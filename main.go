@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/CodeIntelligenceTesting/cifuzz/pkg/cmd"
+	"github.com/CodeIntelligenceTesting/cifuzz/cmd"
 	"github.com/spf13/viper"
 )
 
