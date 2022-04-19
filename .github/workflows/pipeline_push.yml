@@ -1,4 +1,4 @@
-name: General Pipeline 
+name: Push Pipeline 
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - '*'
       - '*/*'
       - '**'
-      - '!main'
+  workflow_dispatch:
 
 jobs:
   linting:

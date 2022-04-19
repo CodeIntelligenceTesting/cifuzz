@@ -1,4 +1,4 @@
-name: Main Pipeline
+name: PR Pipeline
 
 on: 
   pull_request:
@@ -8,10 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  linting:
-    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/resuable_linting.yml@main
-  testing:
-    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main
   building:
     uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_building.yml@main
 
@@ -34,7 +30,7 @@ jobs:
          elif [ "$RUNNER_OS" == "Windows" ]; then
             ./cifuzz_windows.exe;
          elif [ "$RUNNER_OS" == "macOS" ]; then
-            chmod u+x cifuzz_mac;
+            chmod u+x cifuzz_darwin;
             ./cifuzz_mac
          fi
         shell: bash
