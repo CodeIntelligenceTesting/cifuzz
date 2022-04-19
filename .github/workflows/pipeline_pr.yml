@@ -1,4 +1,4 @@
-name: PR Pipeline
+name: Main Pipeline
 
 on: 
   pull_request:
@@ -30,7 +30,7 @@ jobs:
          elif [ "$RUNNER_OS" == "Windows" ]; then
             ./cifuzz_windows.exe;
          elif [ "$RUNNER_OS" == "macOS" ]; then
-            chmod u+x cifuzz_darwin;
-            ./cifuzz_darwin
+            chmod u+x cifuzz_mac;
+            ./cifuzz_mac
          fi
         shell: bash
