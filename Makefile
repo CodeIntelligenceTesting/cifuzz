@@ -1,3 +1,22 @@
+unit_tests = $$(go list ./... | grep -v integration)
+
+current_os :=
+ifeq ($(OS),Windows_NT)
+	current_os = windows
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		current_os = linux
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		current_os = darwin 
+	endif
+endif
+
+build_path = build/bin/
+binary_prefix = cifuzz_
+int_test_prefix = int_test_
+
 default:
 	@echo cifuzz
 
@@ -10,19 +29,23 @@ deps/dev: deps
 	go install honnef.co/go/tools/cmd/staticcheck@latest
 
 .PHONY: build
-build: build/linux build/windows build/macosx ;
+build: build/linux build/windows build/darwin ;
 
 .PHONY: build/linux
 build/linux: deps
-	env GOOS=linux GOARCH=amd64 go build -o build/bin/cifuzz_linux
+	env GOOS=linux GOARCH=amd64 go build -o $(build_path)$(binary_prefix)linux
 
 .PHONY: build/windows
 build/windows: deps
-	env GOOS=windows GOARCH=amd64 go build -o build/bin/cifuzz_windows.exe
+	env GOOS=windows GOARCH=amd64 go build -o $(build_path)$(binary_prefix)windows.exe
 
-.PHONY: build/macosx
-build/macosx: deps
-	env GOOS=darwin GOARCH=amd64 go build -o build/bin/cifuzz_mac
+.PHONY: build/darwin
+build/darwin: deps
+	env GOOS=darwin GOARCH=amd64 go build -o $(build_path)$(binary_prefix)darwin
+
+.PHONY: build/integration
+build/integration: build/$(current_os) 
+	go test -c -o $(build_path)$(int_test_prefix)$(current_os) integration/cli_test.go
 
 .PHONY: lint
 lint: deps/dev
@@ -38,15 +61,23 @@ fmt/check:
 	if [ "$$(gofmt -d -l . | wc -l)" -gt 0 ]; then exit 1; fi;
 
 .PHONY: test
-test: deps
-	go test ./...
+test: test/unit test/integration;
+
+.PHONY: test/unit
+test/unit: deps
+	go test $(unit_tests)
+
+.PHONY: test/integration
+test/integration: build/integration;
+	cd $(build_path) && \
+	./$(int_test_prefix)$(current_os)
 
 .PHONY: test/race
 test/race: deps
-	go test -race  ./...
+	go test -race $(unit_tests)
 
 .PHONY: test/coverage
 test/coverage: deps
-	go test ./... -coverprofile coverage.out
+	go test $(unit_tests) -coverprofile coverage.out
 	go tool cover -html coverage.out
 
