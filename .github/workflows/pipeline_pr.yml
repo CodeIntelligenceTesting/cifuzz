@@ -31,6 +31,6 @@ jobs:
             ./cifuzz_windows.exe;
          elif [ "$RUNNER_OS" == "macOS" ]; then
             chmod u+x cifuzz_darwin;
-            ./cifuzz_mac
+            ./cifuzz_darwin
          fi
         shell: bash
