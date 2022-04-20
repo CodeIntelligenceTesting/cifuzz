@@ -1,4 +1,4 @@
-module github.com/CodeIntelligenceTesting/cifuzz
+module code-intelligence.com/cifuzz
 
 go 1.18
 
