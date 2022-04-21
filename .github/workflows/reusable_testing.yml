@@ -1,11 +1,20 @@
 name: Testing 
 
-on: [workflow_call]
-
+on:
+  workflow_call:
+    inputs:
+      unit-tests:
+        default: true
+        required: false
+        type: boolean 
+      integration-tests:
+        default: false 
+        required: false
+        type: boolean 
 jobs:
   unit-tests:
+    if: ${{ inputs.unit-tests }}
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
 
@@ -18,6 +27,7 @@ jobs:
         run: make test/unit
 
   integration-tests:
+    if: ${{ inputs.integration-tests }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
