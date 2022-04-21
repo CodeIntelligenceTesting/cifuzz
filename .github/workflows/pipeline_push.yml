@@ -13,3 +13,6 @@ jobs:
     uses: CodeIntelligenceTesting/cifuzz/.github/workflows/resuable_linting.yml@main
   testing:
     uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main
+    with:
+      integration-tests: false
+      unit-tests: true

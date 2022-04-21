@@ -8,6 +8,11 @@ on:
   workflow_dispatch:
 
 jobs:
+  testing:
+    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main
+    with:
+      integration-tests: true
+      unit-tests: false 
   building:
     uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_building.yml@main
 
@@ -30,7 +35,7 @@ jobs:
          elif [ "$RUNNER_OS" == "Windows" ]; then
             ./cifuzz_windows.exe;
          elif [ "$RUNNER_OS" == "macOS" ]; then
-            chmod u+x cifuzz_mac;
-            ./cifuzz_mac
+            chmod u+x cifuzz_darwin;
+            ./cifuzz_darwin
          fi
         shell: bash
