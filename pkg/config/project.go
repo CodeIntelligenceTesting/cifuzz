@@ -21,13 +21,13 @@ const projectConfigTemplate = `## Configuration for a CI Fuzz project
 `
 
 // CreateProjectConfig creates a new project config in the given directory
-func CreateProjectConfig(path string, fs *storage.FileSystem) (err error) {
+func CreateProjectConfig(path string, fs *storage.FileSystem) (configpath string, err error) {
 
 	// try to open the target file, returns error if already exists
-	configpath := filepath.Join(path, projectConfigFile)
+	configpath = filepath.Join(path, projectConfigFile)
 	f, err := fs.OpenFile(configpath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
 	if err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 
 	// setup config struct with (default) values
@@ -38,10 +38,10 @@ func CreateProjectConfig(path string, fs *storage.FileSystem) (err error) {
 	// parse the template and write it to config file
 	t, err := template.New("project_config").Parse(projectConfigTemplate)
 	if err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 	if err = t.Execute(f, config); err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 
 	return

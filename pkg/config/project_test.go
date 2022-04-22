@@ -11,8 +11,9 @@ import (
 func TestCreateProjectConfig(t *testing.T) {
 	fs := storage.NewMemFileSystem()
 
-	err := CreateProjectConfig("/", fs)
+	path, err := CreateProjectConfig("/", fs)
 	assert.NoError(t, err)
+	assert.Equal(t, "/cifuzz.yaml", path)
 
 	// file created?
 	exists, err := fs.Exists("/cifuzz.yaml")
@@ -32,8 +33,9 @@ func TestCreateProjectConfig_NoPerm(t *testing.T) {
 	// create read only filesystem
 	fs := &storage.FileSystem{Afero: afero.Afero{Fs: afero.NewReadOnlyFs(afero.NewOsFs())}}
 
-	err := CreateProjectConfig("/", fs)
+	path, err := CreateProjectConfig("/", fs)
 	assert.Error(t, err)
+	assert.Empty(t, path)
 
 	// file should not exists
 	exists, err := fs.Exists("/cifuzz.yaml")
@@ -46,8 +48,9 @@ func TestCreateProjectConfig_Exists(t *testing.T) {
 	fs := storage.NewMemFileSystem()
 	fs.WriteFile("/cifuzz.yaml", []byte{}, 0644)
 
-	err := CreateProjectConfig("/", fs)
+	path, err := CreateProjectConfig("/", fs)
 	assert.Error(t, err)
+	assert.Empty(t, path)
 
 	// file should not exists
 	exists, err := fs.Exists("/cifuzz.yaml")

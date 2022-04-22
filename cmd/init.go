@@ -28,11 +28,12 @@ func runInitCommand(cmd *cobra.Command, args []string) (err error) {
 		return errors.WithStack(err)
 	}
 
-	if err := config.CreateProjectConfig(cwd, fs); err != nil {
+	configpath, err := config.CreateProjectConfig(cwd, fs)
+	if err != nil {
 		color.Red("✗ failed to create config")
 		return err
 	}
 
-	color.Green("✔ successfully created config")
+	color.Green("✔ successfully created config in %s", configpath)
 	return
 }
