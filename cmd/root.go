@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"code-intelligence.com/cifuzz/pkg/storage"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -10,7 +11,7 @@ var rootCmd = &cobra.Command{
 	Short: "#tbd",
 }
 
-var fs *storage.FileSystem
+var fs *afero.Afero
 
 func init() {
 	fs = storage.WrapFileSystem()

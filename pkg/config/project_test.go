@@ -31,7 +31,7 @@ func TestCreateProjectConfig(t *testing.T) {
 // Should return error if not allowed to write to directory
 func TestCreateProjectConfig_NoPerm(t *testing.T) {
 	// create read only filesystem
-	fs := &storage.FileSystem{Afero: afero.Afero{Fs: afero.NewReadOnlyFs(afero.NewOsFs())}}
+	fs := &afero.Afero{Fs: afero.NewReadOnlyFs(afero.NewOsFs())}
 
 	path, err := CreateProjectConfig("/", fs)
 	assert.Error(t, err)

@@ -6,8 +6,8 @@ import (
 	"text/template"
 	"time"
 
-	"code-intelligence.com/cifuzz/pkg/storage"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 )
 
 type projectConfig struct {
@@ -21,7 +21,7 @@ const projectConfigTemplate = `## Configuration for a CI Fuzz project
 `
 
 // CreateProjectConfig creates a new project config in the given directory
-func CreateProjectConfig(path string, fs *storage.FileSystem) (configpath string, err error) {
+func CreateProjectConfig(path string, fs *afero.Afero) (configpath string, err error) {
 
 	// try to open the target file, returns error if already exists
 	configpath = filepath.Join(path, projectConfigFile)
