@@ -27,6 +27,9 @@ func CreateProjectConfig(path string, fs *afero.Afero) (configpath string, err e
 	configpath = filepath.Join(path, projectConfigFile)
 	f, err := fs.OpenFile(configpath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
 	if err != nil {
+		if os.IsExist(err) {
+			return configpath, errors.WithStack(err)
+		}
 		return "", errors.WithStack(err)
 	}
 

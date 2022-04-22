@@ -1,9 +1,11 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/storage"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -50,7 +52,9 @@ func TestCreateProjectConfig_Exists(t *testing.T) {
 
 	path, err := CreateProjectConfig("/", fs)
 	assert.Error(t, err)
-	assert.Empty(t, path)
+	// check if path of the existing config is return and the error indicates it too
+	assert.True(t, os.IsExist(errors.Cause(err)))
+	assert.Equal(t, "/cifuzz.yaml", path)
 
 	// file should not exists
 	exists, err := fs.Exists("/cifuzz.yaml")
