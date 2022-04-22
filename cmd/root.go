@@ -1,12 +1,19 @@
 package cmd
 
 import (
+	"code-intelligence.com/cifuzz/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "cifuzz",
 	Short: "#tbd",
+}
+
+var fs *storage.FileSystem
+
+func init() {
+	fs = storage.WrapFileSystem()
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

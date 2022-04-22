@@ -5,8 +5,14 @@ import (
 	"strings"
 	"testing"
 
+	"code-intelligence.com/cifuzz/pkg/storage"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	fs = storage.NewMemFileSystem()
+	m.Run()
+}
 
 func ExecuteCommand(t *testing.T, args ...string) (string, error) {
 	t.Helper()

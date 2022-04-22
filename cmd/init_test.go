@@ -11,5 +11,5 @@ func TestInitCmd(t *testing.T) {
 		"init",
 	}
 	_, err := ExecuteCommand(t, args...)
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
