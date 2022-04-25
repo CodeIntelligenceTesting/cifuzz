@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/config"
 	"github.com/fatih/color"
 	"github.com/pkg/errors"
@@ -14,9 +15,8 @@ var initCmd = &cobra.Command{
 	Short: "Set up a project for use with cifuzz",
 	Long: "This command sets up a project for use with cifuzz, creating a " +
 		"`.cifuzz.yaml` config file.",
-	Args:         cobra.NoArgs,
-	RunE:         runInitCommand,
-	SilenceUsage: true,
+	Args: cobra.NoArgs,
+	RunE: runInitCommand,
 }
 
 func init() {
@@ -31,10 +31,10 @@ func runInitCommand(cmd *cobra.Command, args []string) (err error) {
 
 	configpath, err := config.CreateProjectConfig(cwd, fs)
 	if err != nil {
-		// explizitly inform the user about an existing config file
+		// explicitly inform the user about an existing config file
 		if os.IsExist(errors.Cause(err)) && configpath != "" {
 			color.Yellow("! config already exists in %s", configpath)
-			cmd.SilenceErrors = true
+			err = cmdutils.WrapSilentError(err)
 		}
 		color.Red("✗ failed to create config")
 		return err
