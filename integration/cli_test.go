@@ -1,8 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
 	"os/exec"
 	"runtime"
 	"testing"
@@ -11,19 +13,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestIntegration(t *testing.T) {
+func prepareTestDir(t *testing.T) (string, string) {
+	t.Helper()
+
 	// make sure executable exists
-	testExecutable := fmt.Sprintf("./cifuzz_%s", runtime.GOOS)
+	executable := fmt.Sprintf("cifuzz_%s", runtime.GOOS)
 	if runtime.GOOS == "windows" {
-		testExecutable = testExecutable + ".exe"
+		executable = executable + ".exe"
+	}
+	require.FileExistsf(t, executable, "make sure an executable of cifuzz is present under %s", executable)
+
+	// create tempory directory for test
+	dir, err := ioutil.TempDir(".", "test")
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	require.FileExistsf(t, testExecutable, "make sure an executable of ci fuzz is present under %s", testExecutable)
+	return executable, dir
+}
 
-	var out bytes.Buffer
-	cmd := exec.Command(testExecutable)
-	cmd.Stdout = &out
+func TestIntegration(t *testing.T) {
+	executable, dir := prepareTestDir(t)
+	// TODO check if path is valid and safe to delete
+	defer os.RemoveAll(dir)
 
+	//execute root command
+	cmd := exec.Command("../" + executable)
+	cmd.Dir = dir
 	err := cmd.Run()
+	assert.NoError(t, err)
+
+	// execute init command
+	cmd = exec.Command("../"+executable, "init")
+	cmd.Dir = dir
+	err = cmd.Run()
 	assert.NoError(t, err)
 }
