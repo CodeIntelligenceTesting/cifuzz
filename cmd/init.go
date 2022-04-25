@@ -5,7 +5,7 @@ import (
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/config"
-	"github.com/fatih/color"
+	"code-intelligence.com/cifuzz/pkg/out"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -33,13 +33,13 @@ func runInitCommand(cmd *cobra.Command, args []string) (err error) {
 	if err != nil {
 		// explicitly inform the user about an existing config file
 		if os.IsExist(errors.Cause(err)) && configpath != "" {
-			color.Yellow("! config already exists in %s", configpath)
+			out.Warn("config already exists in %s", configpath)
 			err = cmdutils.WrapSilentError(err)
 		}
-		color.Red("✗ failed to create config")
+		out.Error(err, "failed to create config")
 		return err
 	}
 
-	color.Green("✔ successfully created config in %s", configpath)
+	out.Success("successfully created config in %s", configpath)
 	return
 }
