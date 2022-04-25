@@ -28,6 +28,7 @@ func runInitCommand(cmd *cobra.Command, args []string) (err error) {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	out.Debug("using current working directory: %s", cwd)
 
 	configpath, err := config.CreateProjectConfig(cwd, fs)
 	if err != nil {

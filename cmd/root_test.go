@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/storage"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +22,12 @@ func ExecuteCommand(t *testing.T, args ...string) (string, error) {
 	rootCmd.SetOut(buf)
 	rootCmd.SetErr(buf)
 	rootCmd.SetArgs(args)
-
+	// overwrite the pre run function to avoid initilization the command settings/environment
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		if fs == nil {
+			fs = storage.NewMemFileSystem()
+		}
+	}
 	err := rootCmd.Execute()
 	return strings.TrimSpace(buf.String()), err
 }

@@ -9,6 +9,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/storage"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var rootCmd = &cobra.Command{
@@ -18,11 +19,19 @@ var rootCmd = &cobra.Command{
 	// error handling
 	SilenceErrors: true,
 	SilenceUsage:  true,
+	// We are using PersistentPreRun to call setup to make sure that all flags/arguments are available
+	PersistentPreRun: setup,
 }
 
 var fs *afero.Afero
 
 func init() {
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false,
+		"Show more verbose output, can be helpful for debugging problems")
+	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+}
+
+func setup(cmd *cobra.Command, args []string) {
 	fs = storage.WrapFileSystem()
 }
 
@@ -31,9 +40,10 @@ func init() {
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 
+		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
 		if !errors.Is(err, cmdutils.ErrSilent) {
-			fmt.Println(rootCmd.UsageString())
 			fmt.Printf("%+v \n", err)
+			fmt.Println(rootCmd.UsageString())
 		}
 
 		os.Exit(1)
