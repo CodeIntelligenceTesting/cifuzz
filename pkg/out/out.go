@@ -6,7 +6,10 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+	"golang.org/x/exp/maps"
 )
 
 func print(target io.Writer, msgColor color.Attribute, icon, msg string, args ...interface{}) {
@@ -41,4 +44,19 @@ func Debug(msg string, args ...interface{}) {
 	if viper.GetBool("verbose") {
 		print(os.Stderr, color.FgWhite, "🔍 ", msg, args...)
 	}
+}
+
+// Select offers the user a list of items (label:value) to select from and returns the value of the selected item
+func Select(label string, items map[string]string) (string, error) {
+	prompt := promptui.Select{
+		Label: label,
+		Items: maps.Keys(items),
+	}
+	_, result, err := prompt.Run()
+
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return items[result], nil
 }

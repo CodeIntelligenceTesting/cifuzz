@@ -17,6 +17,7 @@ import (
 func prepareTestDir(t *testing.T) (string, string) {
 	t.Helper()
 
+	// get working directory
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
 
@@ -52,6 +53,12 @@ func TestIntegration(t *testing.T) {
 
 	// execute init command
 	cmd = exec.Command(executable, "init")
+	cmd.Dir = dir
+	err = cmd.Run()
+	assert.NoError(t, err)
+
+	// execute create command
+	cmd = exec.Command(executable, "create", "cpp")
 	cmd.Dir = dir
 	err = cmd.Run()
 	assert.NoError(t, err)

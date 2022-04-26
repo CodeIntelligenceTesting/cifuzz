@@ -9,6 +9,16 @@ import (
 func TestCreateCmd(t *testing.T) {
 	args := []string{
 		"create",
+		"cpp",
+	}
+	_, err := ExecuteCommand(t, args...)
+	assert.NoError(t, err)
+}
+
+func TestCreateCmd_InvalidType(t *testing.T) {
+	args := []string{
+		"create",
+		"foo",
 	}
 	_, err := ExecuteCommand(t, args...)
 	assert.Error(t, err)

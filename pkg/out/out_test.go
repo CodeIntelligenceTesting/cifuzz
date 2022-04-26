@@ -131,3 +131,7 @@ func TestWarn(t *testing.T) {
 	assert.Contains(t, stderr, "Test")
 	assert.Empty(t, stdout)
 }
+
+func TestSelect(t *testing.T) {
+	t.Skip("promptui needs to be mocked")
+}

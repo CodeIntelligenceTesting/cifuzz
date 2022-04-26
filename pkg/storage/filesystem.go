@@ -7,12 +7,12 @@ import (
 
 // InitFileSystem returns a wrapper for the os/host file system
 func WrapFileSystem() *afero.Afero {
-	out.Debug("using os filesystem wrapper")
+	out.Debug("Using os filesystem wrapper")
 	return &afero.Afero{Fs: afero.NewOsFs()}
 }
 
 // InitMemFileSystem gives access to a memory based file system for using in tests
 func NewMemFileSystem() *afero.Afero {
-	out.Warn("using in-memory filesystem wrapper")
+	out.Warn("Using in-memory filesystem wrapper")
 	return &afero.Afero{Fs: afero.NewMemMapFs()}
 }
