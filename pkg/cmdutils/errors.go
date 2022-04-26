@@ -1,8 +1,8 @@
 package cmdutils
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 )
 
 var ErrSilent = errors.New("SilentError")

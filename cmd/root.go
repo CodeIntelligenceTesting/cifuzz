@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/storage"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -15,7 +15,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "cifuzz",
 	Short: "#tbd",
-	// We are using our the custom ErrSilent instead to support a more specific
+	// We are using our custom ErrSilent instead to support a more specific
 	// error handling
 	SilenceErrors: true,
 	SilenceUsage:  true,
@@ -42,7 +42,7 @@ func Execute() {
 
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
 		if !errors.Is(err, cmdutils.ErrSilent) {
-			fmt.Printf("%+v \n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "%+v\n", err)
 			fmt.Println(rootCmd.UsageString())
 		}
 

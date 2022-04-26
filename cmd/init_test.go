@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"errors"
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
