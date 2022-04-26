@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -38,12 +39,12 @@ func setup(cmd *cobra.Command, args []string) {
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	if cmd, err := rootCmd.ExecuteC(); err != nil {
 
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
 		if !errors.Is(err, cmdutils.ErrSilent) {
 			_, _ = fmt.Fprintf(os.Stderr, "%+v\n", err)
-			_, _ = fmt.Fprintln(os.Stderr, rootCmd.UsageString())
+			_, _ = fmt.Fprintln(os.Stderr, cmd.UsageString())
 		}
 
 		os.Exit(1)
