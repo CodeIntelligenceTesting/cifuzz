@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -16,15 +17,20 @@ import (
 func prepareTestDir(t *testing.T) (string, string) {
 	t.Helper()
 
-	// make sure executable exists
-	executable := fmt.Sprintf("cifuzz_%s", runtime.GOOS)
+	// get working directory
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+
+	// make sure filename exists
+	filename := fmt.Sprintf("cifuzz_%s", runtime.GOOS)
 	if runtime.GOOS == "windows" {
-		executable = executable + ".exe"
+		filename = filename + ".exe"
 	}
+	executable := filepath.Join(cwd, filename)
 	require.FileExistsf(t, executable, "make sure an executable of cifuzz is present under %s", executable)
 
 	// create tempory directory for test
-	dir, err := ioutil.TempDir(".", "test")
+	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,17 +40,15 @@ func prepareTestDir(t *testing.T) (string, string) {
 
 func TestIntegration(t *testing.T) {
 	executable, dir := prepareTestDir(t)
-	// TODO check if path is valid and safe to delete
-	defer os.RemoveAll(dir)
 
 	//execute root command
-	cmd := exec.Command("../" + executable)
+	cmd := exec.Command(executable)
 	cmd.Dir = dir
 	err := cmd.Run()
 	assert.NoError(t, err)
 
 	// execute init command
-	cmd = exec.Command("../"+executable, "init")
+	cmd = exec.Command(executable, "init")
 	cmd.Dir = dir
 	err = cmd.Run()
 	assert.NoError(t, err)

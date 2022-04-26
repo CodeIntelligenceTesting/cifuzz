@@ -43,7 +43,7 @@ func Execute() {
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
 		if !errors.Is(err, cmdutils.ErrSilent) {
 			_, _ = fmt.Fprintf(os.Stderr, "%+v\n", err)
-			fmt.Println(rootCmd.UsageString())
+			_, _ = fmt.Fprintln(os.Stderr, rootCmd.UsageString())
 		}
 
 		os.Exit(1)
