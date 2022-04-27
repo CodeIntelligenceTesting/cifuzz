@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
+	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
-	"code-intelligence.com/cifuzz/pkg/config"
 	"code-intelligence.com/cifuzz/pkg/out"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

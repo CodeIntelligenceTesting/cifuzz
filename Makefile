@@ -20,6 +20,10 @@ int_test_prefix = int_test_
 default:
 	@echo cifuzz
 
+.PHONY: clean
+clean:
+	rm -rf build/
+
 .PHONY: deps
 deps:
 	go mod download
@@ -33,15 +37,15 @@ build: build/linux build/windows build/darwin ;
 
 .PHONY: build/linux
 build/linux: deps
-	env GOOS=linux GOARCH=amd64 go build -o $(build_path)$(binary_prefix)linux
+	env GOOS=linux GOARCH=amd64 go build -o $(build_path)$(binary_prefix)linux cmd/cifuzz/main.go
 
 .PHONY: build/windows
 build/windows: deps
-	env GOOS=windows GOARCH=amd64 go build -o $(build_path)$(binary_prefix)windows.exe
+	env GOOS=windows GOARCH=amd64 go build -o $(build_path)$(binary_prefix)windows.exe cmd/cifuzz/main.go
 
 .PHONY: build/darwin
 build/darwin: deps
-	env GOOS=darwin GOARCH=amd64 go build -o $(build_path)$(binary_prefix)darwin
+	env GOOS=darwin GOARCH=amd64 go build -o $(build_path)$(binary_prefix)darwin cmd/cifuzz/main.go
 
 .PHONY: build/integration
 build/integration: build/$(current_os) 
