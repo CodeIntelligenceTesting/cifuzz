@@ -44,6 +44,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	executable, dir := prepareTestDir(t)
+	fmt.Printf("executing cmake integration test in %s\n", dir)
 
 	//execute root command
 	cmd := exec.Command(executable)
@@ -58,7 +59,7 @@ func TestIntegration(t *testing.T) {
 	assert.NoError(t, err)
 
 	// execute create command
-	cmd = exec.Command(executable, "create", "cpp")
+	cmd = exec.Command(executable, "create", "cpp", "--out", "fuzz-tests")
 	cmd.Dir = dir
 	err = cmd.Run()
 	assert.NoError(t, err)

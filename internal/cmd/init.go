@@ -42,6 +42,6 @@ func runInitCommand(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	out.Success("Configuration saved in %s", configpath)
-  out.Info("\nUse 'cifuzz create' to create your first fuzz test")
+	out.Info("\nUse 'cifuzz create' to create your first fuzz test")
 	return
 }

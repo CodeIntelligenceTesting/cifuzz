@@ -39,6 +39,7 @@ func TestCreateProjectConfig_NoPerm(t *testing.T) {
 
 	path, err := CreateProjectConfig(".", fs)
 	assert.Error(t, err)
+	assert.True(t, os.IsPermission(errors.Cause(err)))
 	assert.Empty(t, path)
 
 	// file should not exists
