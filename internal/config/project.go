@@ -1,11 +1,11 @@
 package config
 
 import (
+	_ "embed"
 	"os"
 	"path/filepath"
 	"text/template"
 	"time"
-  _ "embed"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -18,7 +18,7 @@ type projectConfig struct {
 const projectConfigFile = "cifuzz.yaml"
 
 //go:embed cifuzz.yaml.tmpl
-var projectConfigTemplate string 
+var projectConfigTemplate string
 
 // CreateProjectConfig creates a new project config in the given directory
 func CreateProjectConfig(path string, fs *afero.Afero) (configpath string, err error) {

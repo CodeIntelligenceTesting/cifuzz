@@ -1,4 +1,4 @@
-package out
+package dialog
 
 import (
 	"io/ioutil"
@@ -23,6 +23,7 @@ func TestMain(m *testing.M) {
 	os.Stdout = orgStdout
 
 }
+
 func redirectOutput(t *testing.T) (*os.File, *os.File, *os.File, *os.File) {
 	t.Helper()
 
@@ -130,8 +131,4 @@ func TestWarn(t *testing.T) {
 	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
 	assert.Contains(t, stderr, "Test")
 	assert.Empty(t, stdout)
-}
-
-func TestSelect(t *testing.T) {
-	t.Skip("promptui needs to be mocked")
 }

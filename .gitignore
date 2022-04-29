@@ -1,5 +1,6 @@
 .idea
 build/
+tmp/
 
 coverage.out
 

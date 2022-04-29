@@ -5,7 +5,7 @@ import (
 
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
-	"code-intelligence.com/cifuzz/pkg/out"
+	"code-intelligence.com/cifuzz/pkg/dialog"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -28,20 +28,20 @@ func runInitCommand(cmd *cobra.Command, args []string) (err error) {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	out.Debug("Using current working directory: %s", cwd)
+	dialog.Debug("Using current working directory: %s", cwd)
 
 	configpath, err := config.CreateProjectConfig(cwd, fs)
 	if err != nil {
 		// explicitly inform the user about an existing config file
 		if os.IsExist(errors.Cause(err)) && configpath != "" {
-			out.Warn("Config already exists in %s", configpath)
+			dialog.Warn("Config already exists in %s", configpath)
 			err = cmdutils.WrapSilentError(err)
 		}
-		out.Error(err, "Failed to create config")
+		dialog.Error(err, "Failed to create config")
 		return err
 	}
 
-	out.Success("Configuration saved in %s", configpath)
-	out.Info("\nUse 'cifuzz create' to create your first fuzz test")
+	dialog.Success("Configuration saved in %s", configpath)
+	dialog.Info("\nUse 'cifuzz create' to create your first fuzz test")
 	return
 }

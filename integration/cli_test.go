@@ -59,7 +59,11 @@ func TestIntegration(t *testing.T) {
 	assert.NoError(t, err)
 
 	// execute create command
-	cmd = exec.Command(executable, "create", "cpp", "--out", "fuzz-tests")
+	cmd = exec.Command(executable,
+		"create", "cpp",
+		"--out", "fuzz-tests",
+		"--name", "my_test.cpp",
+	)
 	cmd.Dir = dir
 	err = cmd.Run()
 	assert.NoError(t, err)
