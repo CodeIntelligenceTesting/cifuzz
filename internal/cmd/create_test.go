@@ -24,10 +24,6 @@ func TestCreateCmd_InvalidType(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCreateCmd_DefaultDir(t *testing.T) {
-	t.Skip()
-}
-
 func TestCreateCmd_OutDir(t *testing.T) {
 	t.Skip()
 }
