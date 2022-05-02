@@ -10,17 +10,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Set up a project for use with cifuzz",
-	Long: "This command sets up a project for use with cifuzz, creating a " +
-		"`.cifuzz.yaml` config file.",
-	Args: cobra.NoArgs,
-	RunE: runInitCommand,
-}
+func NewCmdInit() *cobra.Command {
+	initCmd := &cobra.Command{
+		Use:   "init",
+		Short: "Set up a project for use with cifuzz",
+		Long: "This command sets up a project for use with cifuzz, creating a " +
+			"`.cifuzz.yaml` config file.",
+		Args: cobra.NoArgs,
+		RunE: runInitCommand,
+	}
 
-func init() {
-	rootCmd.AddCommand(initCmd)
+	return initCmd
 }
 
 func runInitCommand(cmd *cobra.Command, args []string) (err error) {

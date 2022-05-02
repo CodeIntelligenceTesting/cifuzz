@@ -5,16 +5,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "#TODO",
-	Long:  "#TODO",
-	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return errors.New("Not implemented")
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(runCmd)
+func NewCmdRun() *cobra.Command {
+	runCmd := &cobra.Command{
+		Use:   "run",
+		Short: "#TODO",
+		Long:  "#TODO",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return errors.New("Not implemented")
+		},
+	}
+	return runCmd
 }

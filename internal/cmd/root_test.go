@@ -12,13 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(m *testing.M) {
-	fs = storage.NewMemFileSystem()
-	m.Run()
-}
-
 func ExecuteCommand(t *testing.T, in io.Reader, args ...string) (string, error) {
 	t.Helper()
+	rootCmd := NewCmdRoot()
 
 	rootCmd.SetIn(in)
 	rootCmd.SetArgs(args)

@@ -3,7 +3,7 @@ package dialog
 import (
 	"bufio"
 	"fmt"
-	"os"
+	"io"
 	"strings"
 
 	"github.com/manifoldco/promptui"
@@ -27,8 +27,8 @@ func Select(message string, items map[string]string, inReader io.Reader) (string
 }
 
 // Input asks the user for entering a string
-func Input(label string, defaultValue string) (string, error) {
-	reader := bufio.NewReader(os.Stdin)
+func Input(label string, defaultValue string, inReader io.Reader) (string, error) {
+	reader := bufio.NewReader(inReader)
 	fmt.Printf("%s [%s]: ", label, defaultValue)
 	input, err := reader.ReadString('\n')
 	if err != nil {

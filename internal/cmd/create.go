@@ -16,19 +16,21 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-var createCmd = &cobra.Command{
-	Use:       fmt.Sprintf("create [%s]", strings.Join(maps.Values(config.SupportedTypes), "|")),
-	Short:     "Create a new fuzz target",
-	Long:      "This commands helps creating a new fuzz target",
-	RunE:      runCreateCommand,
-	Args:      cobra.MatchAll(cobra.MaximumNArgs(1), cobra.OnlyValidArgs),
-	ValidArgs: maps.Values(config.SupportedTypes),
-}
+func NewCmdCreate() *cobra.Command {
 
-func init() {
+	createCmd := &cobra.Command{
+		Use:       fmt.Sprintf("create [%s]", strings.Join(maps.Values(config.SupportedTypes), "|")),
+		Short:     "Create a new fuzz target",
+		Long:      "This commands helps creating a new fuzz target",
+		RunE:      runCreateCommand,
+		Args:      cobra.MatchAll(cobra.MaximumNArgs(1), cobra.OnlyValidArgs),
+		ValidArgs: maps.Values(config.SupportedTypes),
+	}
+
 	createCmd.Flags().StringP("out", "o", "", "The location where the new fuzz test should be created")
 	createCmd.Flags().StringP("name", "n", "", "The filename of the created stub")
-	rootCmd.AddCommand(createCmd)
+
+	return createCmd
 }
 
 func runCreateCommand(cmd *cobra.Command, args []string) (err error) {
@@ -102,7 +104,11 @@ func getFilename(cmd *cobra.Command, outDir string, targetType config.TargetType
 	}
 
 	// get filename
-	filename, err := dialog.Input("Please enter filename", stubs.SuggestFilename(outDir, targetType, fs))
+	filename, err := dialog.Input(
+		"Please enter filename",
+		stubs.SuggestFilename(outDir, targetType, fs),
+		cmd.InOrStdin(),
+	)
 	if err != nil {
 		return "", err
 	}

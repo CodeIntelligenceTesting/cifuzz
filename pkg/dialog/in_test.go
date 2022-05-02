@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSelect(t *testing.T) {
@@ -27,21 +28,15 @@ func TestSelect(t *testing.T) {
 }
 
 func TestInput(t *testing.T) {
-
 	input := []byte("my input\n")
 	r, w, err := os.Pipe()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = w.Write(input)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	w.Close()
 
-	oldStdin := os.Stdin
-	defer func() { os.Stdin = oldStdin }()
-
-	os.Stdin = r
-
-	userInput, err := Input("Test", "default")
+	userInput, err := Input("Test", "default", r)
 	assert.NoError(t, err)
 	assert.Equal(t, "my input", userInput)
 }
@@ -50,18 +45,13 @@ func TestInput(t *testing.T) {
 func TestInput_Default(t *testing.T) {
 	input := []byte("\n")
 	r, w, err := os.Pipe()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = w.Write(input)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	w.Close()
 
-	oldStdin := os.Stdin
-	defer func() { os.Stdin = oldStdin }()
-
-	os.Stdin = r
-
-	userInput, err := Input("Test", "default")
+	userInput, err := Input("Test", "default", r)
 	assert.NoError(t, err)
 	assert.Equal(t, "default", userInput)
 }

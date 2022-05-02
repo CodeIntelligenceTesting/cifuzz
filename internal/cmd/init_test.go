@@ -5,11 +5,14 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"code-intelligence.com/cifuzz/pkg/storage"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInitCmd(t *testing.T) {
+	fs = storage.NewMemFileSystem()
+
 	args := []string{
 		"init",
 	}
