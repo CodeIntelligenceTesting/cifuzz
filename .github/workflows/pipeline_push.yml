@@ -10,9 +10,31 @@ on:
 
 jobs:
   linting:
-    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/resuable_linting.yml@main
-  testing:
-    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main
-    with:
-      unit-tests: true
-      integration-tests: false
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.18'
+
+      - name: Run gofmt and print changes
+        run: make fmt/check
+
+      - name: Run linting check
+        run: make lint
+
+  unit_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.18'
+
+      - name: Run unit tests
+        run: make test/unit

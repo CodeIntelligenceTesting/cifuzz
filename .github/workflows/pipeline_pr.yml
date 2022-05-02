@@ -8,34 +8,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  testing:
-    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main
-    with:
-      unit-tests: false
-      integration-tests: true
-  building:
-    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_building.yml@main
+  unit_tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # ubuntu-latest is already covered by the push pipeline
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v3
 
-  test_binaries:
-    needs: building 
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.18'
+
+      - name: Run unit tests
+        run: make test/unit
+
+  integration_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
+      - uses: actions/checkout@v3
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
         with:
-          name: binaries
-      - name: Run binary
-        run: |
-         if [ "$RUNNER_OS" == "Linux" ]; then
-            chmod u+x cifuzz_linux
-            ./cifuzz_linux;
-         elif [ "$RUNNER_OS" == "Windows" ]; then
-            ./cifuzz_windows.exe;
-         elif [ "$RUNNER_OS" == "macOS" ]; then
-            chmod u+x cifuzz_darwin;
-            ./cifuzz_darwin
-         fi
-        shell: bash
+          go-version: '^1.18'
+
+      - name: Run integration tests
+        run: make test/integration
