@@ -11,8 +11,7 @@ else
 	endif
 endif
 
-build_path = build/bin/
-binary_prefix = cifuzz_
+binary_base_path = build/bin/cifuzz_
 
 default:
 	@echo cifuzz
@@ -34,15 +33,15 @@ build: build/linux build/windows build/darwin ;
 
 .PHONY: build/linux
 build/linux: deps
-	env GOOS=linux GOARCH=amd64 go build -o $(build_path)$(binary_prefix)linux cmd/cifuzz/main.go
+	env GOOS=linux GOARCH=amd64 go build -o $(binary_base_path)linux cmd/cifuzz/main.go
 
 .PHONY: build/windows
 build/windows: deps
-	env GOOS=windows GOARCH=amd64 go build -o $(build_path)$(binary_prefix)windows.exe cmd/cifuzz/main.go
+	env GOOS=windows GOARCH=amd64 go build -o $(binary_base_path)windows.exe cmd/cifuzz/main.go
 
 .PHONY: build/darwin
 build/darwin: deps
-	env GOOS=darwin GOARCH=amd64 go build -o $(build_path)$(binary_prefix)darwin cmd/cifuzz/main.go
+	env GOOS=darwin GOARCH=amd64 go build -o $(binary_base_path)darwin cmd/cifuzz/main.go
 
 .PHONY: lint
 lint: deps/dev
