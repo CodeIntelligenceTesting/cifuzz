@@ -17,7 +17,9 @@ func TestMain(m *testing.M) {
 	orgStdout = os.Stdout
 	orgStderr = os.Stderr
 
+	viper.Set("verbose", false)
 	m.Run()
+	viper.Set("verbose", false)
 
 	os.Stderr = orgStderr
 	os.Stdout = orgStdout
@@ -48,11 +50,10 @@ func restoreStdout(t *testing.T, rOut, wOut, rErr, wErr *os.File) (string, strin
 	return string(stdout), string(stderr)
 }
 
-func TestDebug_NoVerbose(t *testing.T) {
+func TestDebugF_NoVerbose(t *testing.T) {
 	rOut, wOut, rErr, wErr := redirectOutput(t)
 
-	viper.Set("verbose", false)
-	Debug("Test")
+	DebugF("Test")
 
 	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
 
@@ -60,24 +61,35 @@ func TestDebug_NoVerbose(t *testing.T) {
 	assert.Empty(t, stdout)
 }
 
-func TestDebug_Verbose(t *testing.T) {
+func TestDebugF_Verbose(t *testing.T) {
+	rOut, wOut, rErr, wErr := redirectOutput(t)
+
+	viper.Set("verbose", true)
+	DebugF("Test")
+	viper.Set("verbose", false)
+
+	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
+
+	assert.Contains(t, stderr, "Test")
+	assert.Empty(t, stdout)
+}
+
+func TestDebug(t *testing.T) {
 	rOut, wOut, rErr, wErr := redirectOutput(t)
 
 	viper.Set("verbose", true)
 	Debug("Test")
 	viper.Set("verbose", false)
 
-	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
-
-	assert.Contains(t, stderr, "Test")
-	assert.Empty(t, stdout, "Test")
+	_, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
+	assert.Contains(t, stderr, "Test\n")
 }
 
-func TestError_Verbose(t *testing.T) {
+func TestErrorF_Verbose(t *testing.T) {
 	rOut, wOut, rErr, wErr := redirectOutput(t)
 
 	viper.Set("verbose", true)
-	Error(errors.New("test-error"), "Test")
+	ErrorF(errors.New("test-error"), "Test")
 	viper.Set("verbose", false)
 
 	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
@@ -87,11 +99,10 @@ func TestError_Verbose(t *testing.T) {
 	assert.Empty(t, stdout)
 }
 
-func TestError_NoVerbose(t *testing.T) {
+func TestErrorF_NoVerbose(t *testing.T) {
 	rOut, wOut, rErr, wErr := redirectOutput(t)
 
-	viper.Set("verbose", false)
-	Error(errors.New("test-error"), "Test")
+	ErrorF(errors.New("test-error"), "Test")
 
 	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
 
@@ -100,11 +111,41 @@ func TestError_NoVerbose(t *testing.T) {
 	assert.Empty(t, stdout)
 }
 
+func TestError(t *testing.T) {
+	rOut, wOut, rErr, wErr := redirectOutput(t)
+
+	Error(errors.New("test-error"), "Test")
+
+	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
+
+	assert.Contains(t, stderr, "Test\n")
+	assert.Empty(t, stdout)
+}
+
+func TestSuccessF(t *testing.T) {
+	rOut, wOut, rErr, wErr := redirectOutput(t)
+
+	SuccessF("Test")
+
+	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
+	assert.Contains(t, stdout, "Test")
+	assert.Empty(t, stderr)
+}
+
 func TestSuccess(t *testing.T) {
 	rOut, wOut, rErr, wErr := redirectOutput(t)
 
-	viper.Set("verbose", false)
 	Success("Test")
+
+	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
+	assert.Contains(t, stdout, "Test\n")
+	assert.Empty(t, stderr)
+}
+
+func TestInfoF(t *testing.T) {
+	rOut, wOut, rErr, wErr := redirectOutput(t)
+
+	InfoF("Test")
 
 	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
 	assert.Contains(t, stdout, "Test")
@@ -114,21 +155,29 @@ func TestSuccess(t *testing.T) {
 func TestInfo(t *testing.T) {
 	rOut, wOut, rErr, wErr := redirectOutput(t)
 
-	viper.Set("verbose", false)
 	Info("Test")
 
 	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
-	assert.Contains(t, stdout, "Test")
+	assert.Contains(t, stdout, "Test\n")
 	assert.Empty(t, stderr)
+}
+
+func TestWarnF(t *testing.T) {
+	rOut, wOut, rErr, wErr := redirectOutput(t)
+
+	WarnF("Test")
+
+	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
+	assert.Contains(t, stderr, "Test")
+	assert.Empty(t, stdout)
 }
 
 func TestWarn(t *testing.T) {
 	rOut, wOut, rErr, wErr := redirectOutput(t)
 
-	viper.Set("verbose", false)
 	Warn("Test")
 
 	stdout, stderr := restoreStdout(t, rOut, wOut, rErr, wErr)
-	assert.Contains(t, stderr, "Test")
+	assert.Contains(t, stderr, "Test\n")
 	assert.Empty(t, stdout)
 }

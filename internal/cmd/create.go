@@ -44,7 +44,7 @@ func runCreateCommand(cmd *cobra.Command, args []string) (err error) {
 	if err != nil {
 		return err
 	}
-	dialog.Debug("Selected fuzz test type: %s", testType)
+	dialog.DebugF("Selected fuzz test type: %s\n", testType)
 
 	// check for the --out flag
 	outFlag, err := cmd.Flags().GetString("out")
@@ -54,30 +54,30 @@ func runCreateCommand(cmd *cobra.Command, args []string) (err error) {
 	// get output directory
 	outDir, err := storage.GetOutDir(outFlag, fs)
 	if os.IsPermission(errors.Cause(err)) {
-		dialog.Error(err, "unable to write to given out directory, permission denied: %s", outDir)
+		dialog.ErrorF(err, "unable to write to given out directory, permission denied: %s\n", outDir)
 		return cmdutils.WrapSilentError(err)
 	} else if err != nil {
 		return err
 	}
-	dialog.Debug("Using output directory: %s", outDir)
+	dialog.DebugF("Using output directory: %s\n", outDir)
 
 	filename, err := determineFilename(cmd, outDir, testType)
 	if err != nil {
 		return err
 	}
-	dialog.Debug("Selected filename %s", filename)
+	dialog.DebugF("Selected filename %s\n", filename)
 
 	// create stub
 	stubPath := filepath.Join(outDir, filename)
 	if err := stubs.Create(stubPath, testType, fs); err != nil {
 		if os.IsExist(errors.Cause(err)) {
-			dialog.Error(err, "Unable to created fuzz test, file already exists %s", stubPath)
+			dialog.ErrorF(err, "Unable to created fuzz test, file already exists %s\n", stubPath)
 			return cmdutils.WrapSilentError(err)
 		}
 	}
 
 	// show success message
-	dialog.Success("Fuzz test stub created at %s", stubPath)
+	dialog.SuccessF("Fuzz test stub created at %s\n", stubPath)
 	dialog.Info(`
 Note: Fuzz tests can be put anywhere in your repository, but it makes sense to keep them close to the tested code - just like regular unit tests.`)
 

@@ -2,7 +2,6 @@ package dialog
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"strings"
 
@@ -45,5 +44,4 @@ func Input(message string, defaultValue string, inReader io.Reader) (string, err
 		return defaultValue, nil
 	}
 	return input, nil
-
 }
