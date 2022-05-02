@@ -40,5 +40,10 @@ jobs:
         with:
           go-version: '^1.18'
 
+      # Add cl.exe to the PATH on Windows for the replayer integration test.
+      # Pinned to the commit of the v1.10.0 tag on 2022-05-05.
+      - uses: ilammy/msvc-dev-cmd@d8610e2b41c6d0f0c3b4c46dad8df0fd826c68e1
+        if: ${{ matrix.os == 'windows-latest' }}
+
       - name: Run integration tests
         run: make test/integration
