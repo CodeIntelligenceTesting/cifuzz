@@ -10,6 +10,7 @@ on:
 
 jobs:
   linting:
+    name: lint
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +28,7 @@ jobs:
         run: make lint
 
   unit_tests:
+    name: unit tests (ubuntu-latest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

@@ -9,6 +9,7 @@ on:
 
 jobs:
   unit_tests:
+    name: unit tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -26,6 +27,7 @@ jobs:
         run: make test/unit
 
   integration_tests:
+    name: integration tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
