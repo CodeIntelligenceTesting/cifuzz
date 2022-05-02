@@ -11,8 +11,8 @@ jobs:
   testing:
     uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main
     with:
+      unit-tests: false
       integration-tests: true
-      unit-tests: false 
   building:
     uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_building.yml@main
 

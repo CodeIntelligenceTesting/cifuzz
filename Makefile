@@ -1,5 +1,3 @@
-unit_tests = $$(go list ./... | grep -v integration)
-
 current_os :=
 ifeq ($(OS),Windows_NT)
 	current_os = windows
@@ -15,7 +13,6 @@ endif
 
 build_path = build/bin/
 binary_prefix = cifuzz_
-int_test_prefix = int_test_
 
 default:
 	@echo cifuzz
@@ -47,10 +44,6 @@ build/windows: deps
 build/darwin: deps
 	env GOOS=darwin GOARCH=amd64 go build -o $(build_path)$(binary_prefix)darwin cmd/cifuzz/main.go
 
-.PHONY: build/integration
-build/integration: build/$(current_os) 
-	go test -c -o $(build_path)$(int_test_prefix)$(current_os) integration/cli_test.go
-
 .PHONY: lint
 lint: deps/dev
 	staticcheck ./...
@@ -65,23 +58,23 @@ fmt/check:
 	if [ "$$(gofmt -d -l . | wc -l)" -gt 0 ]; then exit 1; fi;
 
 .PHONY: test
-test: test/unit test/integration;
+test: deps build/$(current_os)
+	go test ./...
 
 .PHONY: test/unit
 test/unit: deps
-	go test $(unit_tests)
+	go test ./... -short
 
 .PHONY: test/integration
-test/integration: build/integration;
-	cd $(build_path) && \
-	./$(int_test_prefix)$(current_os)
+test/integration: deps build/$(current_os)
+	go test ./... -run 'TestIntegration.*'
 
 .PHONY: test/race
-test/race: deps
-	go test -race $(unit_tests)
+test/race: deps build/$(current_os)
+	go test ./... -race
 
 .PHONY: test/coverage
 test/coverage: deps
-	go test $(unit_tests) -coverprofile coverage.out
+	go test ./... -coverprofile coverage.out
 	go tool cover -html coverage.out
 

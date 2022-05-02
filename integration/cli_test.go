@@ -17,17 +17,16 @@ import (
 func prepareTestDir(t *testing.T) (string, string) {
 	t.Helper()
 
-	// get working directory
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
 
-	// make sure filename exists
-	filename := fmt.Sprintf("cifuzz_%s", runtime.GOOS)
+	cifuzzName := fmt.Sprintf("cifuzz_%s", runtime.GOOS)
 	if runtime.GOOS == "windows" {
-		filename = filename + ".exe"
+		cifuzzName = cifuzzName + ".exe"
 	}
-	executable := filepath.Join(cwd, filename)
-	require.FileExistsf(t, executable, "make sure an executable of cifuzz is present under %s", executable)
+	// The cwd of this test is always integration, so the root dir is one level up.
+	cifuzzPath := filepath.Join(cwd, "..", "build", "bin", cifuzzName)
+	require.FileExistsf(t, cifuzzPath, "cifuzz executable not present under %q", cifuzzPath)
 
 	// create tempory directory for test
 	dir, err := ioutil.TempDir("", "test")
@@ -35,10 +34,14 @@ func prepareTestDir(t *testing.T) (string, string) {
 		log.Fatal(err)
 	}
 
-	return executable, dir
+	return cifuzzPath, dir
 }
 
 func TestIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	executable, dir := prepareTestDir(t)
 
 	//execute root command
