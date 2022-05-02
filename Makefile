@@ -53,12 +53,12 @@ build/integration: build/$(current_os)
 
 .PHONY: lint
 lint: deps/dev
-	staticcheck $$(go list ./...)
-	go vet $$(go list ./...)
+	staticcheck ./...
+	go vet ./...
 
 .PHONY: fmt
 fmt:
-	go fmt $$(go list ./...)
+	go fmt ./...
 
 .PHONY: fmt/check
 fmt/check:
