@@ -16,23 +16,23 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// map of supported types -> label:value
-var supportedTypes = map[string]string{
+// map of supported test types -> label:value
+var supportedTestTypes = map[string]string{
 	"C/C++": string(config.CPP),
 }
 
 func NewCmdCreate() *cobra.Command {
 
 	createCmd := &cobra.Command{
-		Use:       fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTypes), "|")),
-		Short:     "Create a new fuzz target",
-		Long:      "This commands helps creating a new fuzz target",
+		Use:       fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTestTypes), "|")),
+		Short:     "Create a new fuzz test",
+		Long:      "Creates a template for a new fuzz test",
 		RunE:      runCreateCommand,
 		Args:      cobra.MatchAll(cobra.MaximumNArgs(1), cobra.OnlyValidArgs),
-		ValidArgs: maps.Values(supportedTypes),
+		ValidArgs: maps.Values(supportedTestTypes),
 	}
 
-	createCmd.Flags().StringP("out", "o", "", "The location where the new fuzz test should be created")
+	createCmd.Flags().StringP("out", "o", "", "The directory where the new fuzz test should be created")
 	createCmd.Flags().StringP("name", "n", "", "The filename of the created stub")
 
 	return createCmd
@@ -44,7 +44,7 @@ func runCreateCommand(cmd *cobra.Command, args []string) (err error) {
 	if err != nil {
 		return err
 	}
-	dialog.Debug("Selected fuzz test type: %s", targetType)
+	dialog.Debug("Selected fuzz test type: %s", testType)
 
 	// check for the --out flag
 	outFlag, err := cmd.Flags().GetString("out")
@@ -61,7 +61,7 @@ func runCreateCommand(cmd *cobra.Command, args []string) (err error) {
 	}
 	dialog.Debug("Using output directory: %s", outDir)
 
-	filename, err := getFilename(cmd, outDir, targetType)
+	filename, err := determineFilename(cmd, outDir, testType)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func runCreateCommand(cmd *cobra.Command, args []string) (err error) {
 
 	// create stub
 	stubPath := filepath.Join(outDir, filename)
-	if err := stubs.Create(stubPath, targetType, fs); err != nil {
+	if err := stubs.Create(stubPath, testType, fs); err != nil {
 		if os.IsExist(errors.Cause(err)) {
 			dialog.Error(err, "Unable to created fuzz test, file already exists %s", stubPath)
 			return cmdutils.WrapSilentError(err)
@@ -94,10 +94,10 @@ func getTestType(cmd *cobra.Command, args []string) (config.FuzzTestType, error)
 		fmt.Printf("%+v \n", err)
 		return "", cmdutils.WrapSilentError(err)
 	}
-	return
+	return config.FuzzTestType(userSelectedType), nil
 }
 
-func getFilename(cmd *cobra.Command, outDir string, targetType config.TargetType) (string, error) {
+func determineFilename(cmd *cobra.Command, outDir string, testType config.FuzzTestType) (string, error) {
 	// check for the --name flag
 	nameFlag, err := cmd.Flags().GetString("name")
 	if err != nil {
@@ -108,10 +108,16 @@ func getFilename(cmd *cobra.Command, outDir string, targetType config.TargetType
 		return nameFlag, nil
 	}
 
-	// get filename
+	suggestedFilename, err := stubs.SuggestFilename(outDir, testType, fs)
+	if err != nil {
+		// as this error only results in a missing filename suggestion we just show
+		// it but do not stop the application
+		dialog.ErrorF(err, "unable to suggest filename for given test type %s", testType)
+	}
+
 	filename, err := dialog.Input(
 		"Please enter filename",
-		stubs.SuggestFilename(outDir, targetType, fs),
+		suggestedFilename,
 		cmd.InOrStdin(),
 	)
 	if err != nil {

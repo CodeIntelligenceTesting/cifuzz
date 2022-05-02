@@ -14,7 +14,7 @@ import (
 // Select offers the user a list of items (label:value) to select from and returns the value of the selected item
 func Select(message string, items map[string]string, inReader io.Reader) (string, error) {
 	prompt := promptui.Select{
-		Label: label,
+		Label: message,
 		Items: maps.Keys(items),
 		Stdin: io.NopCloser(inReader),
 	}
@@ -27,9 +27,14 @@ func Select(message string, items map[string]string, inReader io.Reader) (string
 }
 
 // Input asks the user for entering a string
-func Input(label string, defaultValue string, inReader io.Reader) (string, error) {
+func Input(message string, defaultValue string, inReader io.Reader) (string, error) {
 	reader := bufio.NewReader(inReader)
-	fmt.Printf("%s [%s]: ", label, defaultValue)
+	if defaultValue == "" {
+		InfoF("%s: ", message)
+	} else {
+		InfoF("%s [%s]: ", message, defaultValue)
+	}
+
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		return "", errors.WithStack(err)

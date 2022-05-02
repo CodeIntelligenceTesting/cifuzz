@@ -46,11 +46,13 @@ func TestCreate_NoPerm(t *testing.T) {
 func TestSuggestFilenam(t *testing.T) {
 	fs := storage.NewMemFileSystem()
 
-	filename1 := SuggestFilename("tests", config.CPP, fs)
+	filename1, err := SuggestFilename("tests", config.CPP, fs)
+	assert.NoError(t, err)
 	assert.Equal(t, "my_fuzz_test_1.cpp", filename1)
 
 	fs.WriteFile("tests/my_fuzz_test_1.cpp", []byte("TEST"), 0644)
 
-	filename2 := SuggestFilename("tests", config.CPP, fs)
+	filename2, err := SuggestFilename("tests", config.CPP, fs)
+	assert.NoError(t, err)
 	assert.Equal(t, "my_fuzz_test_2.cpp", filename2)
 }

@@ -1,7 +1,7 @@
 package config
 
-type TargetType string
+type FuzzTestType string
 
 const (
-	CPP TargetType = "cpp"
+	CPP FuzzTestType = "cpp"
 )

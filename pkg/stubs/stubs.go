@@ -14,8 +14,8 @@ import (
 //go:embed fuzz-test.cpp.tmpl
 var cppStub []byte
 
-// Create creates a stub based for the given targetType
-func Create(path string, targetType config.TargetType, fs *afero.Afero) error {
+// Create creates a stub based for the given test type
+func Create(path string, testType config.FuzzTestType, fs *afero.Afero) error {
 
 	if _, err := fs.Stat(path); err == nil {
 		return errors.WithStack(os.ErrExist)
@@ -23,7 +23,7 @@ func Create(path string, targetType config.TargetType, fs *afero.Afero) error {
 
 	// read matching template
 	var content []byte
-	switch targetType {
+	switch testType {
 	case config.CPP:
 		content = cppStub
 	}
@@ -39,19 +39,24 @@ func Create(path string, targetType config.TargetType, fs *afero.Afero) error {
 
 // SuggestFilename returns a proposal for a filename,
 // depending on the test type and given directory
-func SuggestFilename(dir string, testType config.FuzzTestType, fs *afero.Afero) string {
+func SuggestFilename(dir string, testType config.FuzzTestType, fs *afero.Afero) (string, error) {
 	var basename, ext, filename string
 
-	switch targetType {
+	switch testType {
 	case config.CPP:
 		ext = "cpp"
 		basename = "my_fuzz_test"
+	default:
+		return "", errors.New("unable to suggest filename: unknown test type")
 	}
 
 	counter := 1
 	for {
 		filename = fmt.Sprintf("%s_%d.%s", basename, counter, ext)
-		exists, _ := fs.Exists(filepath.Join(dir, filename))
+		exists, err := fs.Exists(filepath.Join(dir, filename))
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
 		if exists {
 			counter += 1
 		} else {
@@ -59,5 +64,5 @@ func SuggestFilename(dir string, testType config.FuzzTestType, fs *afero.Afero) 
 		}
 	}
 
-	return filename
+	return filename, nil
 }
