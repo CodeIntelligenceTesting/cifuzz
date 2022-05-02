@@ -16,15 +16,20 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+// map of supported types -> label:value
+var supportedTypes = map[string]string{
+	"C/C++": string(config.CPP),
+}
+
 func NewCmdCreate() *cobra.Command {
 
 	createCmd := &cobra.Command{
-		Use:       fmt.Sprintf("create [%s]", strings.Join(maps.Values(config.SupportedTypes), "|")),
+		Use:       fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTypes), "|")),
 		Short:     "Create a new fuzz target",
 		Long:      "This commands helps creating a new fuzz target",
 		RunE:      runCreateCommand,
 		Args:      cobra.MatchAll(cobra.MaximumNArgs(1), cobra.OnlyValidArgs),
-		ValidArgs: maps.Values(config.SupportedTypes),
+		ValidArgs: maps.Values(supportedTypes),
 	}
 
 	createCmd.Flags().StringP("out", "o", "", "The location where the new fuzz test should be created")
