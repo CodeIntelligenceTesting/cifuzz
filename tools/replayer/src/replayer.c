@@ -1,6 +1,11 @@
 /*
- * Taken from:
+ * Based on:
  * https://github.com/llvm/llvm-project/blob/95fedfab6cfb82a2fe1010d266b1269425f5eb46/compiler-rt/lib/fuzzer/standalone/StandaloneFuzzTargetMain.c
+ *
+ * Modified by Fabian Meumertzheim:
+ *   - moved variable declarations to conform to ANSI C90 standard
+ *   - added explicit return to conform to ANSI C90 standard
+ *   - replaced %zd with %ld to conform to ANSI C90 standard
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -24,22 +29,30 @@
 extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
 __attribute__((weak)) extern int LLVMFuzzerInitialize(int *argc, char ***argv);
 int main(int argc, char **argv) {
+  int i;
+
   fprintf(stderr, "StandaloneFuzzTargetMain: running %d inputs\n", argc - 1);
   if (LLVMFuzzerInitialize)
     LLVMFuzzerInitialize(&argc, &argv);
-  for (int i = 1; i < argc; i++) {
+  for (i = 1; i < argc; i++) {
+    FILE *f;
+    size_t len;
+    unsigned char *buf;
+    size_t n_read;
+
     fprintf(stderr, "Running: %s\n", argv[i]);
     FILE *f = fopen(argv[i], "r");
     assert(f);
     fseek(f, 0, SEEK_END);
-    size_t len = ftell(f);
+    len = ftell(f);
     fseek(f, 0, SEEK_SET);
-    unsigned char *buf = (unsigned char*)malloc(len);
-    size_t n_read = fread(buf, 1, len, f);
+    buf = (unsigned char*)malloc(len);
+    n_read = fread(buf, 1, len, f);
     fclose(f);
     assert(n_read == len);
     LLVMFuzzerTestOneInput(buf, len);
     free(buf);
-    fprintf(stderr, "Done:    %s: (%zd bytes)\n", argv[i], n_read);
+    fprintf(stderr, "Done:    %s: (%ld bytes)\n", argv[i], (unsigned long) n_read);
   }
+  return 0;
 }
