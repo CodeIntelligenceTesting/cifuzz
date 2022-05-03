@@ -6,6 +6,7 @@
  *   - moved variable declarations to conform to ANSI C90 standard
  *   - added explicit return to conform to ANSI C90 standard
  *   - replaced %zd with %ld to conform to ANSI C90 standard
+ *   - added assert on LLVMFuzzerTestOneInput return value to mimic libFuzzer
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -30,6 +31,7 @@ extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
 __attribute__((weak)) extern int LLVMFuzzerInitialize(int *argc, char ***argv);
 int main(int argc, char **argv) {
   int i;
+  int res;
 
   fprintf(stderr, "StandaloneFuzzTargetMain: running %d inputs\n", argc - 1);
   if (LLVMFuzzerInitialize)
@@ -50,7 +52,10 @@ int main(int argc, char **argv) {
     n_read = fread(buf, 1, len, f);
     fclose(f);
     assert(n_read == len);
-    LLVMFuzzerTestOneInput(buf, len);
+    res = LLVMFuzzerTestOneInput(buf, len);
+    /* Avoid "unused but set variable" warnings if asserts are compiled out with NDEBUG. */
+    (void)res;
+    assert(res == 0);
     free(buf);
     fprintf(stderr, "Done:    %s: (%ld bytes)\n", argv[i], (unsigned long) n_read);
   }
