@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/storage"
+	"code-intelligence.com/cifuzz/pkg/workarounds"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,11 +35,11 @@ func TestCreateProjectConfig(t *testing.T) {
 // Should return error if not allowed to write to directory
 func TestCreateProjectConfig_NoPerm(t *testing.T) {
 	// create read only filesystem
-	fs := &afero.Afero{Fs: afero.NewReadOnlyFs(afero.NewOsFs())}
+	fs := storage.NewReadOnlyFileSystem()
 
 	path, err := CreateProjectConfig(".", fs)
 	assert.Error(t, err)
-	assert.True(t, os.IsPermission(errors.Cause(err)))
+	assert.True(t, workarounds.IsPermission(errors.Cause(err)))
 	assert.Empty(t, path)
 
 	// file should not exists

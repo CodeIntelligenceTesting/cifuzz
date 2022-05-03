@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
+	"code-intelligence.com/cifuzz/pkg/workarounds"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,11 +30,11 @@ func TestGetOutDir_Default(t *testing.T) {
 }
 
 func TestGetOutDir_NoPerm(t *testing.T) {
-	fs := &afero.Afero{Fs: afero.NewReadOnlyFs(afero.NewOsFs())}
+	fs := NewReadOnlyFileSystem()
 
 	outDir, err := GetOutDir("/fuzz-tests", fs)
 	assert.Error(t, err)
-	assert.True(t, os.IsPermission(errors.Cause(err)))
+	assert.True(t, workarounds.IsPermission(errors.Cause(err)))
 	assert.Equal(t, "/fuzz-tests", outDir)
 
 	// directory should not exists

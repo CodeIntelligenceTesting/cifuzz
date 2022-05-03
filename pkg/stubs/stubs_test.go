@@ -7,6 +7,7 @@ import (
 
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/storage"
+	"code-intelligence.com/cifuzz/pkg/workarounds"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +41,7 @@ func TestCreate_NoPerm(t *testing.T) {
 
 	err := Create(stubFile, config.CPP, fs)
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, os.ErrPermission))
+	assert.True(t, workarounds.IsPermission(err))
 }
 
 func TestSuggestFilenam(t *testing.T) {

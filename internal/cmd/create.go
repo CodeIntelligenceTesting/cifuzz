@@ -11,6 +11,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/storage"
 	"code-intelligence.com/cifuzz/pkg/stubs"
+	"code-intelligence.com/cifuzz/pkg/workarounds"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
@@ -53,7 +54,7 @@ func runCreateCommand(cmd *cobra.Command, args []string) (err error) {
 	}
 	// get output directory
 	outDir, err := storage.GetOutDir(outFlag, fs)
-	if os.IsPermission(errors.Cause(err)) {
+	if workarounds.IsPermission(errors.Cause(err)) {
 		dialog.ErrorF(err, "unable to write to given out directory, permission denied: %s\n", outDir)
 		return cmdutils.WrapSilentError(err)
 	} else if err != nil {

@@ -28,4 +28,3 @@ func GetOutDir(requestedDir string, fs *afero.Afero) (string, error) {
 	}
 	return requestedDir, nil
 }
-

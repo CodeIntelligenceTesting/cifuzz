@@ -19,5 +19,5 @@ func NewMemFileSystem() *afero.Afero {
 
 func NewReadOnlyFileSystem() *afero.Afero {
 	dialog.Warn("Using read only filesystem wrapper")
-	return &afero.Afero{Fs: afero.NewReadOnlyFs(afero.NewOsFs())}
+	return &afero.Afero{Fs: afero.NewReadOnlyFs(afero.NewMemMapFs())}
 }
