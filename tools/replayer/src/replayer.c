@@ -8,6 +8,8 @@
  *   - replaced %zd with %ld to conform to ANSI C90 standard
  *   - replaced fopen with fopen_s on Windows and added an error message
  *   - added assert on LLVMFuzzerTestOneInput return value to mimic libFuzzer
+ *   - made weak semantics of LLVMFuzzerInitialize work on macOS and Windows via
+ *     dlsym and /alternatename
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -29,14 +31,63 @@
 #include <stdlib.h>
 
 extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
-__attribute__((weak)) extern int LLVMFuzzerInitialize(int *argc, char ***argv);
+
+#if defined(_WIN32)
+/*
+ * MSVC does not support weak symbols, but /alternatename can be used to direct the linker to a default implementation.
+ * https://github.com/llvm/llvm-project/blob/0c8c05064d57fe3bbbb1edd4c6e67f909c720578/compiler-rt/lib/fuzzer/FuzzerExtFunctionsWindows.cpp
+ */
+int LLVMFuzzerInitializeDefault(int *argc, char ***argv) {
+  (void)argc;
+  (void)argv;
+  return 0;
+}
+
+#if defined(_MSC_VER)
+#pragma comment(linker, "/alternatename:LLVMFuzzerInitialize=LLVMFuzzerInitializeDefault")
+#else
+__attribute__((weak, alias("LLVMFuzzerInitializeDefault")))
+#endif
+int LLVMFuzzerInitialize(int *argc, char ***argv);
+
+static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
+  LLVMFuzzerInitialize(argc, argv);
+}
+#elif defined(__APPLE__)
+/*
+ * Weak symbols require specifying -U on the command line on macOS, hence use dlsym to find LLVMFuzzerInitialize.
+ * https://github.com/llvm/llvm-project/blob/0c8c05064d57fe3bbbb1edd4c6e67f909c720578/compiler-rt/lib/fuzzer/FuzzerExtFunctionsDlsym.cpp
+ */
+#include <dlfcn.h>
+
+static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
+  void *fn_ptr = dlsym(RTLD_DEFAULT, "LLVMFuzzerInitialize");
+  if (fn_ptr != NULL) {
+    ((int (*)(int *, char ***)) fn_ptr)(argc, argv);
+  }
+}
+#else
+/*
+ * General Unix is assumed to have support for weak symbols, but doesn't export symbols dynamically by default, which
+ * precludes using the dlsym approach.
+ * https://github.com/llvm/llvm-project/blob/0c8c05064d57fe3bbbb1edd4c6e67f909c720578/compiler-rt/lib/fuzzer/FuzzerExtFunctionsWeak.cpp
+ */
+__attribute__((weak)) int LLVMFuzzerInitialize(int *argc, char ***argv) {
+  (void)argc;
+  (void)argv;
+  return 0;
+}
+static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
+  LLVMFuzzerInitialize(argc, argv);
+}
+#endif
+
 int main(int argc, char **argv) {
   int i;
   int res;
 
   fprintf(stderr, "StandaloneFuzzTargetMain: running %d inputs\n", argc - 1);
-  if (LLVMFuzzerInitialize)
-    LLVMFuzzerInitialize(&argc, &argv);
+  LLVMFuzzerInitializeIfPresent(&argc, &argv);
   for (i = 1; i < argc; i++) {
     FILE *f;
     size_t len;
