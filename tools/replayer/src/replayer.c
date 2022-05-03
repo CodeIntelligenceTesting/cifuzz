@@ -6,6 +6,7 @@
  *   - moved variable declarations to conform to ANSI C90 standard
  *   - added explicit return to conform to ANSI C90 standard
  *   - replaced %zd with %ld to conform to ANSI C90 standard
+ *   - replaced fopen with fopen_s on Windows and added an error message
  *   - added assert on LLVMFuzzerTestOneInput return value to mimic libFuzzer
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
@@ -43,8 +44,17 @@ int main(int argc, char **argv) {
     size_t n_read;
 
     fprintf(stderr, "Running: %s\n", argv[i]);
-    FILE *f = fopen(argv[i], "r");
-    assert(f);
+#ifdef _WIN32
+    /* fopen is deprecated in the Microsoft CRT. */
+    fopen_s(&f, argv[i], "r");
+#else
+    /* fopen_s is not available in Unix C90 system headers. */
+    f = fopen(argv[i], "r");
+#endif
+    if (f == NULL) {
+      perror("Failed to open file");
+      exit(1);
+    }
     fseek(f, 0, SEEK_END);
     len = ftell(f);
     fseek(f, 0, SEEK_SET);
