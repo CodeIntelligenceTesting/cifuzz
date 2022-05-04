@@ -8,7 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 
@@ -46,8 +48,12 @@ var clangCl = compilerCase{
 var msvc = compilerCase{
 	"cl",
 	append([]string{
-		// Disable Microsoft extensions to the C90 standard.
-		"/Za",
+		// Enable additional portability checks. The even stricter /Za flag is incompatible with windows.h itself.
+		"/permissive-",
+		// Required when using /external with older versions of MSVC.
+		"/experimental:external",
+		// Disable warnings originating from system includes, which would otherwise be treated as errors.
+		"/external:W0",
 		"/fsanitize=address",
 		// Sanitizer runtimes have to be linked manually on Windows:
 		// https://devblogs.microsoft.com/cppblog/addresssanitizer-asan-for-windows-with-msvc/
@@ -109,40 +115,78 @@ var gcc = compilerCase{
 }
 
 type runCase struct {
-	inputs     []string
+	name       string
+	inputs     []any
 	normalExit bool
 }
 
 var baseRunCases = []runCase{
 	{
-		[]string{},
+		"no files",
+		[]any{},
 		true,
 	},
 	{
-		[]string{"foo"},
+		"single file",
+		[]any{"foo"},
 		true,
 	},
 	{
-		[]string{"foo", "bar"},
+		"multiple files",
+		[]any{"foo", "bar"},
 		true,
 	},
 	{
-		[]string{"foo", "assert", "bar"},
+		"single empty directory",
+		[]any{[]string{}},
+		true,
+	},
+	{
+		"single directory with single file",
+		[]any{[]string{"foo"}},
+		true,
+	},
+	{
+		"single directory with multiple files",
+		[]any{[]string{"foo", "bar", "baz"}},
+		true,
+	},
+	{
+		"multiple directories",
+		[]any{[]string{"foo", "bar"}, []string{}, []string{"baz"}},
+		true,
+	},
+	{
+		"directories and files",
+		[]any{[]string{"foo", "bar"}, "baz", []string{"baz"}, "bob"},
+		true,
+	},
+	{
+		"assert",
+		[]any{"foo", "assert", "bar"},
 		false,
 	},
 	{
-		[]string{"foo", "return", "bar"},
+		"assert in directory",
+		[]any{[]string{"foo", "bar"}, []string{"assert"}, "never_executed"},
+		false,
+	},
+	{
+		"non-zero return value",
+		[]any{"foo", "return", "bar"},
 		false,
 	},
 }
 
 var asanRunCase = runCase{
-	[]string{"foo", "asan", "bar"},
+	"ASan finding",
+	[]any{"foo", "asan", "bar"},
 	false,
 }
 
 var ubsanRunCase = runCase{
-	[]string{"foo", "ubsan", "bar"},
+	"UBSan finding",
+	[]any{"foo", "ubsan", "bar"},
 	false,
 }
 
@@ -255,20 +299,30 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 		for _, rc := range rcs {
 			// Capture loop variable in goroutine, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721.
 			rc := rc
-			t.Run(strings.Join(rc.inputs, ","), func(t *testing.T) {
+			t.Run(rc.name, func(t *testing.T) {
 				t.Parallel()
 
 				expectedOut := []string{
 					// Assert that LLVMFuzzerInitialize has been executed.
 					fmt.Sprintf("init(%d,%s)", len(rc.inputs)+1 /* argc */, replayer /* argv[0] */),
 				}
-				for _, input := range rc.inputs {
-					// The output of the fuzz target ends with the first crash, so don't include the magic
-					// inputs and any subsequent ones in the expected output.
-					if input == "asan" || input == "ubsan" || input == "assert" || input == "return" {
-						break
+			outer_loop:
+				for _, inputs := range rc.inputs {
+					if str, ok := inputs.(string); ok {
+						// For the purpose of output assertions, we can treat a file just like a directory
+						// containing a single file.
+						inputs = []string{str}
 					}
-					expectedOut = append(expectedOut, fmt.Sprintf("'%s'", input))
+					inputs, ok := inputs.([]string)
+					require.True(t, ok, "Elements of test case inputs must be either string or []string")
+					for _, input := range inputs {
+						// The output of the fuzz target ends with the first crash, so don't include the magic
+						// inputs and any subsequent ones in the expected output.
+						if input == "asan" || input == "ubsan" || input == "assert" || input == "return" {
+							break outer_loop
+						}
+						expectedOut = append(expectedOut, fmt.Sprintf("'%s'", input))
+					}
 				}
 
 				out, err := runReplayer(t, tempDir, replayer, rc.inputs...)
@@ -282,6 +336,10 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 					require.Error(t, err)
 					require.IsType(t, &exec.ExitError{}, err, err.Error())
 				}
+				// Directory traversal order is unspecified, so sort the expected output to make it
+				// reliably assertable.
+				sort.Strings(expectedOut)
+				sort.Strings(out)
 				assert.Equal(t, expectedOut, out)
 			})
 		}
@@ -341,16 +399,21 @@ func compileReplayer(t *testing.T, tempDir string, compiler string, outputFlag s
 	return outFile
 }
 
-func runReplayer(t *testing.T, tempDir string, replayerPath string, inputs ...string) ([]string, error) {
+func runReplayer(t *testing.T, baseTempDir string, replayerPath string, inputs ...any) ([]string, error) {
 	var inputPaths []string
 	for _, input := range inputs {
-		tempFile, err := ioutil.TempFile(tempDir, "input")
-		require.NoError(t, err)
-		_, err = tempFile.WriteString(input)
-		require.NoError(t, err)
-		inputPaths = append(inputPaths, tempFile.Name())
-		err = tempFile.Close()
-		require.NoError(t, err)
+		if fileContent, ok := input.(string); ok {
+			inputPaths = append(inputPaths, createInputFile(t, baseTempDir, fileContent))
+		} else if fileContents, ok := input.([]string); ok {
+			tempDir, err := ioutil.TempDir(baseTempDir, "input-dir")
+			require.NoError(t, err)
+			for _, fileContent := range fileContents {
+				createInputFile(t, tempDir, fileContent)
+			}
+			inputPaths = append(inputPaths, tempDir)
+		} else {
+			t.Fatalf("Unexpected type of parameter 'inputs': %s", reflect.TypeOf(inputs).String())
+		}
 	}
 
 	c := exec.Command(replayerPath, inputPaths...)
@@ -358,4 +421,14 @@ func runReplayer(t *testing.T, tempDir string, replayerPath string, inputs ...st
 	// Split on both \r\n (Windows) and \n (Unix) after removing trailing newlines.
 	outLines := strings.Split(strings.ReplaceAll(strings.TrimSpace(string(out)), "\r\n", "\n"), "\n")
 	return outLines, err
+}
+
+func createInputFile(t *testing.T, dir, content string) string {
+	tempFile, err := ioutil.TempFile(dir, "input")
+	require.NoError(t, err)
+	_, err = tempFile.WriteString(content)
+	require.NoError(t, err)
+	err = tempFile.Close()
+	require.NoError(t, err)
+	return tempFile.Name()
 }

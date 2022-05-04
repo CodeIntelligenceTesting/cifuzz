@@ -11,6 +11,7 @@
  *   - made weak semantics of LLVMFuzzerInitialize work on macOS and Windows via
  *     dlsym and /alternatename
  *   - added an assert on malloc return value
+ *   - added support for specifying directories as inputs
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -27,9 +28,28 @@
 // Use this file to provide reproducers for bugs when linking against libFuzzer
 // or other fuzzing engine is undesirable.
 //===----------------------------------------------------------------------===*/
+#if defined(__linux__)
+/* Using S_IFDIR with gcc's -ansi requires this define. */
+#define _XOPEN_SOURCE 700
+#endif
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+
+#if defined(_WIN32)
+#define POSIX_STAT _stat
+#define POSIX_S_IFDIR _S_IFDIR
+#define POSIX_S_IFREG _S_IFREG
+#include <windows.h>
+#else
+#define POSIX_STAT stat
+#define POSIX_S_IFDIR S_IFDIR
+#define POSIX_S_IFREG S_IFREG
+#include <dirent.h>
+#endif
 
 extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
 
@@ -83,7 +103,7 @@ static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
 }
 #endif
 
-void run_one_file(const char *path) {
+void run_file(const char *path) {
   FILE *f;
   size_t len;
   unsigned char *buf;
@@ -118,13 +138,108 @@ void run_one_file(const char *path) {
   fprintf(stderr, "Done:    %s: (%ld bytes)\n", path, (unsigned long) n_read);
 }
 
+void run_file_or_dir(const char *path);
+
+void run_dir_entry(const char *dir, const char *file) {
+  char *path;
+  size_t path_size;
+
+  /* Skip hidden files as well as "." and "..". File names can't be empty. */
+  if (file[0] == '.') {
+    return;
+  }
+
+  /* +1 for path separator, +1 for "\0". */
+  path_size = strlen(dir) + 1 + strlen(file) + 1;
+  path = (char*)malloc(path_size);
+  assert(path != NULL);
+#ifdef _WIN32
+  /* sprintf is deprecated in the Microsoft CRT. */
+  sprintf_s(path, path_size, "%s\\%s", dir, file);
+#else
+  /* sprintf_s is not available in Unix C90 system headers. */
+  sprintf(path, "%s/%s", dir, file);
+#endif
+  run_file_or_dir(path);
+  free(path);
+}
+
+void traverse_dir(const char *path) {
+#if defined(_WIN32)
+  WIN32_FIND_DATA fd;
+  HANDLE h_find;
+  char *filter;
+  size_t filter_size;
+
+  /* +2 for "\*", +1 for "\0". */
+  filter_size = strlen(path) + 3;
+  filter = (char*)malloc(filter_size);
+  assert(filter != NULL);
+  sprintf_s(filter, filter_size, "%s\\*", path);
+  if ((h_find = FindFirstFile(filter, &fd)) == INVALID_HANDLE_VALUE) {
+    /* TODO: Include the stringified last error in the message. */
+    fprintf(stderr, "Failed to list files in '%s'\n", path);
+    exit(1);
+  }
+  do {
+    run_dir_entry(path, fd.cFileName);
+  } while (FindNextFile(h_find, &fd) != 0);
+  if (GetLastError() != ERROR_NO_MORE_FILES) {
+    /* TODO: Include the stringified last error in the message. */
+    fprintf(stderr, "Failed to list files in '%s'\n", path);
+    exit(1);
+  }
+  FindClose(h_find);
+  free(filter);
+#else
+  DIR *dir;
+  struct dirent *dir_entry;
+
+  dir = opendir(path);
+  if (dir == NULL) {
+    fprintf(stderr, "Failed to open directory '%s': %s\n", path, strerror(errno));
+    exit(1);
+  }
+  errno = 0;
+  while ((dir_entry = readdir(dir)) != NULL) {
+    run_dir_entry(path, dir_entry->d_name);
+  }
+  if (errno != 0) {
+    fprintf(stderr, "Failed to list files in '%s': %s\n", path, strerror(errno));
+    exit(1);
+  }
+  closedir(dir);
+#endif
+}
+
+void run_file_or_dir(const char *path) {
+  int res;
+  struct POSIX_STAT stat_info;
+
+  res = POSIX_STAT(path, &stat_info);
+  if (res != 0) {
+    fprintf(stderr, "Failed to access '%s'", path);
+    /* strerror is deprecated in the Microsoft CRT. */
+    perror("");
+    exit(1);
+  }
+  if (stat_info.st_mode & POSIX_S_IFDIR) {
+    traverse_dir(path);
+  } else if (stat_info.st_mode & POSIX_S_IFREG) {
+    run_file(path);
+  } else {
+    fprintf(stderr, "File type of '%s' is unsupported: %d\n", path, stat_info.st_mode);
+    exit(1);
+  }
+}
+
 int main(int argc, char **argv) {
   int i;
 
   fprintf(stderr, "StandaloneFuzzTargetMain: running %d inputs\n", argc - 1);
   LLVMFuzzerInitializeIfPresent(&argc, &argv);
   for (i = 1; i < argc; i++) {
-    run_one_file(argv[i]);
+    run_file_or_dir(argv[i]);
   }
   return 0;
 }
