@@ -83,44 +83,48 @@ static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
 }
 #endif
 
+void run_one_file(const char *path) {
+  FILE *f;
+  size_t len;
+  unsigned char *buf;
+  size_t n_read;
+  int res;
+
+  fprintf(stderr, "Running: %s\n", path);
+#ifdef _WIN32
+  /* fopen is deprecated in the Microsoft CRT. */
+    fopen_s(&f, path, "r");
+#else
+  /* fopen_s is not available in Unix C90 system headers. */
+  f = fopen(path, "r");
+#endif
+  if (f == NULL) {
+    perror("Failed to open file");
+    exit(1);
+  }
+  fseek(f, 0, SEEK_END);
+  len = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  buf = (unsigned char*)malloc(len);
+  assert(buf != NULL);
+  n_read = fread(buf, 1, len, f);
+  fclose(f);
+  assert(n_read == len);
+  res = LLVMFuzzerTestOneInput(buf, len);
+  /* Avoid "unused but set variable" warnings if asserts are compiled out with NDEBUG. */
+  (void)res;
+  assert(res == 0);
+  free(buf);
+  fprintf(stderr, "Done:    %s: (%ld bytes)\n", path, (unsigned long) n_read);
+}
+
 int main(int argc, char **argv) {
   int i;
-  int res;
 
   fprintf(stderr, "StandaloneFuzzTargetMain: running %d inputs\n", argc - 1);
   LLVMFuzzerInitializeIfPresent(&argc, &argv);
   for (i = 1; i < argc; i++) {
-    FILE *f;
-    size_t len;
-    unsigned char *buf;
-    size_t n_read;
-
-    fprintf(stderr, "Running: %s\n", argv[i]);
-#ifdef _WIN32
-    /* fopen is deprecated in the Microsoft CRT. */
-    fopen_s(&f, argv[i], "r");
-#else
-    /* fopen_s is not available in Unix C90 system headers. */
-    f = fopen(argv[i], "r");
-#endif
-    if (f == NULL) {
-      perror("Failed to open file");
-      exit(1);
-    }
-    fseek(f, 0, SEEK_END);
-    len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    buf = (unsigned char*)malloc(len);
-    assert(buf != NULL);
-    n_read = fread(buf, 1, len, f);
-    fclose(f);
-    assert(n_read == len);
-    res = LLVMFuzzerTestOneInput(buf, len);
-    /* Avoid "unused but set variable" warnings if asserts are compiled out with NDEBUG. */
-    (void)res;
-    assert(res == 0);
-    free(buf);
-    fprintf(stderr, "Done:    %s: (%ld bytes)\n", argv[i], (unsigned long) n_read);
+    run_one_file(argv[i]);
   }
   return 0;
 }
