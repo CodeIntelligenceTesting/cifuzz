@@ -43,6 +43,8 @@ function(add_fuzz_test name)
 
   add_executable("${name}" ${_args_sources})
   target_include_directories("${name}" SYSTEM PRIVATE "${CIFUZZ_INCLUDE_DIR}")
+  # This macro is consumed by cifuzz.h.
+  target_compile_definitions("${name}" PRIVATE CIFUZZ_TEST_NAME="${name}")
 
   if(CIFUZZ_ENGINE STREQUAL replayer)
     target_link_libraries("${name}" PRIVATE CIFuzz_Replayer)
