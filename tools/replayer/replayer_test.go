@@ -305,6 +305,8 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 				expectedOut := []string{
 					// Assert that LLVMFuzzerInitialize has been executed.
 					fmt.Sprintf("init(%d,%s)", len(rc.inputs)+1 /* argc */, replayer /* argv[0] */),
+					// Assert that the replayer always runs the test on the empty input.
+					"''",
 				}
 			outer_loop:
 				for _, inputs := range rc.inputs {
@@ -364,7 +366,7 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) 
 		} else {
 			require.NoError(t, err)
 		}
-		assert.Equal(t, []string{"'foo'", "'bar'"}, out)
+		assert.Equal(t, []string{"''", "'foo'", "'bar'"}, out)
 	})
 }
 

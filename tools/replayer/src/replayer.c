@@ -12,6 +12,7 @@
  *     dlsym and /alternatename
  *   - added an assert on malloc return value
  *   - added support for specifying directories as inputs
+ *   - always run on the empty input
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -103,12 +104,20 @@ static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
 }
 #endif
 
+void run_one_input(const unsigned char *data, size_t size) {
+  int res;
+
+  res = LLVMFuzzerTestOneInput(data, size);
+  /* Avoid "unused but set variable" warnings if asserts are compiled out with NDEBUG. */
+  (void)res;
+  assert(res == 0);
+}
+
 void run_file(const char *path) {
   FILE *f;
   size_t len;
   unsigned char *buf;
   size_t n_read;
-  int res;
 
   fprintf(stderr, "Running: %s\n", path);
 #ifdef _WIN32
@@ -130,10 +139,7 @@ void run_file(const char *path) {
   n_read = fread(buf, 1, len, f);
   fclose(f);
   assert(n_read == len);
-  res = LLVMFuzzerTestOneInput(buf, len);
-  /* Avoid "unused but set variable" warnings if asserts are compiled out with NDEBUG. */
-  (void)res;
-  assert(res == 0);
+  run_one_input(buf, len);
   free(buf);
   fprintf(stderr, "Done:    %s: (%ld bytes)\n", path, (unsigned long) n_read);
 }
@@ -235,9 +241,14 @@ void run_file_or_dir(const char *path) {
 
 int main(int argc, char **argv) {
   int i;
+  unsigned char empty[1];
 
-  fprintf(stderr, "StandaloneFuzzTargetMain: running %d inputs\n", argc - 1);
   LLVMFuzzerInitializeIfPresent(&argc, &argv);
+
+  fprintf(stderr, "Running: <empty input>\n");
+  run_one_input(&empty[0], 0);
+  fprintf(stderr, "Done:    <empty input>: (0 bytes)\n");
+
   for (i = 1; i < argc; i++) {
     run_file_or_dir(argv[i]);
   }
