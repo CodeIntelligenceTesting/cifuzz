@@ -10,6 +10,7 @@
  *   - added assert on LLVMFuzzerTestOneInput return value to mimic libFuzzer
  *   - made weak semantics of LLVMFuzzerInitialize work on macOS and Windows via
  *     dlsym and /alternatename
+ *   - added an assert on malloc return value
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -110,6 +111,7 @@ int main(int argc, char **argv) {
     len = ftell(f);
     fseek(f, 0, SEEK_SET);
     buf = (unsigned char*)malloc(len);
+    assert(buf != NULL);
     n_read = fread(buf, 1, len, f);
     fclose(f);
     assert(n_read == len);
