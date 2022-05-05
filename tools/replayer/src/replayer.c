@@ -13,6 +13,7 @@
  *   - added an assert on malloc return value
  *   - added support for specifying directories as inputs
  *   - always run on the empty input
+ *   - crash on UBSan findings
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -51,6 +52,13 @@
 #define POSIX_S_IFREG S_IFREG
 #include <dirent.h>
 #endif
+
+const char *__ubsan_default_options() {
+  /*
+   * With the reproducer, UBSan findings should always be fatal so that they lead to a non-zero exit code.
+   */
+  return "halt_on_error=1";
+}
 
 extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
 
