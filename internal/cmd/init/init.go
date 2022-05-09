@@ -1,4 +1,4 @@
-package cmd
+package init
 
 import (
 	"os"
@@ -7,10 +7,15 @@ import (
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/dialog"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
-func NewCmdInit() *cobra.Command {
+var fs *afero.Afero
+
+func NewCmdInit(useFs *afero.Afero) *cobra.Command {
+	fs = useFs
+
 	initCmd := &cobra.Command{
 		Use:   "init",
 		Short: "Set up a project for use with cifuzz",

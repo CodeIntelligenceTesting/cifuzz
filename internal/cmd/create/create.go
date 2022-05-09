@@ -1,4 +1,4 @@
-package cmd
+package create
 
 import (
 	"fmt"
@@ -13,16 +13,20 @@ import (
 	"code-intelligence.com/cifuzz/pkg/stubs"
 	"code-intelligence.com/cifuzz/pkg/workarounds"
 	"github.com/pkg/errors"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 )
+
+var fs *afero.Afero
 
 // map of supported test types -> label:value
 var supportedTestTypes = map[string]string{
 	"C/C++": string(config.CPP),
 }
 
-func NewCmdCreate() *cobra.Command {
+func NewCmdCreate(useFs *afero.Afero) *cobra.Command {
+	fs = useFs
 
 	createCmd := &cobra.Command{
 		Use:       fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTestTypes), "|")),

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"code-intelligence.com/cifuzz/internal/cmd"
+	"code-intelligence.com/cifuzz/internal/cmd/root"
 
 	"github.com/spf13/viper"
 )
@@ -12,5 +12,5 @@ func init() {
 }
 
 func main() {
-	cmd.Execute()
+	root.Execute()
 }

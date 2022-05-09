@@ -1,4 +1,4 @@
-package cmd
+package build
 
 import (
 	"github.com/pkg/errors"

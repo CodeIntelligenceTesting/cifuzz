@@ -1,41 +1,40 @@
-package cmd
+package create
 
 import (
 	"os"
 	"testing"
 
+	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/storage"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateCmd(t *testing.T) {
-	fs = storage.NewMemFileSystem()
+	fs := storage.NewMemFileSystem()
 
 	args := []string{
-		"create",
 		"cpp",
 		"--out",
 		"/tests/fuzz",
 		"--name",
 		"fuzz-test.cpp",
 	}
-	_, err := ExecuteCommand(t, os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, NewCmdCreate(fs), os.Stdin, args...)
 	assert.NoError(t, err)
 }
 
 func TestCreateCmd_InvalidType(t *testing.T) {
-	fs = storage.NewMemFileSystem()
+	fs := storage.NewMemFileSystem()
 
 	args := []string{
-		"create",
 		"foo",
 	}
-	_, err := ExecuteCommand(t, os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, NewCmdCreate(fs), os.Stdin, args...)
 	assert.Error(t, err)
 }
 
 func TestCreateCmd_InputFilename(t *testing.T) {
-	fs = storage.NewMemFileSystem()
+	fs := storage.NewMemFileSystem()
 
 	input := []byte("my_test_file.cpp\n")
 	r, w, err := os.Pipe()
@@ -46,11 +45,11 @@ func TestCreateCmd_InputFilename(t *testing.T) {
 	w.Close()
 
 	args := []string{
-		"create", "cpp",
+		"cpp",
 		"--out", "/test/",
 	}
 
-	_, err = ExecuteCommand(t, r, args...)
+	_, err = cmdutils.ExecuteCommand(t, NewCmdCreate(fs), r, args...)
 	assert.NoError(t, err)
 
 	exists, err := fs.Exists("/test/my_test_file.cpp")

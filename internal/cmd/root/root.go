@@ -1,9 +1,13 @@
-package cmd
+package root
 
 import (
 	"fmt"
 	"os"
 
+	buildCmd "code-intelligence.com/cifuzz/internal/cmd/build"
+	createCmd "code-intelligence.com/cifuzz/internal/cmd/create"
+	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
+	runCmd "code-intelligence.com/cifuzz/internal/cmd/run"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/storage"
 	"github.com/pkg/errors"
@@ -12,13 +16,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var fs *afero.Afero
-
-func setup(cmd *cobra.Command, args []string) {
-	fs = storage.WrapFileSystem()
-}
-
-func NewCmdRoot() *cobra.Command {
+func NewCmdRoot(fs *afero.Afero) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "cifuzz",
 		Short: "#tbd",
@@ -26,18 +24,16 @@ func NewCmdRoot() *cobra.Command {
 		// error handling
 		SilenceErrors: true,
 		SilenceUsage:  true,
-		// We are using PersistentPreRun to call setup to make sure that all flags/arguments are available
-		PersistentPreRun: setup,
 	}
 
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false,
 		"Show more verbose output, can be helpful for debugging problems")
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 
-	rootCmd.AddCommand(NewCmdInit())
-	rootCmd.AddCommand(NewCmdCreate())
-	rootCmd.AddCommand(NewCmdBuild())
-	rootCmd.AddCommand(NewCmdRun())
+	rootCmd.AddCommand(initCmd.NewCmdInit(fs))
+	rootCmd.AddCommand(createCmd.NewCmdCreate(fs))
+	rootCmd.AddCommand(buildCmd.NewCmdBuild())
+	rootCmd.AddCommand(runCmd.NewCmdRun())
 
 	return rootCmd
 }
@@ -45,7 +41,8 @@ func NewCmdRoot() *cobra.Command {
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	rootCmd := NewCmdRoot()
+	fs := storage.WrapFileSystem()
+	rootCmd := NewCmdRoot(fs)
 	if cmd, err := rootCmd.ExecuteC(); err != nil {
 
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
