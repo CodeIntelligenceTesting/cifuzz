@@ -18,21 +18,20 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-var fs *afero.Afero
-
 // map of supported test types -> label:value
 var supportedTestTypes = map[string]string{
 	"C/C++": string(config.CPP),
 }
 
-func NewCmdCreate(useFs *afero.Afero) *cobra.Command {
-	fs = useFs
+func NewCmdCreate(fs *afero.Afero) *cobra.Command {
 
 	createCmd := &cobra.Command{
-		Use:       fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTestTypes), "|")),
-		Short:     "Create a new fuzz test",
-		Long:      "Creates a template for a new fuzz test",
-		RunE:      runCreateCommand,
+		Use:   fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTestTypes), "|")),
+		Short: "Create a new fuzz test",
+		Long:  "Creates a template for a new fuzz test",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runCreateCommand(cmd, args, fs)
+		},
 		Args:      cobra.MatchAll(cobra.MaximumNArgs(1), cobra.OnlyValidArgs),
 		ValidArgs: maps.Values(supportedTestTypes),
 	}
@@ -43,7 +42,7 @@ func NewCmdCreate(useFs *afero.Afero) *cobra.Command {
 	return createCmd
 }
 
-func runCreateCommand(cmd *cobra.Command, args []string) (err error) {
+func runCreateCommand(cmd *cobra.Command, args []string, fs *afero.Afero) (err error) {
 	// get test type
 	testType, err := getTestType(cmd, args)
 	if err != nil {
@@ -66,7 +65,7 @@ func runCreateCommand(cmd *cobra.Command, args []string) (err error) {
 	}
 	dialog.DebugF("Using output directory: %s\n", outDir)
 
-	filename, err := determineFilename(cmd, outDir, testType)
+	filename, err := determineFilename(cmd, outDir, testType, fs)
 	if err != nil {
 		return err
 	}
@@ -102,7 +101,7 @@ func getTestType(cmd *cobra.Command, args []string) (config.FuzzTestType, error)
 	return config.FuzzTestType(userSelectedType), nil
 }
 
-func determineFilename(cmd *cobra.Command, outDir string, testType config.FuzzTestType) (string, error) {
+func determineFilename(cmd *cobra.Command, outDir string, testType config.FuzzTestType, fs *afero.Afero) (string, error) {
 	// check for the --name flag
 	nameFlag, err := cmd.Flags().GetString("name")
 	if err != nil {
