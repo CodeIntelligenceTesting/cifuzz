@@ -11,7 +11,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type cmdOpts struct {
+	fs *afero.Afero
+}
+
 func New(fs *afero.Afero) *cobra.Command {
+	opts := &cmdOpts{
+		fs: fs,
+	}
 	initCmd := &cobra.Command{
 		Use:   "init",
 		Short: "Set up a project for use with cifuzz",
@@ -19,21 +26,21 @@ func New(fs *afero.Afero) *cobra.Command {
 			"`.cifuzz.yaml` config file.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return run(cmd, args, fs)
+			return run(cmd, args, opts)
 		},
 	}
 
 	return initCmd
 }
 
-func run(cmd *cobra.Command, args []string, fs *afero.Afero) (err error) {
+func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	dialog.DebugF("Using current working directory: %s\n", cwd)
 
-	configpath, err := config.CreateProjectConfig(cwd, fs)
+	configpath, err := config.CreateProjectConfig(cwd, opts.fs)
 	if err != nil {
 		// explicitly inform the user about an existing config file
 		if os.IsExist(errors.Cause(err)) && configpath != "" {
