@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewCmdInit(fs *afero.Afero) *cobra.Command {
+func New(fs *afero.Afero) *cobra.Command {
 	initCmd := &cobra.Command{
 		Use:   "init",
 		Short: "Set up a project for use with cifuzz",
@@ -19,14 +19,14 @@ func NewCmdInit(fs *afero.Afero) *cobra.Command {
 			"`.cifuzz.yaml` config file.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInitCommand(cmd, args, fs)
+			return run(cmd, args, fs)
 		},
 	}
 
 	return initCmd
 }
 
-func runInitCommand(cmd *cobra.Command, args []string, fs *afero.Afero) (err error) {
+func run(cmd *cobra.Command, args []string, fs *afero.Afero) (err error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return errors.WithStack(err)

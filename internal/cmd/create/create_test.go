@@ -19,7 +19,7 @@ func TestCreateCmd(t *testing.T) {
 		"--name",
 		"fuzz-test.cpp",
 	}
-	_, err := cmdutils.ExecuteCommand(t, NewCmdCreate(fs), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, New(fs), os.Stdin, args...)
 	assert.NoError(t, err)
 }
 
@@ -29,7 +29,7 @@ func TestCreateCmd_InvalidType(t *testing.T) {
 	args := []string{
 		"foo",
 	}
-	_, err := cmdutils.ExecuteCommand(t, NewCmdCreate(fs), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, New(fs), os.Stdin, args...)
 	assert.Error(t, err)
 }
 
@@ -49,7 +49,7 @@ func TestCreateCmd_InputFilename(t *testing.T) {
 		"--out", "/test/",
 	}
 
-	_, err = cmdutils.ExecuteCommand(t, NewCmdCreate(fs), r, args...)
+	_, err = cmdutils.ExecuteCommand(t, New(fs), r, args...)
 	assert.NoError(t, err)
 
 	exists, err := fs.Exists("/test/my_test_file.cpp")

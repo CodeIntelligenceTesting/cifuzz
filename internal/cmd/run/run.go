@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewCmdRun() *cobra.Command {
+func New() *cobra.Command {
 	runCmd := &cobra.Command{
 		Use:   "run",
 		Short: "#TODO",

@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewCmdBuild() *cobra.Command {
+func New() *cobra.Command {
 	buildCmd := &cobra.Command{
 		Use:   "build",
 		Short: "#TODO",

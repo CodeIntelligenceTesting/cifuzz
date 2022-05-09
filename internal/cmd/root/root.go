@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func NewCmdRoot(fs *afero.Afero) *cobra.Command {
+func New(fs *afero.Afero) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "cifuzz",
 		Short: "#tbd",
@@ -30,10 +30,10 @@ func NewCmdRoot(fs *afero.Afero) *cobra.Command {
 		"Show more verbose output, can be helpful for debugging problems")
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 
-	rootCmd.AddCommand(initCmd.NewCmdInit(fs))
-	rootCmd.AddCommand(createCmd.NewCmdCreate(fs))
-	rootCmd.AddCommand(buildCmd.NewCmdBuild())
-	rootCmd.AddCommand(runCmd.NewCmdRun())
+	rootCmd.AddCommand(initCmd.New(fs))
+	rootCmd.AddCommand(createCmd.New(fs))
+	rootCmd.AddCommand(buildCmd.New())
+	rootCmd.AddCommand(runCmd.New())
 
 	return rootCmd
 }
@@ -42,7 +42,7 @@ func NewCmdRoot(fs *afero.Afero) *cobra.Command {
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	fs := storage.WrapFileSystem()
-	rootCmd := NewCmdRoot(fs)
+	rootCmd := New(fs)
 	if cmd, err := rootCmd.ExecuteC(); err != nil {
 
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace

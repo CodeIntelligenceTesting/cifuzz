@@ -9,6 +9,6 @@ import (
 )
 
 func TestRunCmd(t *testing.T) {
-	_, err := cmdutils.ExecuteCommand(t, NewCmdRun(), os.Stdin)
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin)
 	assert.Error(t, err)
 }

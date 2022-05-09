@@ -23,14 +23,14 @@ var supportedTestTypes = map[string]string{
 	"C/C++": string(config.CPP),
 }
 
-func NewCmdCreate(fs *afero.Afero) *cobra.Command {
+func New(fs *afero.Afero) *cobra.Command {
 
 	createCmd := &cobra.Command{
 		Use:   fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTestTypes), "|")),
 		Short: "Create a new fuzz test",
 		Long:  "Creates a template for a new fuzz test",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCreateCommand(cmd, args, fs)
+			return run(cmd, args, fs)
 		},
 		Args:      cobra.MatchAll(cobra.MaximumNArgs(1), cobra.OnlyValidArgs),
 		ValidArgs: maps.Values(supportedTestTypes),
@@ -42,7 +42,7 @@ func NewCmdCreate(fs *afero.Afero) *cobra.Command {
 	return createCmd
 }
 
-func runCreateCommand(cmd *cobra.Command, args []string, fs *afero.Afero) (err error) {
+func run(cmd *cobra.Command, args []string, fs *afero.Afero) (err error) {
 	// get test type
 	testType, err := getTestType(cmd, args)
 	if err != nil {
