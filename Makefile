@@ -81,3 +81,13 @@ test/coverage: deps
 	go test ./... -coverprofile coverage.out
 	go tool cover -html coverage.out
 
+
+.PHONY: site
+site: deps
+	-rm -rf site
+	git clone git@github.com:CodeIntelligenceTesting/cifuzz.wiki.git site 
+	go run ./cmd/gen-docs/main.go --dir ./site/
+	cp -R ./docs/*.md ./site
+	git -C site add -A
+	git -C site commit -m "update docs" || true
+	git -C site push
