@@ -36,4 +36,3 @@ func linkHandler(link string) string {
 func filePrepender(filename string) string {
 	return filename
 }
-

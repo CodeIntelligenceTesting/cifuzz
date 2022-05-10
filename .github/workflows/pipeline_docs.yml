@@ -1,0 +1,30 @@
+name: Docs Pipeline
+
+on: 
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  wiki:
+    name: update-wiki 
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          repository: CodeIntelligenceTesting/cifuzz.wiki
+          path: site
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.18'
+
+      - name: generate docs and upload to wiki
+        run: |
+          git config --global user.name 'cifuzz CI'
+          git config --global user.email 'cifuzz@code-intelligence.com'
+          make site/generate
+          make site/update
