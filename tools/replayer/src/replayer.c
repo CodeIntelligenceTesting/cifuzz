@@ -224,7 +224,7 @@ void run_file_or_dir(const char *path) {
 
   res = POSIX_STAT(path, &stat_info);
   if (res != 0) {
-    fprintf(stderr, "Failed to access '%s'", path);
+    fprintf(stderr, "Failed to access '%s': ", path);
     /* strerror is deprecated in the Microsoft CRT. */
     perror("");
     exit(1);
