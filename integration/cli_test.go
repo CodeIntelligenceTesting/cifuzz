@@ -68,3 +68,35 @@ func TestIntegration(t *testing.T) {
 	err = cmd.Run()
 	assert.NoError(t, err)
 }
+
+func TestDirectoryFlagAndOutFlag(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	executable, dir := prepareTestDir(t)
+	fmt.Printf("executing cmake integration test in %s\n", dir)
+
+	//execute root command
+	cmd := exec.Command(executable, "-C", dir)
+	err := cmd.Run()
+	assert.NoError(t, err)
+
+	// execute init command
+	cmd = exec.Command(executable, "init", "-C", dir)
+	err = cmd.Run()
+	assert.NoError(t, err)
+
+	// execute create command
+	cmd = exec.Command(executable,
+		"create", "cpp",
+		"-C", dir,
+		"--out", "fuzz-tests",
+		"--name", "my_test.cpp",
+	)
+	err = cmd.Run()
+	assert.NoError(t, err)
+
+	// check that the fuzz test was created in the correct directory
+	require.FileExists(t, filepath.Join(dir, "fuzz-tests", "my_test.cpp"))
+}
