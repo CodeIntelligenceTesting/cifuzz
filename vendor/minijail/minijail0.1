@@ -1,0 +1,385 @@
+.TH MINIJAIL0 "1" "March 2016" "Chromium OS" "User Commands"
+.SH NAME
+minijail0 \- sandbox a process
+.SH SYNOPSIS
+.B minijail0
+[\fIOPTION\fR]... <\fIPROGRAM\fR> [\fIargs\fR]...
+.SH DESCRIPTION
+.PP
+Runs PROGRAM inside a sandbox.
+.TP
+\fB-a <table>\fR
+Run using the alternate syscall table named \fItable\fR. Only available on kernels
+and architectures that support the \fBPR_ALT_SYSCALL\fR option of \fBprctl\fR(2).
+.TP
+\fB-b <src>[,[dest][,<writeable>]]
+Bind-mount \fIsrc\fR into the chroot directory at \fIdest\fR, optionally writeable.
+The \fIsrc\fR path must be an absolute path.
+
+If \fIdest\fR is not specified, it will default to \fIsrc\fR.
+If the destination does not exist, it will be created as a file or directory
+based on the \fIsrc\fR type (including missing parent directories).
+
+To create a writable bind-mount set \fIwritable\fR to \fB1\fR. If not specified
+it will default to \fB0\fR (read-only).
+.TP
+\fB-B <mask>\fR
+Skip setting securebits in \fImask\fR when restricting capabilities (\fB-c\fR).
+\fImask\fR is a hex constant that represents the mask of securebits that will
+be preserved.  See \fBcapabilities\fR(7) for the complete list.  By default,
+\fBSECURE_NOROOT\fR, \fBSECURE_NO_SETUID_FIXUP\fR, and \fBSECURE_KEEP_CAPS\fR
+(together with their respective locks) are set.
+\fBSECBIT_NO_CAP_AMBIENT_RAISE\fR (and its respective lock) is never set
+because the permitted and inheritable capability sets have already been set
+through \fB-c\fR.
+.TP
+\fB-c <caps>\fR
+Restrict capabilities to \fIcaps\fR, which is either a hex constant or a string
+that will be passed to \fBcap_from_text\fR(3) (only the effective capability
+mask will be considered).  The value will be used as the permitted, effective,
+and inheritable sets.  When used in conjunction with \fB-u\fR and \fB-g\fR,
+this allows a program to have access to only certain parts of root's default
+privileges while running as another user and group ID altogether.  Note that
+these capabilities are not inherited by subprocesses of the process given
+capabilities unless those subprocesses have POSIX file capabilities or the
+\fB--ambient\fR flag is also passed.  See \fBcapabilities\fR(7).
+.TP
+\fB-C <dir>\fR
+Change root (using \fBchroot\fR(2)) to \fIdir\fR.
+.TP
+\fB-d\fR, \fB--mount-dev\fR
+Create a new /dev mount with a minimal set of nodes. Implies \fB-v\fR.
+Additional nodes can be bound with the \fB-b\fR or \fB-k\fR options.
+
+.nf
+\[bu] The initial set of nodes are: full null tty urandom zero.
+\[bu] Symlinks are also created for: fd ptmx stderr stdin stdout.
+\[bu] Directores are also created for: shm.
+.re
+.TP
+\fB-e[file]\fR
+Enter a new network namespace, or if \fIfile\fR is specified, enter an existing
+network namespace specified by \fIfile\fR which is typically of the form
+/proc/<pid>/ns/net.
+.TP
+\fB-f <file>\fR
+Write the pid of the jailed process to \fIfile\fR.
+.TP
+\fB-g <group|gid>
+Change groups to the specified \fIgroup\fR name, or numeric group ID \fIgid\fR.
+.TP
+\fB-G\fR
+Inherit all the supplementary groups of the user specified with \fB-u\fR. It
+is an error to use this option without having specified a \fBuser name\fR to
+\fB-u\fR.
+.TP
+\fB--add-suppl-group <group|gid>\fR
+Add the specified \fIgroup\fR name, or numeric group ID \fIgid\fR,
+to the process' supplementary groups list. Can be specified
+multiple times to add several groups. Incompatible with -y and -G.
+.TP
+\fB-h\fR
+Print a help message.
+.TP
+\fB-H\fR
+Print a help message detailing supported system call names for seccomp_filter.
+(Other direct numbers may be specified if minijail0 is not in sync with the
+host kernel or something like 32/64-bit compatibility issues exist.)
+.TP
+\fB-i\fR
+Exit immediately after \fBfork\fR(2).  The jailed process will keep running in
+the background.
+
+Normally minijail will fork+exec the specified \fIprogram\fR so that it can set
+up the right security settings in the new child process. The initial minijail
+process will stay resident and wait for the \fIprogram\fR to exit so the script
+that ran minijail will correctly block (e.g. standalone scripts). Specifying
+\fB-i\fR makes that initial process exit immediately and free up the resources.
+
+This option is recommended for daemons and init services when you want to
+background the long running \fIprogram\fR.
+.TP
+\fB-I\fR
+Run \fIprogram\fR as init (pid 1) inside a new pid namespace (implies \fB-p\fR).
+
+Most programs don't expect to run as an init which is why minijail will do it
+for you by default. Basically, the \fIprogram\fR needs to reap any processes it
+forks to avoid leaving zombies behind. Signal handling needs care since the
+kernel will mask all signals that don't have handlers registered (all default
+handlers are ignored and cannot be changed).
+
+This means a minijail process (acting as init) will remain resident by default.
+While using \fB-I\fR is recommended when possible, strict review is required to
+make sure the \fIprogram\fR continues to work as expected.
+
+\fB-i\fR and \fB-I\fR may be safely used together. The \fB-i\fR option controls
+the first minijail process outside of the pid namespace while the \fB-I\fR
+option controls the minijail process inside of the pid namespace.
+.TP
+\fB-k <src>,<dest>,<type>[,<flags>[,<data>]]\fR
+Mount \fIsrc\fR, a \fItype\fR filesystem, at \fIdest\fR.  If a chroot or pivot
+root is active, \fIdest\fR will automatically be placed below that path.
+
+The \fIflags\fR field is optional and may be a mix of \fIMS_XXX\fR or hex
+constants separated by \fI|\fR characters.  See \fBmount\fR(2) for details.
+\fIMS_NODEV|MS_NOSUID|MS_NOEXEC\fR is the default value (a writable mount
+with nodev/nosuid/noexec bits set), and it is strongly recommended that all
+mounts have these three bits set whenever possible.  If you need to disable
+all three, then specify something like \fIMS_SILENT\fR.
+
+The \fIdata\fR field is optional and is a comma delimited string (see
+\fBmount\fR(2) for details).  It is passed directly to the kernel, so all
+fields here are filesystem specific.  For \fItmpfs\fR, if no data is specified,
+we will default to \fImode=0755,size=10M\fR.  If you want other settings, you
+will need to specify them explicitly yourself.
+
+If the mount is not a pseudo filesystem (e.g. proc or sysfs), \fIsrc\fR path
+must be an absolute path (e.g. \fI/dev/sda1\fR and not \fIsda1\fR).
+
+If the destination does not exist, it will be created as a directory (including
+missing parent directories).
+.TP
+\fB-K[mode]\fR
+Don't mark all existing mounts as MS_SLAVE.
+This option is \fBdangerous\fR as it negates most of the functionality of \fB-v\fR.
+You very likely don't need this.
+
+You may specify a mount propagation mode in which case, that will be used
+instead of the default MS_SLAVE.  See the \fBmount\fR(2) man page and the
+kernel docs \fIDocumentation/filesystems/sharedsubtree.txt\fR for more
+technical details, but a brief guide:
+
+.IP
+\[bu] \fBslave\fR Changes in the parent mount namespace will propagate in, but
+changes in this mount namespace will not propagate back out.  This is usually
+what people want to use, and is the default behavior if you don't specify \fB-K\fR.
+.IP
+\[bu] \fBprivate\fR No changes in either mount namespace will propagate.
+This provides the most isolation.
+.IP
+\[bu] \fBshared\fR Changes in the parent and this mount namespace will freely
+propagate back and forth.  This is not recommended.
+.IP
+\[bu] \fBunbindable\fR Mark all mounts as unbindable.
+.TP
+\fB-l\fR
+Run inside a new IPC namespace. This option makes the program's System V IPC
+namespace independent.
+.TP
+\fB-L\fR
+Report blocked syscalls when using a seccomp filter. On kernels with support for
+SECCOMP_RET_LOG, every blocked syscall will be reported through the audit
+subsystem (see \fBseccomp\fR(2) for more details on SECCOMP_RET_LOG
+availability.) On all other kernels, the first failing syscall will be logged to
+syslog. This latter case will also force certain syscalls to be allowed in order
+to write to syslog. Note: this option is disabled and ignored for release
+builds.
+.TP
+\fB-m[<uid> <loweruid> <count>[,<uid> <loweruid> <count>]]\fR
+Set the uid mapping of a user namespace (implies \fB-pU\fR). Same arguments as
+\fBnewuidmap\fR(1). Multiple mappings should be separated by ','. With no mapping,
+map the current uid to root inside the user namespace.
+.TP
+\fB-M[<uid> <loweruid> <count>[,<uid> <loweruid> <count>]]\fR
+Set the gid mapping of a user namespace (implies \fB-pU\fR). Same arguments as
+\fBnewgidmap\fR(1). Multiple mappings should be separated by ','. With no mapping,
+map the current gid to root inside the user namespace.
+.TP
+\fB-n\fR
+Set the process's \fIno_new_privs\fR bit. See \fBprctl\fR(2) and the kernel
+source file \fIDocumentation/prctl/no_new_privs.txt\fR for more info.
+.TP
+\fB-N\fR
+Run inside a new cgroup namespace. This option runs the program with a cgroup
+view showing the program's cgroup as the root. This is only available on v4.6+
+of the Linux kernel.
+.TP
+\fB-p\fR
+Run inside a new PID namespace. This option will make it impossible for the
+program to see or affect processes that are not its descendants. This implies
+\fB-v\fR and \fB-r\fR, since otherwise the process can see outside its namespace
+by inspecting /proc.
+
+If the \fIprogram\fR exits, all of its children will be killed immediately by
+the kernel. If you need to daemonize or background things, use the \fB-i\fR
+option.
+
+See \fBpid_namespaces\fR(7) for more info.
+.TP
+\fB-P <dir>\fR
+Set \fIdir\fR as the root fs using \fBpivot_root\fR. Implies \fB-v\fR, not
+compatible with \fB-C\fR.
+.TP
+\fB-r\fR
+Remount /proc readonly. This implies \fB-v\fR. Remounting /proc readonly means
+that even if the process has write access to a system config knob in /proc
+(e.g., in /sys/kernel), it cannot change the value.
+.TP
+\fB-R <rlim_type>,<rlim_cur>,<rlim_max>\fR
+Set an rlimit value, see \fBgetrlimit\fR(2) for more details.
+
+\fIrlim_type\fR may be specified using symbolic constants like \fIRLIMIT_AS\fR.
+
+\fIrlim_cur\fR and \fIrlim_max\fR are specified either with a number (decimal or
+hex starting with \fI0x\fR), or with the string \fIunlimited\fR (which will
+translate to \fIRLIM_INFINITY\fR).
+.TP
+\fB-s\fR
+Enable \fBseccomp\fR(2) in mode 1, which restricts the child process to a very
+small set of system calls.
+You most likely do not want to use this with the seccomp filter mode (\fB-S\fR)
+as they are completely different (even though they have similar names).
+.TP
+\fB-S <arch-specific seccomp_filter policy file>\fR
+Enable \fBseccomp\fR(2) in mode 13 which restricts the child process to a set of
+system calls defined in the policy file. Note that system call names may be
+different based on the runtime environment; see \fBminijail0\fR(5) for more
+details.
+.TP
+\fB-t[size]\fR
+Mounts a tmpfs filesystem on /tmp. /tmp must exist already (e.g. in the chroot).
+The filesystem has a default size of "64M", overridden with an optional
+argument. It has standard /tmp permissions (1777), and is mounted
+nodev/noexec/nosuid. Implies \fB-v\fR.
+.TP
+\fB-T <type>\fR
+Assume binary's ELF linkage type is \fItype\fR, which must be either 'static'
+or 'dynamic'. Either setting will prevent minijail0 from manually parsing the
+ELF header to determine the type. Type 'static' can be used to avoid preload
+hooking, and will force minijail0 to instead set everything up before the
+program is executed. Type 'dynamic' will force minijail0 to preload
+\fIlibminijailpreload.so\fR to setup hooks, but will fail on actually
+statically-linked binaries.
+.TP
+\fB-u <user|uid>\fR
+Change users to the specified \fIuser\fR name, or numeric user ID \fIuid\fR.
+.TP
+\fB-U\fR
+Enter a new user namespace (implies \fB-p\fR).
+.TP
+\fB-v\fR
+Run inside a new VFS namespace. This option prevents mounts performed by the
+program from affecting the rest of the system (but see \fB-K\fR).
+.TP
+\fB-V <file>\fR
+Enter the VFS namespace specified by \fIfile\fR.
+.TP
+\fB-w\fR
+Create and join a new anonymous session keyring.  See \fBkeyrings\fR(7) for more
+details.
+.TP
+\fB-y\fR
+Keep the current user's supplementary groups.
+.TP
+\fB-Y\fR
+Synchronize seccomp filters across thread group.
+.TP
+\fB-z\fR
+Don't forward any signals to the jailed process.  For example, when not using
+\fB-i\fR, sending \fBSIGINT\fR (e.g., CTRL-C on the terminal), will kill the
+minijail0 process, not the jailed process.
+.TP
+\fB--ambient\fR
+Raise ambient capabilities to match the mask specified by \fB-c\fR.  Since
+ambient capabilities are preserved across \fBexecve\fR(2), this allows for
+process trees to have a restricted set of capabilities, even if they are
+capability-dumb binaries.  See \fBcapabilities\fR(7).
+.TP
+\fB--uts[=hostname]\fR
+Create a new UTS/hostname namespace, and optionally set the hostname in the new
+namespace to \fIhostname\fR.
+.TP
+\fB--logging=<system>\fR
+Use \fIsystem\fR as the logging system. \fIsystem\fR must be one of
+\fBauto\fR (the default), \fBsyslog\fR, or \fBstderr\fR.
+
+\fBauto\fR will use \fBstderr\fR if connected to a tty (e.g. run directly by a
+user), otherwise it will use \fBsyslog\fR.
+.TP
+\fB--profile <profile>\fR
+Choose from one of the available sandboxing profiles, which are simple way to
+get a standardized environment. See the
+.BR "SANDBOXING PROFILES"
+section below for the full list of supported values for \fIprofile\fR.
+.TP
+\fB--preload-library <file path>\fR
+Allows overriding the default path of \fI/lib/libminijailpreload.so\fR.  This
+is only really useful for testing.
+\fB--seccomp-bpf-binary <arch-specific BPF binary>\fR
+This is similar to \fB-S\fR, but
+instead of using a policy file, \fB--secomp-bpf-binary\fR expects a
+arch-and-kernel-version-specific pre-compiled BPF binary (such as the ones
+produced by \fBparse_seccomp_policy\fR).  Note that the filter might be
+different based on the runtime environment; see \fBminijail0\fR(5) for more
+details.
+.TP
+\fB--allow-speculative-execution\fR
+Allow speculative execution features that may cause data leaks across processes.
+This passes the \fISECCOMP_FILTER_FLAG_SPEC_ALLOW\fR flag to seccomp which
+disables mitigations against certain speculative execution attacks; namely
+Branch Target Injection (spectre-v2) and Speculative Store Bypass (spectre-v4).
+These mitigations incur a runtime performance hit, so it is useful to be able
+to disable them in order to quantify their performance impact.
+
+\fBWARNING:\fR It is dangerous to use this option on programs that process
+untrusted input, which is normally what Minijail is used for. Do not enable
+this option unless you know what you're doing.
+
+See the kernel documentation \fIDocumentation/userspace-api/spec_ctrl.rst\fR
+and \fIDocumentation/admin-guide/hw-vuln/spectre.rst\fR for more information.
+.SH SANDBOXING PROFILES
+The following sandboxing profiles are supported:
+.TP
+\fBminimalistic-mountns\fR
+Set up a minimalistic mount namespace.  Equivalent to \fB-v -P /var/empty
+-b / -b /proc -b /dev/log -t -r --mount-dev\fR.
+.TP
+\fBminimalistic-mountns-nodev\fR
+Set up a minimalistic mount namespace with an empty /dev path.  Equivalent to
+\fB-v -P /var/empty -b/ -b/proc -t -r\fR.
+.SH IMPLEMENTATION
+This program is broken up into two parts: \fBminijail0\fR (the frontend) and a helper
+library called \fBlibminijailpreload\fR.  Some jailings can only be achieved
+from the process to which they will actually apply:
+
+.IP
+\[bu] capability use (without using ambient capabilities): non-ambient
+capabilities are not inherited across \fBexecve\fR(2) unless the file being
+executed has POSIX file capabilities.  Ambient capabilities (the
+\fB--ambient\fR flag) fix capability inheritance across \fBexecve\fR(2) to
+avoid the need for file capabilities.
+
+\[bu] seccomp: a meaningful seccomp filter policy should disallow
+\fBexecve\fR(2), to prevent a compromised process from executing a different
+binary.  However, this would prevent the seccomp policy from being applied
+before \fBexecve\fR(2).
+.RE
+
+To this end, \fBlibminijailpreload\fR is forcibly loaded into all
+dynamically-linked target programs by default; we pass the specific
+restrictions in an environment variable which the preloaded library looks for.
+The forcibly-loaded library then applies the restrictions to the newly-loaded
+program.
+
+This behavior can be disabled by the use of the \fB-T static\fR flag.  There
+are other cases in which the use of this flag might be useful:
+
+.IP
+\[bu] When \fIprogram\fR is linked against a different version of \fBlibc.so\fR
+than \fBlibminijailpreload.so\fR.
+
+\[bu] When \fBexecve\fR(2) has side-effects that interact badly with the
+jailing process.  If the system uses SELinux, \fBexecve\fR(2) can cause an
+automatic domain transition, which would then require that the target domain
+allows the operations to jail \fIprogram\fR.
+.RE
+
+.SH AUTHOR
+The Chromium OS Authors <chromiumos-dev@chromium.org>
+.SH COPYRIGHT
+Copyright \(co 2011 The Chromium OS Authors
+License BSD-like.
+.SH "SEE ALSO"
+.BR libminijail.h ,
+.BR minijail0 (5),
+.BR seccomp (2)

@@ -1,0 +1,122 @@
+load("//bazel:fuzz_target.bzl", "java_fuzz_target_test")
+load("//bazel:compat.bzl", "SKIP_ON_MACOS")
+
+java_fuzz_target_test(
+    name = "ObjectInputStreamDeserialization",
+    srcs = [
+        "ObjectInputStreamDeserialization.java",
+    ],
+    target_class = "com.example.ObjectInputStreamDeserialization",
+)
+
+java_fuzz_target_test(
+    name = "ReflectiveCall",
+    srcs = [
+        "ReflectiveCall.java",
+    ],
+    target_class = "com.example.ReflectiveCall",
+)
+
+java_fuzz_target_test(
+    name = "LibraryLoad",
+    srcs = [
+        "LibraryLoad.java",
+    ],
+    target_class = "com.example.LibraryLoad",
+    # loading of native libraries is very slow on macos,
+    # especially using Java 17
+    target_compatible_with = SKIP_ON_MACOS,
+)
+
+java_fuzz_target_test(
+    name = "ExpressionLanguageInjection",
+    srcs = [
+        "ExpressionLanguageInjection.java",
+        "InsecureEmailValidator.java",
+    ],
+    target_class = "com.example.ExpressionLanguageInjection",
+    deps = [
+        "@maven//:javax_el_javax_el_api",
+        "@maven//:javax_validation_validation_api",
+        "@maven//:javax_xml_bind_jaxb_api",
+        "@maven//:org_glassfish_javax_el",
+        "@maven//:org_hibernate_hibernate_validator",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "OsCommandInjectionProcessBuilder",
+    srcs = [
+        "OsCommandInjectionProcessBuilder.java",
+    ],
+    target_class = "com.example.OsCommandInjectionProcessBuilder",
+)
+
+java_fuzz_target_test(
+    name = "OsCommandInjectionRuntimeExec",
+    srcs = [
+        "OsCommandInjectionRuntimeExec.java",
+    ],
+    target_class = "com.example.OsCommandInjectionRuntimeExec",
+)
+
+java_fuzz_target_test(
+    name = "LdapSearchInjection",
+    srcs = [
+        "LdapSearchInjection.java",
+        "ldap/MockInitialContextFactory.java",
+        "ldap/MockLdapContext.java",
+    ],
+    expected_findings = ["javax.naming.directory.InvalidSearchFilterException"],
+    target_class = "com.example.LdapSearchInjection",
+    deps = [
+        "@maven//:com_unboundid_unboundid_ldapsdk",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "LdapDnInjection",
+    srcs = [
+        "LdapDnInjection.java",
+        "ldap/MockInitialContextFactory.java",
+        "ldap/MockLdapContext.java",
+    ],
+    expected_findings = ["javax.naming.NamingException"],
+    target_class = "com.example.LdapDnInjection",
+    deps = [
+        "@maven//:com_unboundid_unboundid_ldapsdk",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "RegexInsecureQuoteInjection",
+    srcs = ["RegexInsecureQuoteInjection.java"],
+    target_class = "com.example.RegexInsecureQuoteInjection",
+)
+
+java_fuzz_target_test(
+    name = "RegexCanonEqInjection",
+    srcs = [
+        "RegexCanonEqInjection.java",
+    ],
+    target_class = "com.example.RegexCanonEqInjection",
+)
+
+java_fuzz_target_test(
+    name = "ClassLoaderLoadClass",
+    srcs = [
+        "ClassLoaderLoadClass.java",
+    ],
+    target_class = "com.example.ClassLoaderLoadClass",
+)
+
+java_fuzz_target_test(
+    name = "RegexRoadblocks",
+    srcs = ["RegexRoadblocks.java"],
+    fuzzer_args = [
+        # Limit the number of runs to verify that the regex roadblocks are
+        # cleared quickly.
+        "-runs=22000",
+    ],
+    target_class = "com.example.RegexRoadblocks",
+)

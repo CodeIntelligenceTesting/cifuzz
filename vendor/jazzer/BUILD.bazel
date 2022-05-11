@@ -1,0 +1,82 @@
+load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
+load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "define_kt_toolchain")
+load("@io_bazel_rules_kotlin//kotlin/internal:opts.bzl", "kt_javac_options", "kt_kotlinc_options")
+
+exports_files(["LICENSE"])
+
+kt_kotlinc_options(
+    name = "kotlinc_options",
+)
+
+kt_javac_options(
+    name = "default_javac_options",
+)
+
+define_kt_toolchain(
+    name = "kotlin_toolchain",
+    api_version = "1.5",
+    javac_options = ":default_javac_options",
+    jvm_target = "1.8",
+    kotlinc_options = ":kotlinc_options",
+    language_version = "1.5",
+)
+
+pkg_tar(
+    name = "jazzer_release",
+    srcs = [
+        "//agent:jazzer_agent_deploy",
+        "//agent:jazzer_api_deploy.jar",
+        "//driver:jazzer_driver",
+    ],
+    extension = "tar.gz",
+    mode = "0777",
+    remap_paths = {
+        "agent/jazzer_agent_deploy.jar": "jazzer_agent_deploy.jar",
+        "agent/jazzer_api_deploy.jar": "jazzer_api_deploy.jar",
+        "driver/jazzer_driver": "jazzer",
+    },
+    strip_prefix = "./",
+)
+
+alias(
+    name = "jazzer",
+    actual = "//driver:jazzer_driver",
+)
+
+alias(
+    name = "jazzer_asan",
+    actual = "//driver:jazzer_driver_asan",
+)
+
+alias(
+    name = "jazzer_ubsan",
+    actual = "//driver:jazzer_driver_ubsan",
+)
+
+exports_files([
+    "jazzer-api.pom",
+])
+
+config_setting(
+    name = "clang",
+    flag_values = {"@bazel_tools//tools/cpp:compiler": "clang"},
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "clang_on_linux",
+    actual = select({
+        ":clang": "@platforms//os:linux",
+        "//conditions:default": ":clang",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+platform(
+    name = "x64_windows-clang-cl",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+        "@bazel_tools//tools/cpp:clang-cl",
+    ],
+)

@@ -1,0 +1,144 @@
+load("//bazel:compat.bzl", "SKIP_ON_MACOS")
+load("//bazel:fuzz_target.bzl", "java_fuzz_target_test")
+
+java_fuzz_target_test(
+    name = "LongStringFuzzer",
+    srcs = [
+        "src/test/java/com/example/LongStringFuzzer.java",
+    ],
+    data = ["src/test/java/com/example/LongStringFuzzerInput"],
+    expected_findings = ["com.code_intelligence.jazzer.api.FuzzerSecurityIssueLow"],
+    fuzzer_args = [
+        "$(rootpath src/test/java/com/example/LongStringFuzzerInput)",
+    ],
+    target_class = "com.example.LongStringFuzzer",
+    verify_crash_input = False,
+)
+
+java_fuzz_target_test(
+    name = "JpegImageParserAutofuzz",
+    expected_findings = ["java.lang.NegativeArraySizeException"],
+    fuzzer_args = [
+        "--autofuzz=org.apache.commons.imaging.formats.jpeg.JpegImageParser::getBufferedImage",
+        # Exit after the first finding for testing purposes.
+        "--keep_going=1",
+        "--autofuzz_ignore=java.lang.NullPointerException",
+    ],
+    runtime_deps = [
+        "@maven//:org_apache_commons_commons_imaging",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "HookDependenciesFuzzer",
+    srcs = ["src/test/java/com/example/HookDependenciesFuzzer.java"],
+    env = {"JAVA_OPTS": "-Xverify:all"},
+    hook_classes = ["com.example.HookDependenciesFuzzer"],
+    target_class = "com.example.HookDependenciesFuzzer",
+)
+
+java_fuzz_target_test(
+    name = "AutofuzzWithoutCoverage",
+    expected_findings = ["java.lang.NullPointerException"],
+    fuzzer_args = [
+        # Autofuzz a method that triggers no coverage instrumentation (the Java standard library is
+        # excluded by default).
+        "--autofuzz=java.util.regex.Pattern::compile",
+        "--keep_going=1",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "AutofuzzHookDependencies",
+    # The reproducer does not include the hook on OOM and thus throws a regular error.
+    expected_findings = ["java.lang.OutOfMemoryError"],
+    fuzzer_args = [
+        "--instrumentation_includes=java.util.regex.**",
+        "--autofuzz=java.util.regex.Pattern::compile",
+        "--autofuzz_ignore=java.lang.Exception",
+        "--keep_going=1",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "ForkModeFuzzer",
+    size = "enormous",
+    srcs = [
+        "src/test/java/com/example/ForkModeFuzzer.java",
+    ],
+    env = {
+        "JAVA_OPTS": "-Dfoo=not_foo -Djava_opts=1",
+    },
+    expected_findings = ["com.code_intelligence.jazzer.api.FuzzerSecurityIssueLow"],
+    fuzzer_args = [
+        "-fork=3",
+        "--additional_jvm_args=-Dbaz=baz",
+    ] + select({
+        # \\\\ becomes \\ when evaluated as a Starlark string literal, then \ in
+        # java_fuzz_target_test.
+        "@platforms//os:windows": ["--jvm_args=-Dfoo=foo;-Dbar=b\\\\;ar"],
+        "//conditions:default": ["--jvm_args=-Dfoo=foo:-Dbar=b\\\\:ar"],
+    }),
+    target_class = "com.example.ForkModeFuzzer",
+    # The exit codes of the forked libFuzzer processes are not picked up correctly.
+    target_compatible_with = SKIP_ON_MACOS,
+)
+
+java_fuzz_target_test(
+    name = "CoverageFuzzer",
+    srcs = [
+        "src/test/java/com/example/CoverageFuzzer.java",
+    ],
+    env = {
+        "COVERAGE_REPORT_FILE": "coverage.txt",
+        "COVERAGE_DUMP_FILE": "coverage.exec",
+    },
+    fuzzer_args = [
+        "-use_value_profile=1",
+        "--coverage_report=coverage.txt",
+        "--coverage_dump=coverage.exec",
+        "--instrumentation_includes=com.example.**",
+    ],
+    target_class = "com.example.CoverageFuzzer",
+    verify_crash_input = False,
+    verify_crash_reproducer = False,
+    deps = [
+        "@jazzer_jacoco//:jacoco_internal",
+    ],
+)
+
+java_library(
+    name = "autofuzz_inner_class_target",
+    srcs = ["src/test/java/com/example/AutofuzzInnerClassTarget.java"],
+    deps = [
+        "//agent:jazzer_api_compile_only",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "AutofuzzInnerClassFuzzer",
+    expected_findings = ["com.code_intelligence.jazzer.api.FuzzerSecurityIssueLow"],
+    fuzzer_args = [
+        "--autofuzz=com.example.AutofuzzInnerClassTarget.Middle.Inner::test",
+        "--keep_going=1",
+    ],
+    runtime_deps = [
+        ":autofuzz_inner_class_target",
+    ],
+)
+
+JAZZER_API_TEST_CASES = {
+    "default": [],
+    "nohooks": ["--nohooks"],
+}
+
+[
+    java_fuzz_target_test(
+        name = "JazzerApiFuzzer_" + case,
+        srcs = ["src/test/java/com/example/JazzerApiFuzzer.java"],
+        expected_findings = ["com.code_intelligence.jazzer.api.FuzzerSecurityIssueLow"],
+        fuzzer_args = args,
+        target_class = "com.example.JazzerApiFuzzer",
+    )
+    for case, args in JAZZER_API_TEST_CASES.items()
+]

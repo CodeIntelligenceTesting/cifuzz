@@ -1,0 +1,51 @@
+*.d
+*.depends
+/*.gen.c
+*.o
+*.a
+
+/constants.json
+
+# Coverage-related files that appear when building with MODE=profiling.
+*.gcno
+*.gcda
+/lcov-coverage.info
+/lcov-html/
+
+# libseccomp.
+/libseccomp/
+
+# Python-related files.
+/tools/__pycache__/
+*.pyc
+
+# Shared libraries when compiling in-tree.
+*.so
+
+# Executables when compiling in-tree.
+/dump_constants
+/libminijail_unittest
+/minijail0
+/minijail0_cli_unittest
+/syscall_filter_unittest
+/system_unittest
+/util_unittest
+/parse_seccomp_policy
+
+# common.mk TEST().
+*.test
+
+# Google Test.
+googletest-release*
+
+# Cargo build targets.
+/rust/**/target
+/rust/**/*.rs.bk
+/rust/**/Cargo.lock
+
+# VSCode workspace.
+minijail.code-workspace
+
+# IntelliJ projects.
+.idea
+

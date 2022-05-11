@@ -1,0 +1,148 @@
+// SPDX-License-Identifier: EPL-2.0 and Apache-2.0
+// These patches apply to JaCoCo (https://github.com/jacoco/jacoco) and are hereby made available under the terms of the
+// Eclipse Public License 2.0 available at:
+//   http://www.eclipse.org/legal/epl-2.0
+diff --git org.jacoco.core/src/org/jacoco/core/internal/instr/ClassInstrumenter.java org.jacoco.core/src/org/jacoco/core/internal/instr/ClassInstrumenter.java
+index 476c9e34..bc192dc6 100644
+--- org.jacoco.core/src/org/jacoco/core/internal/instr/ClassInstrumenter.java
++++ org.jacoco.core/src/org/jacoco/core/internal/instr/ClassInstrumenter.java
+@@ -24,6 +24,7 @@ import org.objectweb.asm.MethodVisitor;
+ public class ClassInstrumenter extends ClassProbesVisitor {
+ 
+ 	private final IProbeArrayStrategy probeArrayStrategy;
++	private final IProbeInserterFactory probeInserterFactory;
+ 
+ 	private String className;
+ 
+@@ -40,6 +41,22 @@ public class ClassInstrumenter extends ClassProbesVisitor {
+ 			final ClassVisitor cv) {
+ 		super(cv);
+ 		this.probeArrayStrategy = probeArrayStrategy;
++		this.probeInserterFactory = new IProbeInserterFactory() {
++			@Override
++			public ProbeInserter makeProbeInserter(int access, String name,
++					String desc, MethodVisitor mv,
++					IProbeArrayStrategy arrayStrategy) {
++				return new ProbeInserter(access, name, desc, mv, arrayStrategy);
++			}
++		};
++	}
++
++	public ClassInstrumenter(final IProbeArrayStrategy probeArrayStrategy,
++			final IProbeInserterFactory probeInserterFactory,
++			final ClassVisitor cv) {
++		super(cv);
++		this.probeArrayStrategy = probeArrayStrategy;
++		this.probeInserterFactory = probeInserterFactory;
+ 	}
+ 
+ 	@Override
+@@ -71,8 +88,9 @@ public class ClassInstrumenter extends ClassProbesVisitor {
+ 			return null;
+ 		}
+ 		final MethodVisitor frameEliminator = new DuplicateFrameEliminator(mv);
+-		final ProbeInserter probeVariableInserter = new ProbeInserter(access,
+-				name, desc, frameEliminator, probeArrayStrategy);
++		final ProbeInserter probeVariableInserter =
++				probeInserterFactory.makeProbeInserter(access, name, desc,
++						frameEliminator, probeArrayStrategy);
+ 		return new MethodInstrumenter(probeVariableInserter,
+ 				probeVariableInserter);
+ 	}
+diff --git org.jacoco.core/src/org/jacoco/core/internal/instr/IProbeInserterFactory.java org.jacoco.core/src/org/jacoco/core/internal/instr/IProbeInserterFactory.java
+new file mode 100644
+index 00000000..19c2a7e2
+--- /dev/null
++++ org.jacoco.core/src/org/jacoco/core/internal/instr/IProbeInserterFactory.java
+@@ -0,0 +1,8 @@
++package org.jacoco.core.internal.instr;
++
++import org.objectweb.asm.MethodVisitor;
++
++public interface IProbeInserterFactory {
++    ProbeInserter makeProbeInserter(int access, String name, String desc,
++            MethodVisitor mv, IProbeArrayStrategy arrayStrategy);
++}
+diff --git org.jacoco.core/src/org/jacoco/core/internal/instr/ProbeInserter.java org.jacoco.core/src/org/jacoco/core/internal/instr/ProbeInserter.java
+index 0f5b99ff..80965dfe 100644
+--- org.jacoco.core/src/org/jacoco/core/internal/instr/ProbeInserter.java
++++ org.jacoco.core/src/org/jacoco/core/internal/instr/ProbeInserter.java
+@@ -25,7 +25,7 @@ import org.objectweb.asm.TypePath;
+  * addition the probe array has to be retrieved at the beginning of the method
+  * and stored in a local variable.
+  */
+-class ProbeInserter extends MethodVisitor implements IProbeInserter {
++public class ProbeInserter extends MethodVisitor implements IProbeInserter {
+ 
+ 	private final IProbeArrayStrategy arrayStrategy;
+ 
+@@ -36,7 +36,7 @@ class ProbeInserter extends MethodVisitor implements IProbeInserter {
+ 	private final boolean clinit;
+ 
+ 	/** Position of the inserted variable. */
+-	private final int variable;
++	protected final int variable;
+ 
+ 	/** Label for the new beginning of the method */
+ 	private final Label beginLabel;
+@@ -56,7 +56,7 @@ class ProbeInserter extends MethodVisitor implements IProbeInserter {
+ 	 *            callback to create the code that retrieves the reference to
+ 	 *            the probe array
+ 	 */
+-	ProbeInserter(final int access, final String name, final String desc,
++	public ProbeInserter(final int access, final String name, final String desc,
+ 			final MethodVisitor mv, final IProbeArrayStrategy arrayStrategy) {
+ 		super(InstrSupport.ASM_API_VERSION, mv);
+ 		this.clinit = InstrSupport.CLINIT_NAME.equals(name);
+@@ -91,6 +91,10 @@ class ProbeInserter extends MethodVisitor implements IProbeInserter {
+ 		mv.visitInsn(Opcodes.BASTORE);
+ 	}
+ 
++	protected Object getLocalVariableType() {
++		return InstrSupport.DATAFIELD_DESC;
++	}
++
+ 	@Override
+ 	public void visitCode() {
+ 		mv.visitLabel(beginLabel);
+@@ -118,6 +122,10 @@ class ProbeInserter extends MethodVisitor implements IProbeInserter {
+ 	public AnnotationVisitor visitLocalVariableAnnotation(final int typeRef,
+ 			final TypePath typePath, final Label[] start, final Label[] end,
+ 			final int[] index, final String descriptor, final boolean visible) {
++		if (getLocalVariableType() == null) {
++			return visitLocalVariableAnnotation(typeRef, typePath, start, end, index, descriptor, visible);
++		}
++
+ 		final int[] newIndex = new int[index.length];
+ 		for (int i = 0; i < newIndex.length; i++) {
+ 			newIndex[i] = map(index[i]);
+@@ -137,6 +145,9 @@ class ProbeInserter extends MethodVisitor implements IProbeInserter {
+ 	}
+ 
+ 	private int map(final int var) {
++		if (getLocalVariableType() == null) {
++			return var;
++		}
+ 		if (var < variable) {
+ 			return var;
+ 		} else {
+@@ -153,13 +164,18 @@ class ProbeInserter extends MethodVisitor implements IProbeInserter {
+ 					"ClassReader.accept() should be called with EXPAND_FRAMES flag");
+ 		}
+ 
++        if (getLocalVariableType() == null) {
++			mv.visitFrame(type, nLocal, local, nStack, stack);
++			return;
++		}
++
+ 		final Object[] newLocal = new Object[Math.max(nLocal, variable) + 1];
+ 		int idx = 0; // Arrays index for existing locals
+ 		int newIdx = 0; // Array index for new locals
+ 		int pos = 0; // Current variable position
+ 		while (idx < nLocal || pos <= variable) {
+ 			if (pos == variable) {
+-				newLocal[newIdx++] = InstrSupport.DATAFIELD_DESC;
++				newLocal[newIdx++] = getLocalVariableType();
+ 				pos++;
+ 			} else {
+ 				if (idx < nLocal) {

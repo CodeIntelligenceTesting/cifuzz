@@ -1,0 +1,349 @@
+load("@io_bazel_rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+load("@fmeum_rules_jni//jni:defs.bzl", "java_jni_library")
+load("//bazel:compat.bzl", "SKIP_ON_MACOS", "SKIP_ON_WINDOWS")
+load("//bazel:fuzz_target.bzl", "java_fuzz_target_test")
+
+java_fuzz_target_test(
+    name = "Autofuzz",
+    expected_findings = ["java.lang.ArrayIndexOutOfBoundsException"],
+    fuzzer_args = [
+        "--autofuzz=com.google.json.JsonSanitizer::sanitize",
+        # Exit after the first finding for testing purposes.
+        "--keep_going=1",
+    ],
+    runtime_deps = [
+        "@maven//:com_mikesamuel_json_sanitizer",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "ExampleFuzzer",
+    srcs = [
+        "src/main/java/com/example/ExampleFuzzer.java",
+        "src/main/java/com/example/ExampleFuzzerHooks.java",
+    ],
+    # Comment out the next line to keep the fuzzer running indefinitely.
+    hook_classes = ["com.example.ExampleFuzzerHooks"],
+    target_class = "com.example.ExampleFuzzer",
+)
+
+java_jni_library(
+    name = "example_fuzzer_with_native_lib",
+    srcs = [
+        "src/main/java/com/example/ExampleFuzzerWithNative.java",
+    ],
+    native_libs = [
+        "//examples/src/main/native/com/example:native_asan",
+        "//examples/src/main/native/com/example:native_ubsan",
+    ],
+    visibility = ["//examples/src/main/native/com/example:__pkg__"],
+    deps = [
+        "//agent:jazzer_api_compile_only",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "ExampleFuzzerWithASan",
+    fuzzer_args = ["--jvm_args=-Djazzer.native_lib=native_asan"],
+    sanitizer = "address",
+    target_class = "com.example.ExampleFuzzerWithNative",
+    verify_crash_reproducer = False,
+    runtime_deps = [
+        ":example_fuzzer_with_native_lib",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "ExampleFuzzerWithUBSan",
+    fuzzer_args = ["--jvm_args=-Djazzer.native_lib=native_ubsan"],
+    sanitizer = "undefined",
+    target_class = "com.example.ExampleFuzzerWithNative",
+    # Crashes at runtime without an error message.
+    target_compatible_with = SKIP_ON_WINDOWS,
+    verify_crash_reproducer = False,
+    runtime_deps = [
+        ":example_fuzzer_with_native_lib",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "ExamplePathTraversalFuzzer",
+    srcs = [
+        "src/main/java/com/example/ExamplePathTraversalFuzzer.java",
+        "src/main/java/com/example/ExamplePathTraversalFuzzerHooks.java",
+    ],
+    hook_classes = ["com.example.ExamplePathTraversalFuzzerHooks"],
+    target_class = "com.example.ExamplePathTraversalFuzzer",
+)
+
+java_fuzz_target_test(
+    name = "ExampleValueProfileFuzzer",
+    srcs = [
+        "src/main/java/com/example/ExampleValueProfileFuzzer.java",
+    ],
+    expected_findings = ["com.code_intelligence.jazzer.api.FuzzerSecurityIssueLow"],
+    # Comment out the next line to keep the fuzzer running indefinitely.
+    fuzzer_args = ["-use_value_profile=1"],
+    target_class = "com.example.ExampleValueProfileFuzzer",
+)
+
+java_fuzz_target_test(
+    name = "MazeFuzzer",
+    srcs = [
+        "src/main/java/com/example/MazeFuzzer.java",
+    ],
+    expected_findings = ["com.example.MazeFuzzer$$TreasureFoundException"],
+    fuzzer_args = ["-use_value_profile=1"],
+    target_class = "com.example.MazeFuzzer",
+)
+
+java_fuzz_target_test(
+    name = "ExampleOutOfMemoryFuzzer",
+    srcs = [
+        "src/main/java/com/example/ExampleOutOfMemoryFuzzer.java",
+    ],
+    expected_findings = ["java.lang.OutOfMemoryError"],
+    fuzzer_args = ["--jvm_args=-Xmx512m"],
+    target_class = "com.example.ExampleOutOfMemoryFuzzer",
+)
+
+java_fuzz_target_test(
+    name = "ExampleStackOverflowFuzzer",
+    srcs = [
+        "src/main/java/com/example/ExampleStackOverflowFuzzer.java",
+    ],
+    expected_findings = ["java.lang.StackOverflowError"],
+    target_class = "com.example.ExampleStackOverflowFuzzer",
+    # Crashes with a segfault before any stack trace printing is reached.
+    target_compatible_with = SKIP_ON_MACOS,
+)
+
+# WARNING: This fuzz target uses a vulnerable version of log4j, which could result in the execution
+# of arbitrary code during fuzzing if executed with an older JDK. Use at your own risk.
+java_fuzz_target_test(
+    name = "Log4jFuzzer",
+    timeout = "long",
+    srcs = [
+        "src/main/java/com/example/Log4jFuzzer.java",
+    ],
+    fuzzer_args = [
+        "-fork=4",
+        "-use_value_profile=1",
+    ],
+    # Finding this bug takes ~5 minutes on a decent laptop, but the GitHub Actions machines are not
+    # powerful enough to run it as part of our test suite.
+    tags = ["manual"],
+    target_class = "com.example.Log4jFuzzer",
+    deps = [
+        "@maven//:org_apache_logging_log4j_log4j_api",
+        "@maven//:org_apache_logging_log4j_log4j_core",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "JpegImageParserFuzzer",
+    size = "enormous",
+    srcs = [
+        "src/main/java/com/example/JpegImageParserFuzzer.java",
+    ],
+    expected_findings = ["java.lang.NegativeArraySizeException"],
+    fuzzer_args = [
+        "-fork=3",
+    ],
+    target_class = "com.example.JpegImageParserFuzzer",
+    # The exit codes of the forked libFuzzer processes are not picked up correctly.
+    target_compatible_with = SKIP_ON_MACOS,
+    deps = [
+        "@maven//:org_apache_commons_commons_imaging",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "GifImageParserFuzzer",
+    srcs = [
+        "src/main/java/com/example/GifImageParserFuzzer.java",
+    ],
+    expected_findings = [
+        "java.lang.ArrayIndexOutOfBoundsException",
+        "java.lang.IllegalArgumentException",
+        "java.lang.OutOfMemoryError",
+    ],
+    target_class = "com.example.GifImageParserFuzzer",
+    deps = [
+        "@maven//:org_apache_commons_commons_imaging",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "TiffImageParserFuzzer",
+    srcs = [
+        "src/main/java/com/example/TiffImageParserFuzzer.java",
+    ],
+    tags = ["manual"],
+    target_class = "com.example.TiffImageParserFuzzer",
+    deps = [
+        "@maven//:org_apache_commons_commons_imaging",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "JsonSanitizerCrashFuzzer",
+    srcs = [
+        "src/main/java/com/example/JsonSanitizerCrashFuzzer.java",
+    ],
+    expected_findings = ["java.lang.IndexOutOfBoundsException"],
+    target_class = "com.example.JsonSanitizerCrashFuzzer",
+    deps = [
+        "@maven//:com_mikesamuel_json_sanitizer",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "JsonSanitizerDenylistFuzzer",
+    srcs = [
+        "src/main/java/com/example/JsonSanitizerDenylistFuzzer.java",
+    ],
+    expected_findings = ["java.lang.AssertionError"],
+    target_class = "com.example.JsonSanitizerDenylistFuzzer",
+    deps = [
+        "@maven//:com_mikesamuel_json_sanitizer",
+    ],
+)
+
+java_binary(
+    name = "JsonSanitizerReplayerCrash",
+    data = [
+        ":json_sanitizer_denylist_crash",
+    ],
+    main_class = "com.code_intelligence.jazzer.replay.Replayer",
+    runtime_deps = [
+        ":JsonSanitizerDenylistFuzzer_target_deploy.jar",
+        "//agent/src/main/java/com/code_intelligence/jazzer/replay:Replayer_deploy.jar",
+    ],
+)
+
+sh_test(
+    name = "JsonSanitizerReplayerCrashTest",
+    srcs = ["check_for_finding.sh"],
+    args = [
+        "jazzer/$(rootpath :JsonSanitizerReplayerCrash)",
+        "com.example.JsonSanitizerDenylistFuzzer",
+        "jazzer/$(rootpath :json_sanitizer_denylist_crash)",
+    ],
+    data = [
+        ":JsonSanitizerReplayerCrash",
+        ":json_sanitizer_denylist_crash",
+    ],
+    deps = [
+        "@bazel_tools//tools/bash/runfiles",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "JsonSanitizerIdempotenceFuzzer",
+    srcs = [
+        "src/main/java/com/example/JsonSanitizerIdempotenceFuzzer.java",
+    ],
+    expected_findings = ["java.lang.AssertionError"],
+    target_class = "com.example.JsonSanitizerIdempotenceFuzzer",
+    deps = [
+        "@maven//:com_mikesamuel_json_sanitizer",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "JsonSanitizerValidJsonFuzzer",
+    srcs = [
+        "src/main/java/com/example/JsonSanitizerValidJsonFuzzer.java",
+    ],
+    expected_findings = ["com.code_intelligence.jazzer.api.FuzzerSecurityIssueLow"],
+    target_class = "com.example.JsonSanitizerValidJsonFuzzer",
+    deps = [
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:com_mikesamuel_json_sanitizer",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "JacksonCborFuzzer",
+    srcs = [
+        "src/main/java/com/example/JacksonCborFuzzer.java",
+    ],
+    expected_findings = ["java.lang.NullPointerException"],
+    target_class = "com.example.JacksonCborFuzzer",
+    deps = [
+        "@maven//:com_fasterxml_jackson_core_jackson_core",
+        "@maven//:com_fasterxml_jackson_core_jackson_databind",
+        "@maven//:com_fasterxml_jackson_dataformat_jackson_dataformat_cbor",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "FastJsonFuzzer",
+    srcs = [
+        "src/main/java/com/example/FastJsonFuzzer.java",
+    ],
+    expected_findings = ["java.lang.NumberFormatException"],
+    target_class = "com.example.FastJsonFuzzer",
+    deps = [
+        "@maven//:com_alibaba_fastjson",
+    ],
+)
+
+kt_jvm_library(
+    name = "KlaxonFuzzTarget",
+    srcs = [
+        "src/main/java/com/example/KlaxonFuzzer.kt",
+    ],
+    deps = [
+        "//agent:jazzer_api_compile_only",
+        "@maven//:com_beust_klaxon",
+    ],
+)
+
+java_fuzz_target_test(
+    name = "KlaxonFuzzer",
+    expected_findings = [
+        "java.lang.ClassCastException",
+        "java.lang.IllegalStateException",
+        "java.lang.NumberFormatException",
+    ],
+    fuzzer_args = [
+        "--keep_going=7",
+    ],
+    target_class = "com.example.KlaxonFuzzer",
+    runtime_deps = [":KlaxonFuzzTarget"],
+)
+
+java_fuzz_target_test(
+    name = "TurboJpegFuzzer",
+    srcs = [
+        "src/main/java/com/example/TurboJpegFuzzer.java",
+    ],
+    data = [
+        "@libjpeg_turbo//:turbojpeg_native",
+    ],
+    fuzzer_args = [
+        "-rss_limit_mb=8196",
+    ],
+    sanitizer = "address",
+    tags = ["manual"],
+    target_class = "com.example.TurboJpegFuzzer",
+    deps = [
+        "@libjpeg_turbo//:turbojpeg_java",
+    ],
+)
+
+java_binary(
+    name = "examples",
+    create_executable = False,
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":ExampleFuzzer_target_deploy.jar",
+        ":ExampleValueProfileFuzzer_target_deploy.jar",
+        ":FastJsonFuzzer_target_deploy.jar",
+        ":JacksonCborFuzzer_target_deploy.jar",
+        ":JpegImageParserFuzzer_target_deploy.jar",
+        ":JsonSanitizerDenylistFuzzer_target_deploy.jar",
+    ],
+)

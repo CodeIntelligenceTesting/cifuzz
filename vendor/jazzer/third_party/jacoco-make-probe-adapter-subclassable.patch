@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: EPL-2.0 and Apache-2.0
+// These patches apply to JaCoCo (https://github.com/jacoco/jacoco) and are hereby made available under the terms of the
+// Eclipse Public License 2.0 available at:
+//   http://www.eclipse.org/legal/epl-2.0
+diff --git org.jacoco.core/src/org/jacoco/core/analysis/Analyzer.java org.jacoco.core/src/org/jacoco/core/analysis/Analyzer.java
+index 0cc06ada..b65efb03 100644
+--- org.jacoco.core/src/org/jacoco/core/analysis/Analyzer.java
++++ org.jacoco.core/src/org/jacoco/core/analysis/Analyzer.java
+@@ -31,6 +31,8 @@ import org.jacoco.core.internal.analysis.ClassCoverageImpl;
+ import org.jacoco.core.internal.analysis.StringPool;
+ import org.jacoco.core.internal.data.CRC64;
+ import org.jacoco.core.internal.flow.ClassProbesAdapter;
++import org.jacoco.core.internal.flow.ClassProbesVisitor;
++import org.jacoco.core.internal.flow.IClassProbesAdapterFactory;
+ import org.jacoco.core.internal.instr.InstrSupport;
+ import org.objectweb.asm.ClassReader;
+ import org.objectweb.asm.ClassVisitor;
+@@ -52,6 +54,8 @@ public class Analyzer {
+ 
+ 	private final StringPool stringPool;
+ 
++	private final IClassProbesAdapterFactory classProbesAdapterFactory;
++
+ 	/**
+ 	 * Creates a new analyzer reporting to the given output.
+ 	 *
+@@ -63,9 +67,21 @@ public class Analyzer {
+ 	 */
+ 	public Analyzer(final ExecutionDataStore executionData,
+ 			final ICoverageVisitor coverageVisitor) {
++		this(executionData, coverageVisitor, new IClassProbesAdapterFactory() {
++			@Override
++			public ClassProbesAdapter makeClassProbesAdapter(ClassProbesVisitor cv, boolean trackFrames) {
++				return new ClassProbesAdapter(cv, trackFrames);
++			};
++		});
++	}
++
++	public Analyzer(final ExecutionDataStore executionData,
++			final ICoverageVisitor coverageVisitor,
++			final IClassProbesAdapterFactory classProbesAdapterFactory) {
+ 		this.executionData = executionData;
+ 		this.coverageVisitor = coverageVisitor;
+ 		this.stringPool = new StringPool();
++		this.classProbesAdapterFactory = classProbesAdapterFactory;
+ 	}
+ 
+ 	/**
+@@ -99,7 +115,7 @@ public class Analyzer {
+ 				coverageVisitor.visitCoverage(coverage);
+ 			}
+ 		};
+-		return new ClassProbesAdapter(analyzer, false);
++		return classProbesAdapterFactory.makeClassProbesAdapter(analyzer, false);
+ 	}
+ 
+ 	private void analyzeClass(final byte[] source) {
+diff --git org.jacoco.core/src/org/jacoco/core/internal/flow/IClassProbesAdapterFactory.java org.jacoco.core/src/org/jacoco/core/internal/flow/IClassProbesAdapterFactory.java
+new file mode 100644
+index 00000000..45fc2709
+--- /dev/null
++++ org.jacoco.core/src/org/jacoco/core/internal/flow/IClassProbesAdapterFactory.java
+@@ -0,0 +1,6 @@
++package org.jacoco.core.internal.flow;
++
++public interface IClassProbesAdapterFactory {
++	ClassProbesAdapter makeClassProbesAdapter(ClassProbesVisitor cv,
++			boolean trackFrames);
++}

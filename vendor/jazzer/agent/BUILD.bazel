@@ -1,0 +1,64 @@
+load("@com_github_johnynek_bazel_jar_jar//:jar_jar.bzl", "jar_jar")
+load("//bazel:compat.bzl", "SKIP_ON_WINDOWS")
+load("//bazel:jar.bzl", "strip_jar")
+load("//sanitizers:sanitizers.bzl", "SANITIZER_CLASSES")
+
+java_binary(
+    name = "jazzer_agent_unshaded",
+    create_executable = False,
+    deploy_manifest_lines = [
+        "Premain-Class: com.code_intelligence.jazzer.agent.Agent",
+        "Can-Retransform-Classes: true",
+        "Jazzer-Hook-Classes: {}".format(":".join(SANITIZER_CLASSES)),
+    ],
+    runtime_deps = [
+        "//agent/src/main/java/com/code_intelligence/jazzer/agent:agent_lib",
+        "//sanitizers",
+    ],
+)
+
+strip_jar(
+    name = "jazzer_agent_deploy",
+    out = "jazzer_agent_deploy.jar",
+    jar = ":jazzer_agent_shaded_deploy",
+    paths_to_strip = [
+        "module-info.class",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+jar_jar(
+    name = "jazzer_agent_shaded_deploy",
+    input_jar = "jazzer_agent_unshaded_deploy.jar",
+    rules = "agent_shade_rules",
+)
+
+sh_test(
+    name = "jazzer_agent_shading_test",
+    srcs = ["verify_shading.sh"],
+    args = [
+        "$(rootpath :jazzer_agent_deploy)",
+    ],
+    data = [
+        ":jazzer_agent_deploy",
+        "@local_jdk//:bin/jar",
+    ],
+    target_compatible_with = SKIP_ON_WINDOWS,
+)
+
+java_binary(
+    name = "jazzer_api",
+    create_executable = False,
+    visibility = ["//visibility:public"],
+    runtime_deps = ["//agent/src/main/java/com/code_intelligence/jazzer/api"],
+)
+
+java_import(
+    name = "jazzer_api_compile_only",
+    jars = [
+        ":jazzer_api_deploy.jar",
+    ],
+    neverlink = True,
+    visibility = ["//visibility:public"],
+    deps = [],
+)

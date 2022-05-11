@@ -1,0 +1,62 @@
+name: Build all targets and run all tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+
+  build_and_test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-11, windows-latest]
+        jdk: [8, 17]
+        include:
+          - os: ubuntu-latest
+            arch: "linux"
+            cache: "/home/runner/.cache/bazel-disk"
+          - os: macos-11
+            arch: "macos-x86_64"
+            # Always use the toolchain as UBSan produces linker errors with Apple LLVM 13.
+            bazel_args: "--config=toolchain --extra_toolchains=@llvm_toolchain//:cc-toolchain-x86_64-darwin --xcode_version_config=//.github:host_xcodes"
+            cache: "/private/var/tmp/bazel-disk"
+          - os: windows-latest
+            arch: "windows"
+            cache: "%HOME%/bazel-disk"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.jdk }}
+
+      - name: Mount Bazel disk cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ matrix.cache }}
+          key: bazel-disk-cache-${{ matrix.arch }}-${{ matrix.jdk }}
+
+      - name: Set Build Buddy config
+        run: .github/scripts/echoBuildBuddyConfig.sh ${{ secrets.BUILDBUDDY_API_KEY }} >> $GITHUB_ENV
+        shell: bash
+
+      - name: Build
+        run: bazelisk build ${{env.BUILD_BUDDY_CONFIG}} --java_runtime_version=local_jdk_${{ matrix.jdk }} --disk_cache=${{ matrix.cache }} ${{ matrix.bazel_args }} //...
+
+      - name: Test
+        run: bazelisk test ${{env.BUILD_BUDDY_CONFIG}} --java_runtime_version=local_jdk_${{ matrix.jdk }} --disk_cache=${{ matrix.cache }} ${{ matrix.bazel_args }} //...
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: testlogs-${{ matrix.arch }}-${{ matrix.jdk }}
+          # https://github.com/actions/upload-artifact/issues/92#issuecomment-711107236
+          path: bazel-testlogs*/**/test.log

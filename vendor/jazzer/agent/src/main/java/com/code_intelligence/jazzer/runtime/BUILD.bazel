@@ -1,0 +1,103 @@
+load("@fmeum_rules_jni//jni:defs.bzl", "java_jni_library", "jni_headers")
+load("@io_bazel_rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+
+java_library(
+    name = "fuzzed_data_provider",
+    srcs = [
+        "FuzzedDataProviderImpl.java",
+    ],
+    visibility = [
+        "//agent/src/main/java/com/code_intelligence/jazzer/replay:__pkg__",
+        "//agent/src/test/java/com/code_intelligence/jazzer/runtime:__pkg__",
+    ],
+    deps = [
+        "//agent/src/main/java/com/code_intelligence/jazzer/api",
+    ],
+)
+
+java_library(
+    name = "coverage_map",
+    srcs = ["CoverageMap.java"],
+    visibility = [
+        "//agent/src/jmh/java/com/code_intelligence/jazzer/instrumentor:__pkg__",
+        "//driver/testdata:__pkg__",
+    ],
+    deps = [
+        ":unsafe_provider",
+    ],
+)
+
+jni_headers(
+    name = "coverage_map.hdrs",
+    lib = ":coverage_map",
+    visibility = ["//driver:__pkg__"],
+)
+
+java_library(
+    name = "signal_handler",
+    srcs = ["SignalHandler.java"],
+    visibility = ["//agent/src/main/java/com/code_intelligence/jazzer/agent:__pkg__"],
+)
+
+jni_headers(
+    name = "signal_handler.hdrs",
+    lib = ":signal_handler",
+    visibility = ["//driver:__pkg__"],
+)
+
+java_jni_library(
+    name = "trace_data_flow_native_callbacks",
+    srcs = ["TraceDataFlowNativeCallbacks.java"],
+    native_libs = select({
+        # On Windows, the fuzzer callbacks are statically linked into the driver instead (see
+        # //driver:jazzer_driver).
+        "@platforms//os:windows": [],
+        "//conditions:default": [
+            "//agent/src/main/native/com/code_intelligence/jazzer/runtime:jazzer_fuzzer_callbacks",
+        ],
+    }),
+    visibility = [
+        # For libFuzzer callbacks.
+        "//agent/src/main/native/com/code_intelligence/jazzer/runtime:__pkg__",
+        # For handleLibraryLoad.
+        "//driver:__pkg__",
+    ],
+    deps = [
+        "//agent/src/main/java/com/code_intelligence/jazzer/utils",
+    ],
+)
+
+java_library(
+    name = "unsafe_provider",
+    srcs = ["UnsafeProvider.java"],
+    visibility = [
+        "//sanitizers/src/main/java:__subpackages__",
+    ],
+)
+
+kt_jvm_library(
+    name = "runtime",
+    srcs = [
+        "ExceptionUtils.kt",
+        "HardToCatchError.java",
+        "JazzerInternal.java",
+        "ManifestUtils.kt",
+        "NativeLibHooks.java",
+        "RecordingFuzzedDataProvider.java",
+        "TraceCmpHooks.java",
+        "TraceDivHooks.java",
+        "TraceIndirHooks.java",
+    ],
+    visibility = ["//visibility:public"],
+    runtime_deps = [
+        ":signal_handler",
+        "//agent/src/main/java/com/code_intelligence/jazzer/autofuzz",
+    ],
+    deps = [
+        ":coverage_map",
+        ":fuzzed_data_provider",
+        ":trace_data_flow_native_callbacks",
+        "//agent/src/main/java/com/code_intelligence/jazzer/api",
+        "//agent/src/main/java/com/code_intelligence/jazzer/utils",
+    ],
+)

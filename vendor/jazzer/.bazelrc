@@ -1,0 +1,51 @@
+build --incompatible_strict_action_env
+build --sandbox_tmpfs_path=/tmp
+build --enable_platform_specific_config
+build -c opt
+
+# C/C++
+# Only relevant for tests and their dependencies. Everything that external
+# repositories can reference must build without this, e.g., by using a
+# transition.
+build:linux --cxxopt='-std=c++17'
+build:macos --cxxopt='-std=c++17'
+build:windows --cxxopt='/std:c++17'
+common --repo_env=CC=clang
+build --incompatible_enable_cc_toolchain_resolution
+# Requires a relatively modern clang.
+build:ci --features=layering_check
+
+# Java
+build --java_language_version=8
+build --tool_java_language_version=9
+
+# Windows
+# Only compiles with clang on Windows.
+build:windows --extra_toolchains=@local_config_cc//:cc-toolchain-x64_windows-clang-cl
+build:windows --extra_execution_platforms=//:x64_windows-clang-cl
+build:windows --features=static_link_msvcrt
+# Required as PATH doubles as the shared library search path on Windows and the
+# Java agent functionality depends on system-provided shared libraries.
+test:windows --noincompatible_strict_action_env
+run:windows --noincompatible_strict_action_env
+
+# Toolchain
+# Since the toolchain is conditional on OS and architecture, set it on the particular GitHub Action.
+build:toolchain --//third_party:toolchain
+
+# Forward debug variables to tests
+test --test_env=JAZZER_AUTOFUZZ_DEBUG
+test --test_env=JAZZER_REFLECTION_DEBUG
+
+# CI tests (not using the toolchain to test OSS-Fuzz & local compatibility)
+test:ci --test_env=JAZZER_CI=1
+build:ci --bes_results_url=https://app.buildbuddy.io/invocation/
+build:ci --bes_backend=grpcs://cloud.buildbuddy.io
+build:ci --remote_cache=grpcs://cloud.buildbuddy.io
+build:ci --remote_timeout=3600
+
+# Maven publishing (local only, requires GPG signature)
+build:maven --config=toolchain
+build:maven --stamp
+build:maven --define "maven_repo=https://oss.sonatype.org/service/local/staging/deploy/maven2"
+build:maven --java_runtime_version=local_jdk_8

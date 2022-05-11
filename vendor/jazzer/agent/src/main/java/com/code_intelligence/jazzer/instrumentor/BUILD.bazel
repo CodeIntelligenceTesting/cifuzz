@@ -1,0 +1,34 @@
+load("@io_bazel_rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+load("@com_github_johnynek_bazel_jar_jar//:jar_jar.bzl", "jar_jar")
+
+kt_jvm_library(
+    name = "instrumentor",
+    srcs = [
+        "ClassInstrumentor.kt",
+        "CoverageRecorder.kt",
+        "DescriptorUtils.kt",
+        "DeterministicRandom.kt",
+        "EdgeCoverageInstrumentor.kt",
+        "Hook.kt",
+        "HookInstrumentor.kt",
+        "HookMethodVisitor.kt",
+        "Hooks.kt",
+        "Instrumentor.kt",
+        "StaticMethodStrategy.java",
+        "TraceDataFlowInstrumentor.kt",
+    ],
+    visibility = [
+        "//agent/src/jmh/java/com/code_intelligence/jazzer/instrumentor:__pkg__",
+        "//agent/src/main/java/com/code_intelligence/jazzer/agent:__pkg__",
+        "//agent/src/test/java/com/code_intelligence/jazzer/instrumentor:__pkg__",
+    ],
+    deps = [
+        "//agent/src/main/java/com/code_intelligence/jazzer/runtime",
+        "//agent/src/main/java/com/code_intelligence/jazzer/utils",
+        "@com_github_classgraph_classgraph//:classgraph",
+        "@com_github_jetbrains_kotlin//:kotlin-reflect",
+        "@jazzer_jacoco//:jacoco_internal",
+        "@org_ow2_asm_asm//jar",
+        "@org_ow2_asm_asm_commons//jar",
+    ],
+)
