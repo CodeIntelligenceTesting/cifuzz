@@ -14,6 +14,7 @@
  *   - added support for specifying directories as inputs
  *   - always run on the empty input
  *   - crash on UBSan findings
+ *   - disabled dialog boxes for aborts or failed asserts on Windows
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -46,6 +47,7 @@
 #define POSIX_S_IFDIR _S_IFDIR
 #define POSIX_S_IFREG _S_IFREG
 #include <windows.h>
+#include <crtdbg.h>
 #else
 #define POSIX_STAT stat
 #define POSIX_S_IFDIR S_IFDIR
@@ -250,6 +252,19 @@ void run_file_or_dir(const char *path) {
 int main(int argc, char **argv) {
   int i;
   unsigned char empty[1];
+
+#if _WIN32
+  /* Disable the dialog box shown for a failed assert. */
+  _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG);
+#if !defined(__MSVCRT_VERSION__) || __MSVCRT_VERSION >= 0x900
+  /* Using _set_abort_behavior with MinGW requires setting the MinGW-specific
+   * setting __MSVCRT_VERSION__ to at least 0x900.
+   * https://lists.llvm.org/pipermail/llvm-dev/2015-January/081208.html */
+  /* Disable the dialog box shown for a call to abort(), but still generate a
+   * crash dump. */
+  _set_abort_behavior(0, _WRITE_ABORT_MSG);
+#endif
+#endif
 
   LLVMFuzzerInitializeIfPresent(&argc, &argv);
 
