@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
-	"sort"
 	"strings"
 	"testing"
 
@@ -293,6 +293,34 @@ func TestIntegrationReplayerWithNoAsserts(t *testing.T) {
 	} else {
 		compileReplayer(t, tempDir, clang.compiler, clang.outputFlag, append([]string{"-DNDEBUG"}, clang.flags...)...)
 	}
+}
+
+func TestIntegrationReplayerWithoutArgsRunsSeedCorpus(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	t.Parallel()
+
+	tempDir, err := ioutil.TempDir(baseTempDir, "")
+	require.NoError(t, err)
+
+	var replayerPath string
+	if runtime.GOOS == "windows" {
+		replayerPath = compileReplayer(t, tempDir, msvc.compiler, msvc.outputFlag, msvc.flags...)
+	} else {
+		replayerPath = compileReplayer(t, tempDir, clang.compiler, clang.outputFlag, clang.flags...)
+	}
+
+	// Create a seed corpus directory with the correct name next to the replayer binary.
+	seedCorpusDir := strings.TrimSuffix(replayerPath, ".exe") + "_seed_corpus"
+	err = os.Mkdir(seedCorpusDir, 0700)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(seedCorpusDir, "some_entry"), []byte("seed_corpus_entry"), 0700)
+	require.NoError(t, err)
+
+	outs, err := runReplayer(t, tempDir, replayerPath)
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{fmt.Sprintf("init(1,%s)", replayerPath), "''", "'seed_corpus_entry'"}, outs)
 }
 
 func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs []runCase) {

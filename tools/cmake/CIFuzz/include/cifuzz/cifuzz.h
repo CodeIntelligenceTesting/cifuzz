@@ -45,14 +45,15 @@ static const int DOCTEST_ANON_VAR_15771531 =    \
 #define CLION_TEST_PLAY_BUTTON
 #endif
 
-#define FUZZ_TEST                                                         \
-void LLVMFuzzerTestOneInputNoReturn(const uint8_t *data, size_t size);    \
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) { \
-  LLVMFuzzerTestOneInputNoReturn(data, size);                             \
-  return 0;                                                               \
-}                                                                         \
-extern "C" const char *cifuzz_test_name() { return CIFUZZ_TEST_NAME; }    \
-CLION_TEST_PLAY_BUTTON                                                    \
+#define FUZZ_TEST                                                          \
+void LLVMFuzzerTestOneInputNoReturn(const uint8_t *data, size_t size);     \
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {  \
+  LLVMFuzzerTestOneInputNoReturn(data, size);                              \
+  return 0;                                                                \
+}                                                                          \
+extern "C" const char *cifuzz_test_name() { return CIFUZZ_TEST_NAME; }     \
+extern "C" const char *cifuzz_seed_corpus() { return CIFUZZ_SEED_CORPUS; } \
+CLION_TEST_PLAY_BUTTON                                                     \
 void LLVMFuzzerTestOneInputNoReturn
 
 #define FUZZ_TEST_SETUP \
