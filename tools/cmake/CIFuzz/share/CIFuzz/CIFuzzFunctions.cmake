@@ -60,11 +60,19 @@ function(add_fuzz_test name)
     message(FATAL_ERROR "CIFuzz: Unsupported value for CIFUZZ_ENGINE: ${CIFUZZ_ENGINE}")
   endif()
 
-  set(_seed_corpus "${CMAKE_CURRENT_SOURCE_DIR}/${name}_seed_corpus")
-  set(_regression_test_name "${name}_regression_test")
-  if(IS_DIRECTORY "${_seed_corpus}")
-    add_test(NAME "${_regression_test_name}" COMMAND "${name}" "${_seed_corpus}")
-  else()
-    add_test(NAME "${_regression_test_name}" COMMAND "${name}")
+  set(_seed_corpus_suffix _seed_corpus)
+  set(_source_seed_corpus "${CMAKE_CURRENT_SOURCE_DIR}/${name}${_seed_corpus_suffix}")
+  # Convert path separators to '\' (Windows only) and escape all backslashes for a C string literal.
+  # In the regex strings below, one level of escaping is for the CMake string and another one to get a literal backslash
+  # in a regex.
+  if(WIN32)
+    string(REGEX REPLACE "/" "\\\\" _source_seed_corpus "${_source_seed_corpus}")
   endif()
+  string(REGEX REPLACE "\\\\" "\\\\\\\\" _source_seed_corpus "${_source_seed_corpus}")
+  # Compile the path to the seed corpus, which lives under the soure root, into the fuzz test binary as it is built
+  # out-of-tree and Windows doesn't have symlinks (junctions exist, but may cause issues with tools that are unaware of
+  # them and are not easy to deal with using just POSIX functions).
+  target_compile_definitions("${name}" PRIVATE CIFUZZ_SEED_CORPUS="${_source_seed_corpus}")
+
+  add_test(NAME "${name}_regression_test" COMMAND "${name}")
 endfunction()

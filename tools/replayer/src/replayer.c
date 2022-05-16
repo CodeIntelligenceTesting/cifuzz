@@ -16,6 +16,7 @@
  *   - crash on UBSan findings
  *   - disabled dialog boxes for aborts or failed asserts on Windows
  *   - emit summary and follow-up suggestions at the end
+ *   - automatically execute a <name>_seed_corpus dir adjacent to the target
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -56,6 +57,9 @@
 #define POSIX_S_IFREG S_IFREG
 #include <dirent.h>
 #endif
+
+/* If argv[0] + SEED_CORPUS_SUFFIX exists as a file or directory, its contents will always executed first. */
+#define SEED_CORPUS_SUFFIX "_seed_corpus"
 
 static const char *argv0;
 static int all_inputs_passed = 0;
@@ -169,6 +173,10 @@ DEFINE_DEFAULT(int, LLVMFuzzerInitialize, (int *argc, char ***argv)) {
 
 /* Set by the FUZZ_TEST macro defined in cifuzz.h. */
 DEFINE_DEFAULT(const char*, cifuzz_test_name, (void)) {
+  return NULL;
+}
+
+DEFINE_DEFAULT(const char*, cifuzz_seed_corpus, (void)) {
   return NULL;
 }
 
@@ -409,6 +417,9 @@ static int is_clion_doctest_arg(const char *arg) {
 int main(int argc, char **argv) {
   int i;
   unsigned char empty[1];
+  char *seed_corpus_path;
+  size_t seed_corpus_path_size;
+  struct POSIX_STAT stat_info;
 
   argv0 = argv[0];
 
@@ -447,9 +458,38 @@ int main(int argc, char **argv) {
 
   WITH_DEFAULT(LLVMFuzzerInitialize)(&argc, &argv);
 
+  /* Always run the empty input. */
   fprintf(stderr, "Running: <empty input>\n");
   run_one_input(&empty[0], 0);
   fprintf(stderr, "Done:    <empty input>: (0 bytes)\n");
+
+  /* If no arguments are specified, run the seed corpus at argv[0] + SEED_CORPUS_SUFFIX. */
+  if (argc == 1) {
+    if (WITH_DEFAULT(cifuzz_seed_corpus)() != NULL) {
+      /* Only run the seed corpus if it exists, either as a single file or a directory. */
+      if (POSIX_STAT(WITH_DEFAULT(cifuzz_seed_corpus)(), &stat_info) == 0) {
+        run_file_or_dir(WITH_DEFAULT(cifuzz_seed_corpus)());
+      }
+    } else {
+      seed_corpus_path_size = strlen(argv[0]) + strlen(SEED_CORPUS_SUFFIX) + 1;
+      seed_corpus_path = malloc(seed_corpus_path_size);
+      assert(seed_corpus_path != NULL);
+#ifdef _WIN32
+      /* Use the non-deprecated safe versions of the standard string functions with the Microsoft CRT.
+       * Also, strip the ".exe" suffix to derive a platform-independent basename for the seed corpus. */
+      strncpy_s(seed_corpus_path, seed_corpus_path_size, argv[0], strlen(argv[0]) - strlen(".exe"));
+      strcat_s(seed_corpus_path, seed_corpus_path_size, SEED_CORPUS_SUFFIX);
+#else
+      /* sprintf_s is not available in Unix C90 system headers. */
+      sprintf(seed_corpus_path, "%s%s", argv[0], SEED_CORPUS_SUFFIX);
+#endif
+      /* Only run the seed corpus if it exists, either as a single file or a directory. */
+      if (POSIX_STAT(seed_corpus_path, &stat_info) == 0) {
+        run_file_or_dir(seed_corpus_path);
+      }
+      free(seed_corpus_path);
+    }
+  }
 
   for (i = 1; i < argc; i++) {
     run_file_or_dir(argv[i]);
