@@ -318,9 +318,13 @@ func TestIntegrationReplayerWithoutArgsRunsSeedCorpus(t *testing.T) {
 	err = os.WriteFile(filepath.Join(seedCorpusDir, "some_entry"), []byte("seed_corpus_entry"), 0700)
 	require.NoError(t, err)
 
-	outs, err := runReplayer(t, tempDir, replayerPath)
+	stdoutLines, _, err := runReplayer(t, tempDir, replayerPath)
 	require.NoError(t, err)
-	require.ElementsMatch(t, []string{fmt.Sprintf("init(1,%s)", replayerPath), "''", "'seed_corpus_entry'"}, outs)
+	require.ElementsMatch(
+		t,
+		[]string{fmt.Sprintf("init(1,%s)", replayerPath), "''", "'seed_corpus_entry'"},
+		stdoutLines,
+	)
 }
 
 func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs []runCase) {
@@ -383,11 +387,8 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 						assert.Contains(t, stderr, replayer)
 					}
 				}
-				// Directory traversal order is unspecified, so sort the expected output to make it
-				// reliably assertable.
-				sort.Strings(expectedStdoutLines)
-				sort.Strings(stdoutLines)
-				assert.Equal(t, expectedStdoutLines, stdoutLines)
+				// Directory traversal order is unspecified, so only compare the set of elements.
+				assert.ElementsMatch(t, expectedStdoutLines, stdoutLines)
 			})
 		}
 	})
