@@ -59,7 +59,7 @@
 #endif
 
 /* If argv[0] + SEED_CORPUS_SUFFIX exists as a file or directory, its contents will always executed first. */
-#define SEED_CORPUS_SUFFIX "_seed_corpus"
+const char *SEED_CORPUS_SUFFIX = "_seed_corpus";
 
 static const char *argv0;
 static int all_inputs_passed = 0;
@@ -458,13 +458,14 @@ int main(int argc, char **argv) {
 
   WITH_DEFAULT(LLVMFuzzerInitialize)(&argc, &argv);
 
-  /* Always run the empty input. */
-  fprintf(stderr, "Running: <empty input>\n");
-  run_one_input(&empty[0], 0);
-  fprintf(stderr, "Done:    <empty input>: (0 bytes)\n");
-
-  /* If no arguments are specified, run the seed corpus at argv[0] + SEED_CORPUS_SUFFIX. */
+  /* If no arguments are specified, run the empty input and the seed corpus at argv[0] + SEED_CORPUS_SUFFIX
+   * Note: On Windows, ".exe" is stripped from argv[0] before forming the seed corpus path. */
   if (argc == 1) {
+    /* Always run the empty input. */
+    fprintf(stderr, "Running: <empty input>\n");
+    run_one_input(&empty[0], 0);
+    fprintf(stderr, "Done:    <empty input>: (0 bytes)\n");
+
     if (WITH_DEFAULT(cifuzz_seed_corpus)() != NULL) {
       /* Only run the seed corpus if it exists, either as a single file or a directory. */
       if (POSIX_STAT(WITH_DEFAULT(cifuzz_seed_corpus)(), &stat_info) == 0) {

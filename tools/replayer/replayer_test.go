@@ -345,8 +345,10 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 				expectedStdoutLines := []string{
 					// Assert that LLVMFuzzerInitialize has been executed.
 					fmt.Sprintf("init(%d,%s)", len(rc.inputs)+1 /* argc */, replayer /* argv[0] */),
-					// Assert that the replayer always runs the test on the empty input.
-					"''",
+				}
+				// If no inputs are specified explicitly, the replayer runs the empty input.
+				if len(rc.inputs) == 0 {
+					expectedStdoutLines = append(expectedStdoutLines, "''")
 				}
 			outer_loop:
 				for _, inputs := range rc.inputs {
@@ -412,8 +414,8 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) 
 		} else {
 			require.NoError(t, err)
 		}
-		assert.Equal(t, []string{"''", "'foo'", "'bar'"}, stdoutLines)
-		assert.Contains(t, stderr, "3 inputs")
+		assert.Equal(t, []string{"'foo'", "'bar'"}, stdoutLines)
+		assert.Contains(t, stderr, "2 inputs")
 	})
 }
 
