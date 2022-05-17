@@ -117,6 +117,8 @@ func runTests(t *testing.T, buildDir string) (testPassed map[string]bool) {
 		buildDir,
 		"ctest",
 		"--verbose",
+		// Print the output of failed tests to improve the CI logs.
+		"--output-on-failure",
 		// On Windows, ctest requires a configuration to be specified explicitly.
 		"-C",
 		"Debug",
