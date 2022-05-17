@@ -15,6 +15,7 @@
  *   - always run on the empty input
  *   - crash on UBSan findings
  *   - disabled dialog boxes for aborts or failed asserts on Windows
+ *   - emit summary and follow-up suggestions at the end
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -37,6 +38,7 @@
 #endif
 #include <assert.h>
 #include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,6 +55,41 @@
 #define POSIX_S_IFDIR S_IFDIR
 #define POSIX_S_IFREG S_IFREG
 #include <dirent.h>
+#endif
+
+static const char *argv0;
+static int all_inputs_passed = 0;
+static int num_passing_inputs = 0;
+static const char *current_input = NULL;
+
+/* Keep in sync with strsignal below. */
+static const int TERMINATING_SIGNALS[] = {
+    SIGABRT,
+    SIGFPE,
+    SIGILL,
+    SIGSEGV,
+    SIGTERM,
+};
+static const int NUM_TERMINATING_SIGNALS = sizeof(TERMINATING_SIGNALS) / sizeof(int);
+
+#ifdef _WIN32
+/* The Microsoft C Runtime lacks strsignal, so we provide our own implementation for the signals we are handling. */
+static const char *strsignal(int sig) {
+  switch(sig) {
+  case SIGABRT:
+    return "Aborted";
+  case SIGFPE:
+    return "Arithmetic exception";
+  case SIGILL:
+    return "Illegal instruction";
+  case SIGSEGV:
+    return "Segmentation fault";
+  case SIGTERM:
+    return "Terminated";
+  default:
+    return NULL;
+  }
+}
 #endif
 
 const char *__ubsan_default_options() {
@@ -130,6 +167,21 @@ DEFINE_DEFAULT(int, LLVMFuzzerInitialize, (int *argc, char ***argv)) {
   return 0;
 }
 
+/* Set by the FUZZ_TEST macro defined in cifuzz.h. */
+DEFINE_DEFAULT(const char*, cifuzz_test_name, (void)) {
+  return NULL;
+}
+
+/* Set by the CMake integration if a sanitizer is linked in.
+ * Detecting this via compiler macros isn't possible since gcc does not define a macro for UBSan.
+ * Using DEFINE_DEFAULT/WITH_DEFAULT isn't possible since sanitizer runtimes are usually linked dynamically and thus
+ * don't override weak symbols.
+ * TODO: If this ever becomes an issue with other build systems, replace the compile-time check with a dynamic lookup
+ *       at runtime. */
+#ifdef CIFUZZ_HAS_SANITIZER
+void __sanitizer_set_death_callback(void (*callback)(void));
+#endif
+
 void run_one_input(const unsigned char *data, size_t size) {
   int res;
 
@@ -137,6 +189,7 @@ void run_one_input(const unsigned char *data, size_t size) {
   /* Avoid "unused but set variable" warnings if asserts are compiled out with NDEBUG. */
   (void)res;
   assert(res == 0);
+  num_passing_inputs++;
 }
 
 void run_file(const char *path) {
@@ -165,6 +218,7 @@ void run_file(const char *path) {
   n_read = fread(buf, 1, len, f);
   fclose(f);
   assert(n_read == len);
+  current_input = path;
   run_one_input(buf, len);
   free(buf);
   fprintf(stderr, "Done:    %s: (%ld bytes)\n", path, (unsigned long) n_read);
@@ -265,9 +319,98 @@ void run_file_or_dir(const char *path) {
   }
 }
 
+static void print_summary(const char *failure_reason) {
+  if (all_inputs_passed) {
+    fprintf(stderr, "\nRan fuzz test on %d inputs - passed\n\n"
+                    "Note: No fuzzing has been performed, the fuzz test has only been executed on the\n"
+                    "fixed inputs in the seed corpus.\n\n", num_passing_inputs);
+    if (WITH_DEFAULT(cifuzz_test_name)()) {
+      fprintf(stderr, "To start a fuzzing run, execute:\n\n"
+                      "    cifuzz run %s\n", WITH_DEFAULT(cifuzz_test_name)());
+    }
+  } else {
+    if (current_input) {
+      fprintf(stderr, "\nFuzz test failed on input '%s'\n"
+                      "Reason: %s\n\n", current_input, failure_reason);
+      /* TODO: Replace with cifuzz debug on all platforms when it has been implemented. */
+#ifdef __linux__
+      fprintf(stderr, "To debug this failure, execute:\n\n"
+                      "    gdb -ex 'break LLVMFuzzerTestOneInput' -ex run --args '%s' '%s'\n", argv0, current_input);
+#endif
+    } else {
+      if (failure_reason == NULL) {
+        failure_reason = "Unknown";
+      }
+      /* The empty input is always executed first by the replayer, so we do not need to pass in an empty file. */
+      fprintf(stderr, "\nFuzz test failed on the empty input\n"
+                      "Reason: %s\n\n", failure_reason);
+      /* TODO: Replace with cifuzz debug on all platforms when it has been implemented. */
+#ifdef __linux__
+      fprintf(stderr, "To debug this failure, execute:\n\n"
+                      "    gdb -ex 'break LLVMFuzzerTestOneInput' -ex run --args '%s'\n", argv0);
+#endif
+    }
+  }
+}
+
+static void explicit_exit_handler(void) {
+  print_summary("Fuzz target exited");
+}
+
+static void terminating_signal_handler(int sig) {
+  /*
+   * The default action for the signals we handle is to terminate the process, so this is the time to write our report
+   * and explain the termination. Afterwards, disable the handler and re-raise the signal to trigger the default action.
+   */
+  print_summary(strsignal(sig));
+  signal(sig, SIG_DFL);
+  raise(sig);
+  return;
+}
+
+static void register_terminating_signal_handler(int sig) {
+  void (*old_handler)(int sig) = signal(sig, terminating_signal_handler);
+  if (old_handler == SIG_ERR) {
+    /* Signal handling is best-effort, print a warning and continue. */
+    fprintf(stderr, "Failed to register handler for " STRINGIFY(SIGNAL) ": error %d", errno);
+    return;
+  }
+  /* We only want to replace the default handler since it would terminate the program in a clearly undesired way. If the
+   * fuzz test registers a signal handler, we expect the relevant signal to indicate a benign situation. */
+  if (old_handler != SIG_DFL) {
+    /* Restore the old handler and exit.
+     * Note: We wouldn't have to do this if we used sigaction instead, but it isn't available on Windows. */
+    old_handler = signal(sig, old_handler);
+    if (old_handler == SIG_ERR) {
+      /* Failing to restore the previous signal handling behavior may affect the execution of the fuzz test and is thus
+       * a fatal error. */
+      fprintf(stderr, "Failed to restore handler for " STRINGIFY(SIGNAL) ": error %d", errno);
+      exit(1);
+    }
+  }
+}
+
+#ifdef CIFUZZ_HAS_SANITIZER
+static void sanitizer_report_handler(void) {
+  print_summary("Sanitizer finding");
+}
+#endif
+
 int main(int argc, char **argv) {
   int i;
   unsigned char empty[1];
+
+  argv0 = argv[0];
+
+  /* Best-effort attempt at registering handlers that run right before any kind of normal or abnormal program exit so
+   * that the summary of executed inputs and follow-up commands can be printed. */
+  atexit(explicit_exit_handler);
+  for (i = 0; i < NUM_TERMINATING_SIGNALS; ++i) {
+    register_terminating_signal_handler(TERMINATING_SIGNALS[i]);
+  }
+#ifdef CIFUZZ_HAS_SANITIZER
+  __sanitizer_set_death_callback(sanitizer_report_handler);
+#endif
 
 #if _WIN32
   /* Disable the dialog box shown for a failed assert. */
@@ -291,5 +434,7 @@ int main(int argc, char **argv) {
   for (i = 1; i < argc; i++) {
     run_file_or_dir(argv[i]);
   }
+
+  all_inputs_passed = 1;
   return 0;
 }

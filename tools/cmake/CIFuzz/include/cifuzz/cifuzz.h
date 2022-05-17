@@ -51,6 +51,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) { \
   LLVMFuzzerTestOneInputNoReturn(data, size);                             \
   return 0;                                                               \
 }                                                                         \
+extern "C" const char *cifuzz_test_name() { return CIFUZZ_TEST_NAME; }    \
 CLION_TEST_PLAY_BUTTON                                                    \
 void LLVMFuzzerTestOneInputNoReturn
 

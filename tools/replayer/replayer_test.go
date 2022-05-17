@@ -1,6 +1,7 @@
 package replayer
 
 import (
+	"bytes"
 	_ "embed"
 	"fmt"
 	"io/ioutil"
@@ -55,6 +56,8 @@ var msvc = compilerCase{
 		// Disable warnings originating from system includes, which would otherwise be treated as errors.
 		"/external:W0",
 		"/fsanitize=address",
+		// Signal to the replayer that it is being built with sanitizers.
+		"-DCIFUZZ_HAS_SANITIZER",
 		// Sanitizer runtimes have to be linked manually on Windows:
 		// https://devblogs.microsoft.com/cppblog/addresssanitizer-asan-for-windows-with-msvc/
 		"/wholearchive:clang_rt.asan-x86_64.lib",
@@ -74,6 +77,8 @@ var clang = compilerCase{
 		// Add debug info to make ASan and UBSan findings more useful.
 		"-g",
 		"-fsanitize=address,undefined",
+		// Signal to the replayer that it is being built with sanitizers.
+		"-DCIFUZZ_HAS_SANITIZER",
 		// Make UBSan findings assertable by aborting.
 		"-fsanitize-undefined-trap-on-error",
 		// Disable compiler-specific extensions and use the C90 standard.
@@ -107,6 +112,8 @@ var gcc = compilerCase{
 		// Add debug info to make ASan and UBSan findings more useful.
 		"-g",
 		"-fsanitize=address,undefined",
+		// Signal to the replayer that it is being built with sanitizers.
+		"-DCIFUZZ_HAS_SANITIZER",
 		// Make UBSan findings assertable by aborting.
 		"-fsanitize-undefined-trap-on-error",
 	}, mingw.flags...),
@@ -302,7 +309,7 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 			t.Run(rc.name, func(t *testing.T) {
 				t.Parallel()
 
-				expectedOut := []string{
+				expectedStdoutLines := []string{
 					// Assert that LLVMFuzzerInitialize has been executed.
 					fmt.Sprintf("init(%d,%s)", len(rc.inputs)+1 /* argc */, replayer /* argv[0] */),
 					// Assert that the replayer always runs the test on the empty input.
@@ -323,26 +330,35 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 						if input == "asan" || input == "ubsan" || input == "assert" || input == "return" {
 							break outer_loop
 						}
-						expectedOut = append(expectedOut, fmt.Sprintf("'%s'", input))
+						expectedStdoutLines = append(expectedStdoutLines, fmt.Sprintf("'%s'", input))
 					}
 				}
 
-				out, err := runReplayer(t, tempDir, replayer, rc.inputs...)
+				stdoutLines, stderr, err := runReplayer(t, tempDir, replayer, rc.inputs...)
 				if rc.normalExit {
 					if exitErr, ok := err.(*exec.ExitError); ok {
 						require.NoError(t, err, string(exitErr.Stderr))
 					} else {
 						require.NoError(t, err)
 					}
+
+					assert.Contains(t, stderr, "passed")
+					assert.Contains(t, stderr, fmt.Sprintf("%d inputs", len(expectedStdoutLines)-1))
 				} else {
 					require.Error(t, err)
 					require.IsType(t, &exec.ExitError{}, err, err.Error())
+
+					assert.Contains(t, stderr, "failed on input")
+					if runtime.GOOS == "linux" {
+						// Assert the reproduction command on Linux.
+						assert.Contains(t, stderr, replayer)
+					}
 				}
 				// Directory traversal order is unspecified, so sort the expected output to make it
 				// reliably assertable.
-				sort.Strings(expectedOut)
-				sort.Strings(out)
-				assert.Equal(t, expectedOut, out)
+				sort.Strings(expectedStdoutLines)
+				sort.Strings(stdoutLines)
+				assert.Equal(t, expectedStdoutLines, stdoutLines)
 			})
 		}
 	})
@@ -360,13 +376,14 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) 
 			cc.flags...,
 		)...)
 
-		out, err := runReplayer(t, tempDir, replayer, "foo", "bar")
+		stdoutLines, stderr, err := runReplayer(t, tempDir, replayer, "foo", "bar")
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			require.NoError(t, err, string(exitErr.Stderr))
 		} else {
 			require.NoError(t, err)
 		}
-		assert.Equal(t, []string{"''", "'foo'", "'bar'"}, out)
+		assert.Equal(t, []string{"''", "'foo'", "'bar'"}, stdoutLines)
+		assert.Contains(t, stderr, "3 inputs")
 	})
 }
 
@@ -401,7 +418,7 @@ func compileReplayer(t *testing.T, tempDir string, compiler string, outputFlag s
 	return outFile
 }
 
-func runReplayer(t *testing.T, baseTempDir string, replayerPath string, inputs ...any) ([]string, error) {
+func runReplayer(t *testing.T, baseTempDir string, replayerPath string, inputs ...any) ([]string, string, error) {
 	var inputPaths []string
 	for _, input := range inputs {
 		if fileContent, ok := input.(string); ok {
@@ -419,10 +436,23 @@ func runReplayer(t *testing.T, baseTempDir string, replayerPath string, inputs .
 	}
 
 	c := exec.Command(replayerPath, inputPaths...)
-	out, err := c.Output()
+	stdout, stderr, err := outputWithStderr(c)
 	// Split on both \r\n (Windows) and \n (Unix) after removing trailing newlines.
-	outLines := strings.Split(strings.ReplaceAll(strings.TrimSpace(string(out)), "\r\n", "\n"), "\n")
-	return outLines, err
+	stdoutLines := strings.Split(strings.ReplaceAll(strings.TrimSpace(string(stdout)), "\r\n", "\n"), "\n")
+	return stdoutLines, string(stderr), err
+}
+
+// outputWithStderr behaves like cmd.Output, but additionally always returns stderr.
+func outputWithStderr(cmd *exec.Cmd) (stdout []byte, stderr []byte, err error) {
+	stderrBuf := &bytes.Buffer{}
+	cmd.Stderr = stderrBuf
+	stdout, err = cmd.Output()
+	stderr = stderrBuf.Bytes()
+	// Also store stderr in the ExitError in case of failure to remain compatible with cmd.Output.
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		exitErr.Stderr = stderr
+	}
+	return
 }
 
 func createInputFile(t *testing.T, dir, content string) string {
