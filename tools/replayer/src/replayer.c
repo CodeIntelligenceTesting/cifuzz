@@ -64,27 +64,35 @@ const char *__ubsan_default_options() {
 
 extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
 
+#define STRINGIFY_(x) #x
+#define STRINGIFY(x) STRINGIFY_(x)
+
+/*
+ * The following macros provide a cross-platform way of referencing an optional symbol with a provided default.
+ * DEFINE_DEFAULT defines the default implementation and WITH_DEFAULT is a function pointer that points to the real
+ * symbol if it is defined and to the default implementation otherwise.
+ */
 #if defined(_WIN32)
 /*
  * MSVC does not support weak symbols, but /alternatename can be used to direct the linker to a default implementation.
  * https://github.com/llvm/llvm-project/blob/0c8c05064d57fe3bbbb1edd4c6e67f909c720578/compiler-rt/lib/fuzzer/FuzzerExtFunctionsWindows.cpp
  */
-int LLVMFuzzerInitializeDefault(int *argc, char ***argv) {
-  (void)argc;
-  (void)argv;
-  return 0;
-}
-
 #if defined(_MSC_VER)
-#pragma comment(linker, "/alternatename:LLVMFuzzerInitialize=LLVMFuzzerInitializeDefault")
+#define DEFINE_DEFAULT(ret, name, args)                                                   \
+ret name##Default args;                                                                   \
+__pragma(comment(linker, "/alternatename:" STRINGIFY(name) "=" STRINGIFY(name##Default))) \
+ret name args;                                                                            \
+ret name##Default args
 #else
-__attribute__((weak, alias("LLVMFuzzerInitializeDefault")))
+#define DEFINE_DEFAULT(ret, name, args)                \
+ret name##Default args;                                \
+__attribute__((weak, alias(STRINGIFY(name##Default)))) \
+ret name args;                                         \
+ret name##Default args
 #endif
-int LLVMFuzzerInitialize(int *argc, char ***argv);
 
-static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
-  LLVMFuzzerInitialize(argc, argv);
-}
+#define WITH_DEFAULT(name) name
+
 #elif defined(__APPLE__)
 /*
  * Weak symbols require specifying -U on the command line on macOS, hence use dlsym to find LLVMFuzzerInitialize.
@@ -92,27 +100,35 @@ static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
  */
 #include <dlfcn.h>
 
-static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
-  void *fn_ptr = dlsym(RTLD_DEFAULT, "LLVMFuzzerInitialize");
-  if (fn_ptr != NULL) {
-    ((int (*)(int *, char ***)) fn_ptr)(argc, argv);
-  }
-}
+#define DEFINE_DEFAULT(ret, name, args)                \
+static ret name##Default args;                         \
+static ret (*name##Ptr()) args {                       \
+  void *fn_ptr = dlsym(RTLD_DEFAULT, STRINGIFY(name)); \
+  if (fn_ptr != NULL) {                                \
+    return (ret (*) args) fn_ptr;                      \
+  }                                                    \
+  return name##Default;                                \
+}                                                      \
+static ret name##Default args
+
+#define WITH_DEFAULT(name) name##Ptr()
+
 #else
 /*
  * General Unix is assumed to have support for weak symbols, but doesn't export symbols dynamically by default, which
  * precludes using the dlsym approach.
  * https://github.com/llvm/llvm-project/blob/0c8c05064d57fe3bbbb1edd4c6e67f909c720578/compiler-rt/lib/fuzzer/FuzzerExtFunctionsWeak.cpp
  */
-__attribute__((weak)) int LLVMFuzzerInitialize(int *argc, char ***argv) {
+#define DEFINE_DEFAULT(ret, name, args) __attribute__((weak)) ret name args
+#define WITH_DEFAULT(name) name
+
+#endif
+
+DEFINE_DEFAULT(int, LLVMFuzzerInitialize, (int *argc, char ***argv)) {
   (void)argc;
   (void)argv;
   return 0;
 }
-static void LLVMFuzzerInitializeIfPresent(int *argc, char ***argv) {
-  LLVMFuzzerInitialize(argc, argv);
-}
-#endif
 
 void run_one_input(const unsigned char *data, size_t size) {
   int res;
@@ -266,7 +282,7 @@ int main(int argc, char **argv) {
 #endif
 #endif
 
-  LLVMFuzzerInitializeIfPresent(&argc, &argv);
+  WITH_DEFAULT(LLVMFuzzerInitialize)(&argc, &argv);
 
   fprintf(stderr, "Running: <empty input>\n");
   run_one_input(&empty[0], 0);
