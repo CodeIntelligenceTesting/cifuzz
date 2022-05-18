@@ -182,7 +182,7 @@ DEFINE_DEFAULT(const char*, cifuzz_test_name, (void)) {
 void __sanitizer_set_death_callback(void (*callback)(void));
 #endif
 
-void run_one_input(const unsigned char *data, size_t size) {
+static void run_one_input(const unsigned char *data, size_t size) {
   int res;
 
   res = LLVMFuzzerTestOneInput(data, size);
@@ -192,7 +192,7 @@ void run_one_input(const unsigned char *data, size_t size) {
   num_passing_inputs++;
 }
 
-void run_file(const char *path) {
+static void run_file(const char *path) {
   FILE *f;
   size_t len;
   unsigned char *buf;
@@ -224,9 +224,9 @@ void run_file(const char *path) {
   fprintf(stderr, "Done:    %s: (%ld bytes)\n", path, (unsigned long) n_read);
 }
 
-void run_file_or_dir(const char *path);
+static void run_file_or_dir(const char *path);
 
-void run_dir_entry(const char *dir, const char *file) {
+static void run_dir_entry(const char *dir, const char *file) {
   char *path;
   size_t path_size;
 
@@ -250,7 +250,7 @@ void run_dir_entry(const char *dir, const char *file) {
   free(path);
 }
 
-void traverse_dir(const char *path) {
+static void traverse_dir(const char *path) {
 #if defined(_WIN32)
   WIN32_FIND_DATA fd;
   HANDLE h_find;
@@ -298,7 +298,7 @@ void traverse_dir(const char *path) {
 #endif
 }
 
-void run_file_or_dir(const char *path) {
+static void run_file_or_dir(const char *path) {
   int res;
   struct POSIX_STAT stat_info;
 
