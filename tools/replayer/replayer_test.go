@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"code-intelligence.com/cifuzz/util/fileutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -206,7 +206,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}
-	defer os.RemoveAll(baseTempDir)
+	defer fileutil.Cleanup(baseTempDir)
 	m.Run()
 }
 
