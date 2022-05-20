@@ -3,6 +3,7 @@ package root
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -67,6 +68,19 @@ func Execute() {
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
 		if !errors.Is(err, cmdutils.ErrSilent) {
 			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%+v\n", err)
+		}
+
+		// We only want to print the usage message if an ErrIncorrectUsage
+		// was returned or it's an error produced by cobra which was
+		// caused by incorrect usage
+		if errors.Is(err, cmdutils.ErrIncorrectUsage) ||
+			strings.HasPrefix(err.Error(), "required flag") ||
+			strings.HasPrefix(err.Error(), "unknown command") {
+			// Ensure that there is an extra newline between the error
+			// and the usage message
+			if !strings.HasSuffix(err.Error(), "\n") {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr())
+			}
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), cmd.UsageString())
 		}
 
