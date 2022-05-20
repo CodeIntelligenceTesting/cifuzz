@@ -12,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 func prepareTestDir(t *testing.T) (string, string) {
@@ -44,6 +46,7 @@ func TestIntegration(t *testing.T) {
 	}
 
 	executable, dir := prepareTestDir(t)
+	defer fileutil.Cleanup(dir)
 	fmt.Printf("executing cmake integration test in %s\n", dir)
 
 	//execute root command
@@ -75,6 +78,7 @@ func TestDirectoryFlagAndOutFlag(t *testing.T) {
 	}
 
 	executable, dir := prepareTestDir(t)
+	defer fileutil.Cleanup(dir)
 	fmt.Printf("executing cmake integration test in %s\n", dir)
 
 	//execute root command

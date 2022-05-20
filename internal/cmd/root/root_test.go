@@ -10,6 +10,7 @@ import (
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/storage"
+	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 func TestRootCmd(t *testing.T) {
@@ -26,7 +27,7 @@ func TestChangingToNonExistingDirectory(t *testing.T) {
 	require.NoError(t, err)
 	err = os.Chdir(testDir)
 	require.NoError(t, err)
-	defer os.RemoveAll(testDir)
+	defer fileutil.Cleanup(testDir)
 
 	origWorkDir, err := os.Getwd()
 	require.NoError(t, err)
@@ -56,7 +57,7 @@ func TestChangingToExistingDirectory(t *testing.T) {
 	require.NoError(t, err)
 	err = os.Chdir(testDir)
 	require.NoError(t, err)
-	defer os.RemoveAll(testDir)
+	defer fileutil.Cleanup(testDir)
 
 	origWorkDir, err := os.Getwd()
 	require.NoError(t, err)
