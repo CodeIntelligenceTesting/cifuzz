@@ -1,13 +1,13 @@
 name: Docs Pipeline
 
-on: 
+on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   wiki:
-    name: update-wiki 
+    name: update-wiki
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +20,7 @@ jobs:
       - name: Setup Go environment
         uses: actions/setup-go@v3
         with:
-          go-version: '^1.18'
+          go-version: "^1.18"
 
       - name: generate docs and upload to wiki
         run: |
