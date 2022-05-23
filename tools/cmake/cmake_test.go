@@ -183,6 +183,8 @@ func runInDirWithExpectedStatus(t *testing.T, expectFailure bool, dir string, co
 	defer cancel()
 	c := exec.CommandContext(ctx, command, args...)
 	c.Dir = dir
+	t.Logf("Working directory: %s", c.Dir)
+	t.Logf("Command: %s", c.String())
 	out, err := c.Output()
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {

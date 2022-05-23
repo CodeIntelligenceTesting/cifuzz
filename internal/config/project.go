@@ -101,3 +101,28 @@ func ReadProjectConfig(projectDir string) (*projectConfig, error) {
 
 	return config, nil
 }
+
+func FindProjectDir() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	configFileExists, err := fileutil.Exists(filepath.Join(dir, projectConfigFile))
+	if err != nil {
+		return "", err
+	}
+	for !configFileExists {
+		dir = filepath.Dir(dir)
+		configFileExists, err = fileutil.Exists(filepath.Join(dir, projectConfigFile))
+		if err != nil {
+			return "", err
+		}
+	}
+
+	dir, err = filepath.Abs(dir)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return dir, nil
+}
