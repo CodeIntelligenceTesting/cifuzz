@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -12,11 +13,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/envutil"
+	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
@@ -58,6 +61,9 @@ func (opts *runOptions) validate() error {
 type runCmd struct {
 	*cobra.Command
 	opts *runOptions
+
+	projectDir string
+	buildDir   string
 }
 
 func New() *cobra.Command {
@@ -74,7 +80,7 @@ func New() *cobra.Command {
 			return opts.validate()
 		},
 		RunE: func(c *cobra.Command, args []string) error {
-			cmd := runCmd{c, opts}
+			cmd := runCmd{Command: c, opts: opts}
 			return cmd.run()
 		},
 	}
@@ -88,13 +94,20 @@ func New() *cobra.Command {
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
 	useMinijailDefault := strings.HasPrefix(runtime.GOOS, "linux")
 	cmd.Flags().BoolVar(&opts.useSandbox, "sandbox", useMinijailDefault, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
-	cmdutils.MarkFlagsRequired(cmd, "build-command", "seeds-dir", "fuzz-test")
+	cmdutils.MarkFlagsRequired(cmd, "seeds-dir", "fuzz-test")
 
 	return cmd
 }
 
 func (c *runCmd) run() error {
-	err := c.buildFuzzTest()
+	var err error
+
+	c.projectDir, err = config.FindProjectDir()
+	if err != nil {
+		return err
+	}
+
+	err = c.buildFuzzTest()
 	if err != nil {
 		return err
 	}
@@ -108,9 +121,99 @@ func (c *runCmd) run() error {
 }
 
 func (c *runCmd) buildFuzzTest() error {
-	env, err := buildEnv()
+	conf, err := config.ReadProjectConfig(c.projectDir)
 	if err != nil {
 		return err
+	}
+
+	if conf.BuildSystem == config.BuildSystemCMake {
+		return c.buildWithCMake()
+	} else if conf.BuildSystem == config.BuildSystemUnknown {
+		return c.buildWithUnknownBuildSystem()
+	} else {
+		return errors.Errorf("Unsupported build system \"%s\"", conf.BuildSystem)
+	}
+}
+
+func (c *runCmd) buildWithCMake() error {
+	// TODO: Make these configurable
+	engine := "libfuzzer"
+	sanitizers := []string{"address", "undefined"}
+
+	// Prepare the environment
+	env, err := commonBuildEnv()
+	if err != nil {
+		return err
+	}
+
+	// Create the build directory if it doesn't exist
+	c.buildDir = filepath.Join(c.projectDir, ".build", engine, strings.Join(sanitizers, "+"))
+	exists, err := fileutil.Exists(c.buildDir)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		err = os.MkdirAll(c.buildDir, 0755)
+		if err != nil {
+			return err
+		}
+
+		cacheVariables := map[string]string{
+			"CIFUZZ_SANITIZERS": strings.Join(sanitizers, ";"),
+			"CIFUZZ_ENGINE":     engine,
+		}
+		var cacheArgs []string
+		for key, value := range cacheVariables {
+			cacheArgs = append(cacheArgs, "-D", fmt.Sprintf("%s=%s", key, value))
+		}
+
+		// Call cmake to "Generate a project buildsystem" (that's the
+		// phrasing used by the CMake man page).
+		cmd := exec.Command("cmake", append(cacheArgs, c.projectDir)...)
+		cmd.Stdout = c.OutOrStdout()
+		cmd.Stderr = c.ErrOrStderr()
+		cmd.Env = env
+		cmd.Dir = c.buildDir
+		log.Debugf("Working directory: %s", cmd.Dir)
+		log.Debugf("Command: %s", cmd.String())
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	// Build the project with CMake
+	cmd := exec.Command("cmake", "--build", c.buildDir, "--target", c.opts.fuzzTest)
+	cmd.Stdout = c.OutOrStdout()
+	cmd.Stderr = c.ErrOrStderr()
+	cmd.Env = env
+	log.Debugf("Command: %s", cmd.String())
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *runCmd) buildWithUnknownBuildSystem() error {
+	// Prepare the environment
+	env, err := commonBuildEnv()
+	if err != nil {
+		return err
+	}
+	// Set CFLAGS, CXXFLAGS, LDFLAGS, and FUZZ_TEST_LDFLAGS which must
+	// be passed to the build commands by the build system.
+	env, err = setBuildFlagsEnvVars(env)
+	if err != nil {
+		return err
+	}
+
+	// To build with an unknown build system, a build command must be
+	// provided
+	if c.opts.buildCommand == "" {
+		return cmdutils.WrapIncorrectUsageError(errors.Errorf("Flag \"build-command\" must be set to build" +
+			" with an unknown build system"))
 	}
 
 	// Run the build command
@@ -118,17 +221,22 @@ func (c *runCmd) buildFuzzTest() error {
 	cmd.Stdout = c.OutOrStdout()
 	cmd.Stderr = c.ErrOrStderr()
 	cmd.Env = env
+	log.Debugf("Command: %s", cmd.String())
 	err = cmd.Run()
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
 	return nil
 }
 
 func (c *runCmd) runFuzzTest() error {
+	fuzzTestExecutable, err := c.findFuzzTestExecutable(c.opts.fuzzTest)
+	if err != nil {
+		return err
+	}
+	log.Debugf("executable: %s", fuzzTestExecutable)
 	runnerOpts := &libfuzzer.RunnerOptions{
-		FuzzTarget:          c.opts.fuzzTest,
+		FuzzTarget:          fuzzTestExecutable,
 		SeedsDir:            c.opts.seedsDirs[0],
 		AdditionalSeedsDirs: c.opts.seedsDirs[1:],
 		Dictionary:          c.opts.dictionary,
@@ -142,10 +250,28 @@ func (c *runCmd) runFuzzTest() error {
 	return runner.Run(context.Background())
 }
 
-func buildEnv() ([]string, error) {
-	var err error
+func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
+	if exists, _ := fileutil.Exists(fuzzTest); exists {
+		return fuzzTest, nil
+	}
+	var executable string
+	err := filepath.Walk(c.buildDir, func(path string, info os.FileInfo, err error) error {
+		if info.Name() == fuzzTest {
+			executable = path
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if executable == "" {
+		return "", errors.Errorf("Could not find executable for fuzz test %s", fuzzTest)
+	}
+	return executable, nil
+}
 
-	// Prepare the build environment
+func commonBuildEnv() ([]string, error) {
+	var err error
 	env := os.Environ()
 
 	// Set the C/C++ compiler to clang/clang++, which is needed to build
@@ -159,10 +285,19 @@ func buildEnv() ([]string, error) {
 		return nil, err
 	}
 
+	// We don't want to fail if ASan is set up incorrectly for tools
+	// built and executed during the build or they contain leaks.
+	env, err = envutil.Setenv(env, "ASAN_OPTIONS", "detect_leaks=0:verify_asan_link_order=0")
+	if err != nil {
+		return nil, err
+	}
+
+	return env, nil
+}
+
+func setBuildFlagsEnvVars(env []string) ([]string, error) {
 	// Set CFLAGS and CXXFLAGS. Note that these flags must not contain
 	// spaces, because the environment variables are space separated.
-	// TODO: These flags were copied from ci-build, we should explain
-	//       for each why we use it
 	cflags := []string{
 		// ----- Common flags -----
 		// Keep debug symbols
@@ -194,7 +329,7 @@ func buildEnv() ([]string, error) {
 		//       which we want to use
 		"-fsanitize-address-use-after-scope",
 	}
-	env, err = envutil.Setenv(env, "CFLAGS", strings.Join(cflags, " "))
+	env, err := envutil.Setenv(env, "CFLAGS", strings.Join(cflags, " "))
 	if err != nil {
 		return nil, err
 	}
@@ -220,13 +355,6 @@ func buildEnv() ([]string, error) {
 	// the linker command building the fuzz test. For libfuzzer, we set
 	// it to "-fsanitize=fuzzer" to build a libfuzzer binary.
 	env, err = envutil.Setenv(env, "FUZZ_TEST_LDFLAGS", "-fsanitize=fuzzer")
-	if err != nil {
-		return nil, err
-	}
-
-	// We don't want to fail if ASan is set up incorrectly for tools
-	// built and executed during the build or they contain leaks.
-	env, err = envutil.Setenv(env, "ASAN_OPTIONS", "detect_leaks=0:verify_asan_link_order=0")
 	if err != nil {
 		return nil, err
 	}

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"code-intelligence.com/cifuzz/internal/cmd/root"
-
 	"github.com/spf13/viper"
+
+	"code-intelligence.com/cifuzz/internal/cmd/root"
 )
 
 func init() {
