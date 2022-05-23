@@ -69,8 +69,9 @@ function(add_fuzz_test name)
     string(REGEX REPLACE "/" "\\\\" _source_seed_corpus "${_source_seed_corpus}")
   endif()
   string(REGEX REPLACE "\\\\" "\\\\\\\\" _source_seed_corpus "${_source_seed_corpus}")
-  # Compile the path to the seed corpus, which lives under the soure root, into the fuzz test binary as it is built
-  # out-of-tree and Windows doesn't have symlinks (junctions exist, but may cause issues with tools that are unaware of
+  # Compile the path to the seed corpus, which lives under the source root, into the fuzz test binary as it is built
+  # out-of-tree. An alternative could be to symlink the seed corpus to a well-known location next to the binary, but
+  # symlinks are not always available on Windows (junctions exist, but may cause issues with tools that are unaware of
   # them and are not easy to deal with using just POSIX functions).
   target_compile_definitions("${name}" PRIVATE CIFUZZ_SEED_CORPUS="${_source_seed_corpus}")
 
