@@ -1,10 +1,10 @@
 name: PR Pipeline
 
-on: 
+on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
       - name: Setup Go environment
         uses: actions/setup-go@v3
         with:
-          go-version: '^1.18'
+          go-version: "^1.18"
 
       - name: Run unit tests
         run: make test/unit
@@ -38,12 +38,37 @@ jobs:
       - name: Setup Go environment
         uses: actions/setup-go@v3
         with:
-          go-version: '^1.18'
+          go-version: "^1.18"
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@f0cccbdf563688c6e0f9273d4bc27a8c5278de85
+        with:
+          version: "13.0"
+
+      - name: Setup - Linux
+        if: contains(matrix.os, 'ubuntu')
+        run: sudo apt-get install -y libcap-dev
+
+      # needed to fix MacOSX clang/llvm after using the action above
+      # https://github.com/KyleMayes/install-llvm-action/issues/15
+      - name: Setup - MacOSX 
+        if: contains(matrix.os, 'macos')
+        run: |
+          LLVM_PATH=${{ env.LLVM_PATH }}
+          LLVM_VERSION=${{ matrix.clang }}
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
+          echo "CPATH=$LLVM_PATH/lib/clang/$LLVM_VERSION/include/" >> $GITHUB_ENV
+          echo "LDFLAGS=-L$LLVM_PATH/lib" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I$LLVM_PATH/include" >> $GITHUB_ENV
+          echo "CC=$LLVM_PATH/bin/clang" >> $GITHUB_ENV
+          echo "CXX=$LLVM_PATH/bin/clang++" >> $GITHUB_ENV
 
       # Add cl.exe to the PATH on Windows for the replayer integration test.
       # Pinned to the commit of the v1.10.0 tag on 2022-05-05.
-      - uses: ilammy/msvc-dev-cmd@d8610e2b41c6d0f0c3b4c46dad8df0fd826c68e1
+      - name: Setup - Windows
+        uses: ilammy/msvc-dev-cmd@d8610e2b41c6d0f0c3b4c46dad8df0fd826c68e1
         if: ${{ matrix.os == 'windows-latest' }}
 
       - name: Run integration tests
         run: make test/integration
+        shell: bash

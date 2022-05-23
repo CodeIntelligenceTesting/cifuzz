@@ -12,6 +12,7 @@ else
 endif
 
 binary_base_path = build/bin/cifuzz_
+test_fuzz_targets_path = testdata
 
 default:
 	@echo cifuzz
@@ -19,6 +20,7 @@ default:
 .PHONY: clean
 clean:
 	rm -rf build/
+	make -C $(test_fuzz_targets_path) clean
 
 .PHONY: deps
 deps:
@@ -43,6 +45,10 @@ build/windows: deps
 build/darwin: deps
 	env GOOS=darwin GOARCH=amd64 go build -o $(binary_base_path)darwin cmd/cifuzz/main.go
 
+.PHONY: build/test/fuzz-targets
+build/test/fuzz-targets:
+	make -C $(test_fuzz_targets_path) all
+
 .PHONY: lint
 lint: deps/dev
 	staticcheck ./...
@@ -57,7 +63,7 @@ fmt/check:
 	if [ "$$(gofmt -d -l . | wc -l)" -gt 0 ]; then exit 1; fi;
 
 .PHONY: test
-test: deps build/$(current_os)
+test: deps build/$(current_os) build/test/fuzz-targets
 	go test ./...
 
 .PHONY: test/unit
@@ -69,7 +75,7 @@ test/unit/concurrent: deps
 	go test ./... -short -count=10 
 
 .PHONY: test/integration
-test/integration: deps build/$(current_os)
+test/integration: deps build/$(current_os) build/test/fuzz-targets
 	go test ./... -run 'TestIntegration.*'
 
 .PHONY: test/race
