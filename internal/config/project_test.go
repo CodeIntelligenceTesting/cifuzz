@@ -88,3 +88,36 @@ func TestCreateProjectConfig_Exists(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
+
+func TestReadProjectConfig(t *testing.T) {
+	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	require.NoError(t, err)
+
+	configFile := filepath.Join(projectDir, "cifuzz.yaml")
+	err = ioutil.WriteFile(configFile, []byte("build_system: "+BuildSystemAuto), 0644)
+	require.NoError(t, err)
+
+	config, err := ReadProjectConfig(projectDir)
+	require.NoError(t, err)
+
+	require.Equal(t, BuildSystemUnknown, config.BuildSystem)
+}
+
+func TestReadProjectConfigCMake(t *testing.T) {
+	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	require.NoError(t, err)
+
+	configFile := filepath.Join(projectDir, "cifuzz.yaml")
+	err = ioutil.WriteFile(configFile, []byte("build_system: "+BuildSystemAuto), 0644)
+	require.NoError(t, err)
+
+	// Create a CMakeLists.txt in the project dir, which should cause
+	// the build system to be detected as CMake
+	err = ioutil.WriteFile(filepath.Join(projectDir, "CMakeLists.txt"), []byte{}, 0644)
+	require.NoError(t, err)
+
+	config, err := ReadProjectConfig(projectDir)
+	require.NoError(t, err)
+
+	require.Equal(t, BuildSystemCMake, config.BuildSystem)
+}
