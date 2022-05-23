@@ -58,7 +58,8 @@
 #include <dirent.h>
 #endif
 
-/* If argv[0] + SEED_CORPUS_SUFFIX exists as a file or directory, its contents will always executed first. */
+/* If no arguments are specified and argv[0] + SEED_CORPUS_SUFFIX exists as a file or directory, its contents will
+ * be executed. */
 const char *SEED_CORPUS_SUFFIX = "_seed_corpus";
 
 static const char *argv0;
@@ -461,11 +462,16 @@ int main(int argc, char **argv) {
   /* If no arguments are specified, run the empty input and the seed corpus at argv[0] + SEED_CORPUS_SUFFIX
    * Note: On Windows, ".exe" is stripped from argv[0] before forming the seed corpus path. */
   if (argc == 1) {
-    /* Always run the empty input. */
+    /* Run the fuzz test on the empty input. This serves as a simple check to catch runtime issues in the fuzz test
+     * setup (e.g. dynamic linking problems). */
     fprintf(stderr, "Running: <empty input>\n");
     run_one_input(&empty[0], 0);
     fprintf(stderr, "Done:    <empty input>: (0 bytes)\n");
 
+    /* If the build system integration provided the path to the seed corpus at build time via the cifuzz_seed_corpus
+     * symbol, use that path. Otherwise, e.g. in case of no special build system support, look in a well-known location
+     * next to the fuzz test binary so that a regression test run on the seed corpus only requires running the binary
+     * without having to specify any arguments. */
     if (WITH_DEFAULT(cifuzz_seed_corpus)() != NULL) {
       /* Only run the seed corpus if it exists, either as a single file or a directory. */
       if (POSIX_STAT(WITH_DEFAULT(cifuzz_seed_corpus)(), &stat_info) == 0) {
