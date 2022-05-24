@@ -10,7 +10,7 @@ FUZZ_TEST_SETUP() {
 
 // This fuzz target crashes on any input if and only if FUZZ_TEST_SETUP has been
 // invoked.
-FUZZ_TEST(const uint8_t *data, size_t size) {
+FUZZ_TEST(const std::uint8_t *data, std::size_t size) {
   if (should_crash) {
     assert(0 == 1);
   }
