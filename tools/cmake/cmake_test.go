@@ -129,6 +129,56 @@ func TestIntegrationBuildLegacyFuzzTests(t *testing.T) {
 	runAndAssertTests(t, buildDir, cifuzzCmakeBuildType, map[string]bool{"legacy_fuzz_test_regression_test": true})
 }
 
+func TestIntegrationCifuzzInfoIsCreated(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	t.Parallel()
+	testutil.RegisterTestDeps("testdata", "CIFuzz")
+
+	buildDir, err := ioutil.TempDir(baseTempDir, "build")
+	require.NoError(t, err)
+
+	// Only configure, don't build.
+	runInDir(t, buildDir, "cmake", testDataDir(t))
+
+	// For multi-configuration build tools such as MSBuild, the build directory contains subdirectories for each
+	// configuration. Since we didn't specify any explicitly, the default is "Debug". With make and ninja, the value of
+	// the $<CONFIG> generator expression used in the CMake integration is ".".
+	var configDir string
+	var binaryName string
+	if runtime.GOOS == "windows" {
+		configDir = "Debug"
+		binaryName = "parser_fuzz_test.exe"
+	} else {
+		configDir = "."
+		binaryName = "parser_fuzz_test"
+	}
+
+	// The CMake integration should create a file containing the binary path for every target at a fixed location.
+	parserFuzzTestInfo := filepath.Join(buildDir, configDir, ".cifuzz", "fuzz_tests", "parser_fuzz_test")
+	content, err := os.ReadFile(parserFuzzTestInfo)
+	require.NoError(t, err)
+	// Canonicalize the paths before comparing since they may use different symlinks (e.g., on macOS /private/var and
+	// /var are symlinked aliases). Since Go doesn't offer a way to canonicalize paths to non-existent files, touch both
+	// paths (the fuzz test binaries haven't been built yet since we only ran the configure step).
+	expectedFuzzTestPath := filepath.Join(buildDir, "src", "parser", configDir, binaryName)
+	err = os.MkdirAll(filepath.Dir(expectedFuzzTestPath), 0755)
+	require.NoError(t, err)
+	err = fileutil.Touch(expectedFuzzTestPath)
+	require.NoError(t, err)
+	expectedFuzzTestPath, err = filepath.EvalSymlinks(expectedFuzzTestPath)
+	require.NoError(t, err)
+	actualFuzzTestPath := string(content)
+	err = os.MkdirAll(filepath.Dir(actualFuzzTestPath), 0755)
+	require.NoError(t, err)
+	err = fileutil.Touch(actualFuzzTestPath)
+	require.NoError(t, err)
+	actualFuzzTestPath, err = filepath.EvalSymlinks(actualFuzzTestPath)
+	require.NoError(t, err)
+	assert.Equal(t, expectedFuzzTestPath, actualFuzzTestPath)
+}
+
 func build(t *testing.T, buildType string, cacheVariables map[string]string) string {
 	buildDir, err := ioutil.TempDir(baseTempDir, "build")
 	require.NoError(t, err)
