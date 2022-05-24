@@ -2,6 +2,8 @@
 /build/
 /site/
 tmp/
+bin/
+lib/
 
 coverage.out
 
