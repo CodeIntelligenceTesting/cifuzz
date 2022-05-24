@@ -14,7 +14,6 @@ go_library(
         "//pkg/runfiles:go_default_library",
         "//util/envutil:go_default_library",
         "//util/fileutil:go_default_library",
-        "//util/glogutil:go_default_library",
         "//util/stringutil:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

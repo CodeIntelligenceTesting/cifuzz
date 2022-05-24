@@ -14,13 +14,11 @@ import (
 
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 const maxBufferedReports = 10
 
 func TestMain(m *testing.M) {
-	testutil.SetupGlog()
 	flag.Parse()
 
 	res := m.Run()
