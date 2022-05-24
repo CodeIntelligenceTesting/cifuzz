@@ -59,35 +59,35 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	if err != nil {
 		return err
 	}
-	dialog.DebugF("Selected fuzz test type: %s\n", opts.testType)
+	dialog.Debugf("Selected fuzz test type: %s\n", opts.testType)
 
 	// get output directory
 	opts.outDir, err = storage.GetOutDir(opts.outDir, opts.fs)
 	if workarounds.IsPermission(errors.Cause(err)) {
-		dialog.ErrorF(err, "unable to write to given out directory, permission denied: %s\n", opts.outDir)
+		dialog.Errorf(err, "unable to write to given out directory, permission denied: %s\n", opts.outDir)
 		return cmdutils.WrapSilentError(err)
 	} else if err != nil {
 		return err
 	}
-	dialog.DebugF("Using output directory: %s\n", opts.outDir)
+	dialog.Debugf("Using output directory: %s\n", opts.outDir)
 
 	opts.filename, err = determineFilename(opts, cmd.InOrStdin())
 	if err != nil {
 		return err
 	}
-	dialog.DebugF("Selected filename %s\n", opts.filename)
+	dialog.Debugf("Selected filename %s\n", opts.filename)
 
 	// create stub
 	stubPath := filepath.Join(opts.outDir, opts.filename)
 	if err := stubs.Create(stubPath, opts.testType, opts.fs); err != nil {
 		if os.IsExist(errors.Cause(err)) {
-			dialog.ErrorF(err, "Unable to created fuzz test, file already exists %s\n", stubPath)
+			dialog.Errorf(err, "Unable to created fuzz test, file already exists %s\n", stubPath)
 			return cmdutils.WrapSilentError(err)
 		}
 	}
 
 	// show success message
-	dialog.SuccessF("Fuzz test stub created at %s\n", stubPath)
+	dialog.Successf("Fuzz test stub created at %s\n", stubPath)
 	dialog.Info(`
 Note: Fuzz tests can be put anywhere in your repository, but it makes sense to keep them close to the tested code - just like regular unit tests.`)
 
@@ -117,7 +117,7 @@ func determineFilename(opts *cmdOpts, stdin io.Reader) (string, error) {
 	if err != nil {
 		// as this error only results in a missing filename suggestion we just show
 		// it but do not stop the application
-		dialog.ErrorF(err, "unable to suggest filename for given test type %s", opts.testType)
+		dialog.Errorf(err, "unable to suggest filename for given test type %s", opts.testType)
 	}
 
 	filename, err := dialog.Input(

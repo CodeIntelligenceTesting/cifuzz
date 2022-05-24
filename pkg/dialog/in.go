@@ -29,9 +29,9 @@ func Select(message string, items map[string]string, inReader io.Reader) (string
 func Input(message string, defaultValue string, inReader io.Reader) (string, error) {
 	reader := bufio.NewReader(inReader)
 	if defaultValue == "" {
-		InfoF("%s: ", message)
+		Infof("%s: ", message)
 	} else {
-		InfoF("%s [%s]: ", message, defaultValue)
+		Infof("%s [%s]: ", message, defaultValue)
 	}
 
 	input, err := reader.ReadString('\n')
