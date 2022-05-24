@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
+	"code-intelligence.com/cifuzz/pkg/dialog"
 	"github.com/pkg/errors"
 )
 
@@ -113,7 +113,7 @@ func (c *Cmd) Start() error {
 			case <-c.ctx.Done():
 				c.terminatedAfterContextDoneMutex.Lock()
 				// Print the reason for the context being done
-				glog.Infof("Terminating process: %s", c.ctx.Err().Error())
+				dialog.Infof("Terminating process: %s", c.ctx.Err().Error())
 				// In contrast to exec.Cmd.Start(), we terminate the
 				// whole process group here with a grace period instead
 				// of calling c.Process.Kill().

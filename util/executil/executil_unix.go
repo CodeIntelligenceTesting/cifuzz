@@ -6,12 +6,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/golang/glog"
+	"code-intelligence.com/cifuzz/pkg/dialog"
 	"github.com/pkg/errors"
 )
 
 func (c *Cmd) TerminateProcessGroup(pgid int) {
-	glog.Infof("Sending SIGTERM to process group %d", pgid)
+	dialog.Infof("Sending SIGTERM to process group %d", pgid)
 	// We ignore errors here because the process group might not exist
 	// anymore at this point.
 	_ = syscall.Kill(-pgid, syscall.SIGTERM) // note the minus sign
@@ -21,7 +21,7 @@ func (c *Cmd) TerminateProcessGroup(pgid int) {
 	case <-time.After(processGroupTerminationGracePeriod):
 		// The process group didn't exit within the grace period, so we
 		// send it a SIGKILL now
-		glog.Infof("Sending SIGKILL to process group %d", pgid)
+		dialog.Infof("Sending SIGKILL to process group %d", pgid)
 		// We ignore errors here because the process group might not exist
 		// anymore at this point.
 		_ = syscall.Kill(-pgid, syscall.SIGKILL) // note the minus sign

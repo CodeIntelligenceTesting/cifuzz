@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 
+	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/parser/sanitizer"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/util/regexutil"
@@ -78,7 +78,7 @@ func (p *parser) Parse(ctx context.Context, input io.Reader, reportsCh chan *rep
 	scanner := bufio.NewScanner(input)
 
 	// Send an initial report, to notify the server that the fuzzer is now running
-	glog.V(3).Info("Sending initial report")
+	dialog.Debug("Sending initial report")
 	err := p.sendReport(ctx, &report.Report{Status: report.RunStatus_INITIALIZING})
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (p *parser) sendReport(ctx context.Context, report *report.Report) error {
 func (p *parser) parseLine(ctx context.Context, line string) error {
 	metric := p.parseAsFuzzingMetric(line)
 	if metric != nil {
-		glog.V(3).Info("Sending metric report")
+		dialog.Debug("Sending metric report")
 		err := p.sendReport(ctx, &report.Report{
 			Status: report.RunStatus_RUNNING,
 			Metric: metric,
@@ -427,7 +427,7 @@ func (p *parser) sendPendingFinding(ctx context.Context) error {
 }
 
 func (p *parser) sendFinding(ctx context.Context, finding *report.Finding) error {
-	glog.V(3).Info("Sending finding")
+	dialog.Debug("Sending finding")
 	p.FindingReported = true
 
 	return p.sendReport(ctx, &report.Report{

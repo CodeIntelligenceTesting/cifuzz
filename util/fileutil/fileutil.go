@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"code-intelligence.com/cifuzz/pkg/dialog"
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 )
 
@@ -73,7 +73,7 @@ func Cleanup(path string) {
 
 	err := os.RemoveAll(path)
 	if err != nil {
-		glog.Errorf("%+v", errors.WithStack(err))
+		dialog.Warnf("%+v", errors.WithStack(err))
 	}
 }
 
