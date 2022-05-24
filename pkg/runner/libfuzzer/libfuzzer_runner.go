@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"code-intelligence.com/cifuzz/pkg/minijail"
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
+	"code-intelligence.com/cifuzz/pkg/dialog"
+	"code-intelligence.com/cifuzz/pkg/minijail"
 	libfuzzer_parser "code-intelligence.com/cifuzz/pkg/parser/libfuzzer"
 	"code-intelligence.com/cifuzz/pkg/report"
 	fuzzer_runner "code-intelligence.com/cifuzz/pkg/runner"
@@ -198,7 +198,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 		return err
 	}
 
-	glog.Infof("Running command %s", strings.Join(stringutil.QuotedStrings(cmd.Args), " "))
+	dialog.Debugf("Command: %s", strings.Join(stringutil.QuotedStrings(cmd.Args), " "))
 	err = cmd.Start()
 	if err != nil {
 		return err
