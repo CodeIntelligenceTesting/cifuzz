@@ -17,11 +17,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 var baseTempDir string
 
 func TestMain(m *testing.M) {
+	testutil.RegisterTestDeps("testdata", "CIFuzz")
+
 	var err error
 	// Intentionally include a space here to test that we don't break on it.
 	baseTempDir, err = ioutil.TempDir("", "cifuzz cmake")

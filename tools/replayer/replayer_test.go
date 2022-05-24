@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -200,6 +201,8 @@ var ubsanRunCase = runCase{
 var baseTempDir string
 
 func TestMain(m *testing.M) {
+	testutil.RegisterTestDeps("src", "testdata")
+
 	var err error
 	// Intentionally include a space here to test that we don't break on it.
 	baseTempDir, err = ioutil.TempDir("", "cifuzz replayer")
