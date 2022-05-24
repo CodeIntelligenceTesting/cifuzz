@@ -48,6 +48,8 @@ func TestIntegrationCtestDefaultSettings(t *testing.T) {
 		"parser_fuzz_test_regression_test": true,
 		// The target returns a non-zero value on every input and the replayer always runs on the empty input.
 		"no_seed_corpus_fuzz_test_regression_test": false,
+		// Never crashes.
+		"c_fuzz_test_regression_test": true,
 	}, testResults)
 }
 
@@ -64,6 +66,8 @@ func TestIntegrationCtestWithAddressSanitizer(t *testing.T) {
 		"parser_fuzz_test_regression_test": false,
 		// The target returns a non-zero value on every input and the replayer always runs on the empty input.
 		"no_seed_corpus_fuzz_test_regression_test": false,
+		// Never crashes.
+		"c_fuzz_test_regression_test": true,
 	}, testResults)
 }
 
@@ -83,6 +87,8 @@ func TestIntegrationCtestWithUndefinedBehaviorSanitizer(t *testing.T) {
 		"parser_fuzz_test_regression_test": false,
 		// The target returns a non-zero value on every input and the replayer always runs on the empty input.
 		"no_seed_corpus_fuzz_test_regression_test": false,
+		// Never crashes.
+		"c_fuzz_test_regression_test": true,
 	}, testResults)
 }
 

@@ -13,3 +13,5 @@ add_fuzz_test(parser_fuzz_test parser_fuzz_test.cpp)
 target_link_libraries(parser_fuzz_test PRIVATE parser)
 
 add_fuzz_test(no_seed_corpus_fuzz_test crash_always_fuzz_target.cpp)
+
+add_fuzz_test(c_fuzz_test c_fuzz_test.c)

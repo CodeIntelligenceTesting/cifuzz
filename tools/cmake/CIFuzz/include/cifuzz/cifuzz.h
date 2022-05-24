@@ -1,7 +1,13 @@
+/* Include the headers providing the definitions required to use FUZZ_TEST. */
+#ifdef __cplusplus
 #include <cstddef>
 #include <cstdint>
+#else
+#include <stddef.h>
+#include <stdint.h>
+#endif
 
-#ifdef __CLION_IDE__
+#if defined(__CLION_IDE__) && defined(__cplusplus)
 /* This code will only be seen by CLion's static analysis/preprocessing engine
  * and thus doesn't have to contain any definitions, declarations are
  * sufficient. It mocks enough of the Doctest classes to make CLion's test
@@ -45,22 +51,27 @@ static const int DOCTEST_ANON_VAR_15771531 =    \
 #define CLION_TEST_PLAY_BUTTON
 #endif
 
-#define FUZZ_TEST                                                          \
-void LLVMFuzzerTestOneInputNoReturn(const uint8_t *data, size_t size);     \
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {  \
-  LLVMFuzzerTestOneInputNoReturn(data, size);                              \
-  return 0;                                                                \
-}                                                                          \
-extern "C" const char *cifuzz_test_name() { return CIFUZZ_TEST_NAME; }     \
-extern "C" const char *cifuzz_seed_corpus() { return CIFUZZ_SEED_CORPUS; } \
-CLION_TEST_PLAY_BUTTON                                                     \
+#ifdef __cplusplus
+#define CIFUZZ_C_LINKAGE extern "C"
+#else
+#define CIFUZZ_C_LINKAGE
+#endif
+
+#define FUZZ_TEST                                                                \
+static void LLVMFuzzerTestOneInputNoReturn(const uint8_t *data, size_t size);    \
+CIFUZZ_C_LINKAGE int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {  \
+  LLVMFuzzerTestOneInputNoReturn(data, size);                                    \
+  return 0;                                                                      \
+}                                                                                \
+CIFUZZ_C_LINKAGE const char *cifuzz_test_name() { return CIFUZZ_TEST_NAME; }     \
+CIFUZZ_C_LINKAGE const char *cifuzz_seed_corpus() { return CIFUZZ_SEED_CORPUS; } \
+CLION_TEST_PLAY_BUTTON                                                           \
 void LLVMFuzzerTestOneInputNoReturn
 
-#define FUZZ_TEST_SETUP \
-void LLVMFuzzerInitializeNoReturn();    \
-extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) { \
-  LLVMFuzzerInitializeNoReturn();                              \
-  return 0;                                                    \
-}                                                              \
+#define FUZZ_TEST_SETUP                                              \
+static void LLVMFuzzerInitializeNoReturn();                          \
+CIFUZZ_C_LINKAGE int LLVMFuzzerInitialize(int *argc, char ***argv) { \
+  LLVMFuzzerInitializeNoReturn();                                    \
+  return 0;                                                          \
+}                                                                    \
 void LLVMFuzzerInitializeNoReturn
-
