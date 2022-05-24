@@ -21,6 +21,8 @@ import (
 	"code-intelligence.com/cifuzz/util/testutil"
 )
 
+const cifuzzCmakeBuildType = "RelWithDebInfo"
+
 var baseTempDir string
 
 func TestMain(m *testing.M) {
@@ -41,8 +43,11 @@ func TestIntegrationCtestDefaultSettings(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("testdata", "CIFuzz")
 
-	buildDir := build(t, nil)
-	runAndAssertTests(t, buildDir, map[string]bool{
+	// Simulate a build without any special flags. This is closest to what users get when they run fuzz tests like their
+	// existing (unit) tests - without cifuzz run or any CIFUZZ_* CMake variables set.
+	buildDir := build(t, "", nil)
+	// The default configuration without any other settings is Debug.
+	runAndAssertTests(t, buildDir, "Debug", map[string]bool{
 		// Without sanitizers, the seed corpus entries do not crash this target.
 		"parser_fuzz_test_regression_test": true,
 		// The target returns a non-zero value on every input and the replayer always runs on the empty input.
@@ -59,8 +64,11 @@ func TestIntegrationCtestWithAddressSanitizer(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("testdata", "CIFuzz")
 
-	buildDir := build(t, map[string]string{"CIFUZZ_SANITIZERS": "address"})
-	runAndAssertTests(t, buildDir, map[string]bool{
+	buildDir := build(t, cifuzzCmakeBuildType, map[string]string{
+		"CIFUZZ_SANITIZERS": "address",
+		"CIFUZZ_TESTING":    "ON",
+	})
+	runAndAssertTests(t, buildDir, cifuzzCmakeBuildType, map[string]bool{
 		// Crashes on the `asan_crash` input.
 		"parser_fuzz_test_regression_test": false,
 		// The target returns a non-zero value on every input and the replayer always runs on the empty input.
@@ -80,8 +88,11 @@ func TestIntegrationCtestWithUndefinedBehaviorSanitizer(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("testdata", "CIFuzz")
 
-	buildDir := build(t, map[string]string{"CIFUZZ_SANITIZERS": "undefined"})
-	runAndAssertTests(t, buildDir, map[string]bool{
+	buildDir := build(t, cifuzzCmakeBuildType, map[string]string{
+		"CIFUZZ_SANITIZERS": "undefined",
+		"CIFUZZ_TESTING":    "ON",
+	})
+	runAndAssertTests(t, buildDir, cifuzzCmakeBuildType, map[string]bool{
 		// Crashes on the `ubsan_crash` input.
 		"parser_fuzz_test_regression_test": false,
 		// The target returns a non-zero value on every input and the replayer always runs on the empty input.
@@ -101,7 +112,10 @@ func TestIntegrationBuildWithMultipleSanitizers(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("testdata", "CIFuzz")
 
-	build(t, map[string]string{"CIFUZZ_SANITIZERS": "address;undefined"})
+	build(t, cifuzzCmakeBuildType, map[string]string{
+		"CIFUZZ_SANITIZERS": "address;undefined",
+		"CIFUZZ_TESTING":    "ON",
+	})
 }
 
 func TestIntegrationBuildLegacyFuzzTests(t *testing.T) {
@@ -111,11 +125,11 @@ func TestIntegrationBuildLegacyFuzzTests(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("testdata", "CIFuzz")
 
-	buildDir := build(t, map[string]string{"CIFUZZ_USE_DEPRECATED_MACROS": "ON"})
-	runAndAssertTests(t, buildDir, map[string]bool{"legacy_fuzz_test_regression_test": true})
+	buildDir := build(t, cifuzzCmakeBuildType, map[string]string{"CIFUZZ_USE_DEPRECATED_MACROS": "ON"})
+	runAndAssertTests(t, buildDir, cifuzzCmakeBuildType, map[string]bool{"legacy_fuzz_test_regression_test": true})
 }
 
-func build(t *testing.T, cacheVariables map[string]string) string {
+func build(t *testing.T, buildType string, cacheVariables map[string]string) string {
 	buildDir, err := ioutil.TempDir(baseTempDir, "build")
 	require.NoError(t, err)
 
@@ -124,14 +138,24 @@ func build(t *testing.T, cacheVariables map[string]string) string {
 		cacheArgs = append(cacheArgs, "-D", fmt.Sprintf("%s=%s", key, value))
 	}
 	cacheArgs = append(cacheArgs, "-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON")
+	if buildType != "" {
+		cacheArgs = append(cacheArgs, "-D", fmt.Sprintf("CMAKE_BUILD_TYPE=%s", buildType))
+	}
 
+	// Configure
 	runInDir(t, buildDir, "cmake", append(cacheArgs, testDataDir(t))...)
-	runInDir(t, buildDir, "cmake", "--build", ".")
+
+	// Build
+	buildArgs := []string{"--build", "."}
+	if buildType != "" {
+		buildArgs = append(buildArgs, "--config", buildType)
+	}
+	runInDir(t, buildDir, "cmake", buildArgs...)
 
 	return buildDir
 }
 
-func runAndAssertTests(t *testing.T, buildDir string, expectedTestStatus map[string]bool) {
+func runAndAssertTests(t *testing.T, buildDir string, buildType string, expectedTestStatus map[string]bool) {
 	// We expect ctest to exit with 0 if and only if all tests are expected to pass.
 	ctestFails := false
 	for _, status := range expectedTestStatus {
@@ -149,9 +173,10 @@ func runAndAssertTests(t *testing.T, buildDir string, expectedTestStatus map[str
 		"--verbose",
 		// Print the output of failed tests to improve the CI logs.
 		"--output-on-failure",
-		// On Windows, ctest requires a configuration to be specified explicitly.
+		// With a multi-configuration generator (e.g. MSBuild on Windows), ctest requires specifying the configuration.
+		// For all other generators, this is a no-op.
 		"-C",
-		"Debug",
+		buildType,
 		// Instead of parsing CTest's unstructured console output, we let it emit an XML report that contains
 		// information on which tests passed or failed.
 		"--output-junit",

@@ -313,6 +313,8 @@ func commonBuildEnv() ([]string, error) {
 func setBuildFlagsEnvVars(env []string) ([]string, error) {
 	// Set CFLAGS and CXXFLAGS. Note that these flags must not contain
 	// spaces, because the environment variables are space separated.
+	//
+	// Note: Keep in sync with tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake
 	cflags := []string{
 		// ----- Common flags -----
 		// Keep debug symbols

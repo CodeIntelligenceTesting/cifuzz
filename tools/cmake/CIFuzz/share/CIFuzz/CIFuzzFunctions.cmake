@@ -1,4 +1,31 @@
+# Note: Keep the clang flags used below in sync with internal/cmd/run/run.go
+#       Explanations of these flags are provided in that file.
 function(enable_fuzz_testing)
+  if(CIFUZZ_TESTING)
+    add_compile_definitions(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+    if(MSVC)
+      add_compile_options(
+          # Allow the compiler to inline more aggressively. This overrides the (questionable?) default of /Ob1 set by
+          # CMake's RelWithDebInfo configuration (see https://stackoverflow.com/a/66089368/297261). Given that it also
+          # sets /Zi, which implies /Zo, which promises that it "tells the compiler to generate additional debugging
+          # information for local variables and inlined functions" (see
+          # https://docs.microsoft.com/en-us/cpp/build/reference/zo-enhance-optimized-debugging?view=msvc-170).
+          /Ob2
+          # MSVC's equivalent of -fno-omit-frame-pointer.
+          /Oy-
+          # Undefine NDEBUG, which is explicitly defined by the RelWithDebInfo CMake configuration, so that asserts are
+          # kept.
+          /UNDEBUG
+      )
+    else()
+      add_compile_options(
+          -fno-omit-frame-pointer
+          # Undefine NDEBUG, which is explicitly defined by the RelWithDebInfo CMake configuration, so that asserts are
+          # kept.
+          -UNDEBUG
+      )
+    endif()
+  endif()
 
   if(CIFUZZ_ENGINE STREQUAL libfuzzer)
     if(MSVC)
@@ -11,13 +38,17 @@ function(enable_fuzz_testing)
   foreach(sanitizer IN LISTS CIFUZZ_SANITIZERS)
     if(sanitizer STREQUAL address)
       if(MSVC)
-        add_compile_options(
-            /fsanitize=address
-            # Create a separate .pdb with debugging info used for more informative ASan reports.
-            /Zi
-        )
+        # stack-use-after-scope instrumentation is enabled by default.
+        # https://docs.microsoft.com/en-us/cpp/sanitizers/asan?view=msvc-170#differences
+        add_compile_options(/fsanitize=address)
+        # MSVC automatically signals to the linker that ASan should be linked.
+        # https://docs.microsoft.com/en-us/cpp/build/reference/inferasanlibs?view=msvc-170
       else()
-        add_compile_options(-fsanitize=address)
+        add_compile_options(
+            -fsanitize=address
+            -fsanitize-recover=address
+            -fsanitize-address-use-after-scope
+        )
         add_link_options(-fsanitize=address)
       endif()
     elseif(sanitizer STREQUAL undefined)
@@ -26,6 +57,11 @@ function(enable_fuzz_testing)
       else()
         add_compile_options(-fsanitize=undefined)
         add_link_options(-fsanitize=undefined)
+        if (CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+          # To avoid issues with clang (not clang++) and UBSan, see
+          # https://github.com/bazelbuild/bazel/issues/11122#issuecomment-896613570
+          add_link_options(-fsanitize-link-c++-runtime)
+        endif()
       endif()
     else()
       message(FATAL_ERROR "CIFuzz: Unsupported value in CIFUZZ_SANITIZERS: ${sanitizer}")

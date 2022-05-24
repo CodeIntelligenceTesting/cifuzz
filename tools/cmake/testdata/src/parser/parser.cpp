@@ -12,7 +12,7 @@ int parse(const std::string &input) {
   }
   const int bar = std::numeric_limits<int>::max() - 5;
   // Crashes with UndefinedBehaviorSanitizer.
-  if (bar + input[0] == 300) {
+  if (bar + input[0] == std::numeric_limits<int>::max()) {
     return -1;
   }
   if (input[0] == 'a' && input[1] == 'b' && input[2] == 'c') {
