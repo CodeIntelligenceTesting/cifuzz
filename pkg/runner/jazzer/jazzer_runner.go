@@ -110,6 +110,9 @@ func (r *Runner) Run(ctx context.Context) error {
 	// Tell libfuzzer which corpus directory it should use
 	args = append(args, r.SeedsDir)
 
+	// Add any additional corpus directories as further positional arguments
+	args = append(args, r.AdditionalSeedsDirs...)
+
 	// -----------------------------
 	// --- fuzz target arguments ---
 	// -----------------------------
