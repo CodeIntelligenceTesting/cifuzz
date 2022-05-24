@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -38,6 +39,13 @@ func NewInstaller(opts *Options) (*installer, error) {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+	}
+	if strings.HasPrefix(opts.InstallDir, "~") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		opts.InstallDir = home + strings.TrimPrefix(opts.InstallDir, "~")
 	}
 
 	i := &installer{
