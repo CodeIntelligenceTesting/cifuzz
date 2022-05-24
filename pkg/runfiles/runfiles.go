@@ -30,7 +30,7 @@ func init() {
 	// current executable lives in $INSTALL_DIR/bin, so we go up one
 	// directory from there and use that as the installation directory.
 	installDir, found := os.LookupEnv("CIFUZZ_INSTALL_ROOT")
-	if !found {
+	if !found || installDir == "" {
 		executablePath, err := os.Executable()
 		if err != nil {
 			panic(errors.WithStack(err))
