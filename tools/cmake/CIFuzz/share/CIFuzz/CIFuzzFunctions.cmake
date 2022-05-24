@@ -1,6 +1,10 @@
 # Note: Keep the clang flags used below in sync with internal/cmd/run/run.go
 #       Explanations of these flags are provided in that file.
 function(enable_fuzz_testing)
+  # Remove the metadata directory we populate with fuzz test target information at configuration time so that e.g.
+  # metadata for renamed or removed targets doesn't linger around.
+  file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/$<CONFIG>/.cifuzz")
+
   if(CIFUZZ_TESTING)
     add_compile_definitions(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
     if(MSVC)
@@ -122,6 +126,17 @@ function(add_fuzz_test name)
   # symlinks are not always available on Windows (junctions exist, but may cause issues with tools that are unaware of
   # them and are not easy to deal with using just POSIX functions).
   target_compile_definitions("${name}" PRIVATE CIFUZZ_SEED_CORPUS="${_source_seed_corpus}")
+
+  # Collect a mapping from CMake target names to binary paths for cifuzz.
+  # We don't use add_custom_command here as we want the mapping to exist already after the configure step, not only
+  # after the build step - this way, it is comparatively cheap to update the mapping since the actual build tool doesn't
+  # have to run. IDEs may even refresh the metadata automatically for us.
+  # Note: Removed and renamed targets leave behind their entry in this mapping. Since these files are cheap to
+  #       regenerate, cifuzz can just delete the entire .cifuzz directory before each build (see enable_fuzz_testing).
+  set(_info_file "${CMAKE_BINARY_DIR}/$<CONFIG>/.cifuzz/fuzz_tests/${name}")
+  file(GENERATE
+       OUTPUT "$<SHELL_PATH:${_info_file}>"
+       CONTENT $<TARGET_FILE:${name}>)
 
   add_test(NAME "${name}_regression_test" COMMAND "${name}")
 endfunction()
