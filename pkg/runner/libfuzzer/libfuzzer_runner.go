@@ -135,6 +135,10 @@ func (r *Runner) Run(ctx context.Context) error {
 			{Source: r.SeedsDir, Writable: minijail.ReadWrite},
 		}
 
+		for _, dir := range r.AdditionalSeedsDirs {
+			bindings = append(bindings, &minijail.Binding{Source: dir})
+		}
+
 		// Set up Minijail
 		mj, err := minijail.NewMinijail(&minijail.Options{
 			Args:     libfuzzerArgs,

@@ -144,6 +144,10 @@ func (r *Runner) Run(ctx context.Context) error {
 			{Source: r.SeedsDir, Writable: minijail.ReadWrite},
 		}
 
+		for _, dir := range r.AdditionalSeedsDirs {
+			bindings = append(bindings, &minijail.Binding{Source: dir})
+		}
+
 		// Add bindings for the Java dependencies
 		for _, p := range r.ClassPaths {
 			bindings = append(bindings, &minijail.Binding{Source: p})
