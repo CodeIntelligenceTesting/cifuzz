@@ -11,7 +11,11 @@ import (
 
 func print(target io.Writer, msgColor color.Attribute, icon, msg string, args ...interface{}) {
 	color.Set(msgColor)
-	_, _ = fmt.Fprintf(target, icon+msg, args...)
+	s := fmt.Sprintf(icon+msg, args...)
+	if len(s) == 0 || s[len(s)-1] != '\n' {
+		s += "\n"
+	}
+	_, _ = fmt.Fprint(target, s)
 	defer color.Unset()
 }
 
