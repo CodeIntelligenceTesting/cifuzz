@@ -1,27 +1,26 @@
-package dialog
+package log
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/spf13/viper"
 )
 
-func print(target io.Writer, msgColor color.Attribute, icon, msg string, args ...interface{}) {
+func log(msgColor color.Attribute, icon, msg string, args ...interface{}) {
 	color.Set(msgColor)
 	s := fmt.Sprintf(icon+msg, args...)
 	if len(s) == 0 || s[len(s)-1] != '\n' {
 		s += "\n"
 	}
-	_, _ = fmt.Fprint(target, s)
+	_, _ = fmt.Fprint(os.Stderr, s)
 	defer color.Unset()
 }
 
 // Successf highlights a message as successful
 func Successf(msg string, args ...interface{}) {
-	print(os.Stdout, color.FgGreen, "✅ ", msg, args...)
+	log(color.FgGreen, "✅ ", msg, args...)
 }
 
 func Success(msg string) {
@@ -30,7 +29,7 @@ func Success(msg string) {
 
 // Warnf highlights a message as a warning
 func Warnf(msg string, args ...interface{}) {
-	print(os.Stderr, color.FgYellow, "⚠️ ", msg, args...)
+	log(color.FgYellow, "⚠️ ", msg, args...)
 }
 
 func Warn(msg string) {
@@ -39,7 +38,7 @@ func Warn(msg string) {
 
 // Errorf highlights a message as an error and shows the stack strace if the --verbose flag is active
 func Errorf(err error, msg string, args ...interface{}) {
-	print(os.Stderr, color.FgRed, "❌ ", msg, args...)
+	log(color.FgRed, "❌ ", msg, args...)
 	Debugf("%+v", err)
 }
 
@@ -49,7 +48,7 @@ func Error(err error, msg string) {
 
 // Infof outputs a regular user message without any highlighting
 func Infof(msg string, args ...interface{}) {
-	print(os.Stdout, color.FgWhite, "", msg, args...)
+	log(color.FgWhite, "", msg, args...)
 }
 
 func Info(msg string) {
@@ -59,7 +58,7 @@ func Info(msg string) {
 // Debugf outputs additional information when the --verbose flag is active
 func Debugf(msg string, args ...interface{}) {
 	if viper.GetBool("verbose") {
-		print(os.Stderr, color.FgWhite, "🔍 ", msg, args...)
+		log(color.FgWhite, "🔍 ", msg, args...)
 	}
 }
 

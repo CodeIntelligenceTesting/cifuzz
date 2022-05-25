@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strings"
 
@@ -29,9 +30,9 @@ func Select(message string, items map[string]string, inReader io.Reader) (string
 func Input(message string, defaultValue string, inReader io.Reader) (string, error) {
 	reader := bufio.NewReader(inReader)
 	if defaultValue == "" {
-		Infof("%s: ", message)
+		fmt.Printf("%s: \n", message)
 	} else {
-		Infof("%s [%s]: ", message, defaultValue)
+		fmt.Printf("%s [%s]: \n", message, defaultValue)
 	}
 
 	input, err := reader.ReadString('\n')

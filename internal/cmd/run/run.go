@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
-	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/envutil"
@@ -40,7 +40,7 @@ func (opts *runOptions) validate() error {
 		_, err := opts.fs.Stat(d)
 		if err != nil {
 			err = errors.WithStack(err)
-			dialog.Error(err, err.Error())
+			log.Error(err, err.Error())
 			return cmdutils.WrapSilentError(err)
 		}
 	}
@@ -50,7 +50,7 @@ func (opts *runOptions) validate() error {
 		_, err := opts.fs.Stat(opts.dictionary)
 		if err != nil {
 			err = errors.WithStack(err)
-			dialog.Error(err, err.Error())
+			log.Error(err, err.Error())
 			return cmdutils.WrapSilentError(err)
 		}
 	}

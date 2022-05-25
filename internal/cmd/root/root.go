@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -15,7 +16,6 @@ import (
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
 	runCmd "code-intelligence.com/cifuzz/internal/cmd/run"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
-	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/storage"
 )
 
@@ -34,7 +34,7 @@ func New(fs *afero.Afero) *cobra.Command {
 				err := os.Chdir(workdir)
 				if err != nil {
 					err = errors.WithStack(err)
-					dialog.Error(err, err.Error())
+					log.Error(err, err.Error())
 					return cmdutils.WrapSilentError(err)
 				}
 			}
