@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"code-intelligence.com/cifuzz/pkg/dialog"
+	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/pkg/runfiles"
@@ -256,7 +256,7 @@ func NewMinijail(opts *Options) (*minijail, error) {
 	minijailArgs := append([]string{minijailPath}, fixedMinijailArgs...)
 
 	if os.Getenv(DebugEnvVarName) != "" {
-		dialog.Warn("Running minijail in debug mode, this is NOT SAFE FOR PRODUCTION!")
+		log.Warn("Running minijail in debug mode, this is NOT SAFE FOR PRODUCTION!")
 		// This causes minijail to not use preload hooking, which
 		// sometimes results in better error messages, so it can be
 		// useful for debugging but shouldn't be used in production,
