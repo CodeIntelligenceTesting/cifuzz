@@ -1,3 +1,6 @@
+#ifndef CIFUZZ_CIFUZZ_H
+#define CIFUZZ_CIFUZZ_H
+
 /* Include the headers providing the definitions required to use FUZZ_TEST. */
 #ifdef __cplusplus
 #include <cstddef>
@@ -75,3 +78,5 @@ CIFUZZ_C_LINKAGE int LLVMFuzzerInitialize(int *argc, char ***argv) { \
   return 0;                                                          \
 }                                                                    \
 void LLVMFuzzerInitializeNoReturn
+
+#endif  // CIFUZZ_CIFUZZ_H
