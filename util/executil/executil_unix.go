@@ -10,21 +10,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (c *Cmd) TerminateProcessGroup(pgid int) {
-	log.Infof("Sending SIGTERM to process group %d", pgid)
+func (c *Cmd) TerminateProcessGroup() {
+	log.Infof("Sending SIGTERM to process group %d", c.pgid)
 	// We ignore errors here because the process group might not exist
 	// anymore at this point.
-	_ = syscall.Kill(-pgid, syscall.SIGTERM) // note the minus sign
+	_ = syscall.Kill(-c.pgid, syscall.SIGTERM) // note the minus sign
 
 	// Give the process group a few seconds to exit
 	select {
 	case <-time.After(processGroupTerminationGracePeriod):
 		// The process group didn't exit within the grace period, so we
 		// send it a SIGKILL now
-		log.Infof("Sending SIGKILL to process group %d", pgid)
+		log.Infof("Sending SIGKILL to process group %d", c.pgid)
 		// We ignore errors here because the process group might not exist
 		// anymore at this point.
-		_ = syscall.Kill(-pgid, syscall.SIGKILL) // note the minus sign
+		_ = syscall.Kill(-c.pgid, syscall.SIGKILL) // note the minus sign
 	case <-c.waitDone:
 		// The process has already exited, nothing else to do here.
 		// Note: This might leave other processes in the process group

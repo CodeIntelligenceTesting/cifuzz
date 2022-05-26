@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -247,6 +249,19 @@ func (c *runCmd) runFuzzTest() error {
 		UseMinijail:         c.opts.useSandbox,
 	}
 	runner := libfuzzer.NewRunner(runnerOpts)
+
+	// Handle cleanup (terminating the fuzzer process) when receiving
+	// termination signals
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	go func() {
+		s := <-sigs
+		log.Infof("Received %s", s.String())
+		runner.Cleanup()
+		os.Exit(128 + int(s.(syscall.Signal)))
+	}()
+
 	return runner.Run(context.Background())
 }
 

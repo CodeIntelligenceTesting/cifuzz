@@ -8,8 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
+
+	"code-intelligence.com/cifuzz/pkg/log"
 )
 
 const (
@@ -27,6 +28,7 @@ type Cmd struct {
 	ctx            context.Context
 	waitDone       chan struct{}
 	CloseAfterWait []io.Closer
+	pgid           int
 	// When TerminateProcessGroupWhenContextDone is set to true,
 	// Cmd.Start() will terminate the process group when the command did
 	// not complete before the context is done. In that case,
@@ -91,9 +93,7 @@ func (c *Cmd) Start() error {
 		return errors.New("exec: already started")
 	}
 
-	if c.TerminateProcessGroupWhenContextDone {
-		c.prepareProcessGroupTermination()
-	}
+	c.prepareProcessGroupTermination()
 
 	err := c.Cmd.Start()
 	if err != nil {
@@ -101,12 +101,14 @@ func (c *Cmd) Start() error {
 		return errors.WithStack(err)
 	}
 
-	if c.TerminateProcessGroupWhenContextDone && c.ctx != nil {
-		pgid, err := c.getpgid()
-		if err != nil {
-			return err
-		}
+	// Get the process group ID which is needed when
+	// c.TerminateProcessGroup() is called.
+	c.pgid, err = c.getpgid()
+	if err != nil {
+		return err
+	}
 
+	if c.TerminateProcessGroupWhenContextDone && c.ctx != nil {
 		c.waitDone = make(chan struct{}, 1)
 		go func() {
 			select {
@@ -117,7 +119,7 @@ func (c *Cmd) Start() error {
 				// In contrast to exec.Cmd.Start(), we terminate the
 				// whole process group here with a grace period instead
 				// of calling c.Process.Kill().
-				c.TerminateProcessGroup(pgid)
+				c.TerminateProcessGroup()
 				c.terminatedAfterContextDone = true
 				c.terminatedAfterContextDoneMutex.Unlock()
 				context.Background().Done()
