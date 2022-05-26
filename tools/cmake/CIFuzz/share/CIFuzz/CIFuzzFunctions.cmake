@@ -42,9 +42,21 @@ function(add_fuzz_test name)
   set(_args_sources ${_args_UNPARSED_ARGUMENTS})
 
   add_executable("${name}" ${_args_sources})
-  target_include_directories("${name}" SYSTEM PRIVATE "${CIFUZZ_INCLUDE_DIR}")
-  # This macro is consumed by cifuzz.h.
-  target_compile_definitions("${name}" PRIVATE CIFUZZ_TEST_NAME="${name}")
+
+  if(CIFUZZ_USE_DEPRECATED_MACROS)
+    # The old fuzz macro header is injected via the compile command line. It does not live under the include directory
+    # so that is not offered to fuzz tests using the new macros via include path IDE completions.
+    set(_fuzz_macro_header "$<SHELL_PATH:${CIFUZZ_INCLUDE_DIR}/../legacy/fuzz_macro.h>")
+    if(MSVC)
+      target_compile_options("${name}" PRIVATE /FI"${_fuzz_macro_header}")
+    else()
+      target_compile_options("${name}" PRIVATE "-include${_fuzz_macro_header}")
+    endif()
+  else()
+    target_include_directories("${name}" SYSTEM PRIVATE "${CIFUZZ_INCLUDE_DIR}")
+    # This macro is consumed by cifuzz.h.
+    target_compile_definitions("${name}" PRIVATE CIFUZZ_TEST_NAME="${name}")
+  endif()
 
   if(CIFUZZ_ENGINE STREQUAL replayer)
     target_link_libraries("${name}" PRIVATE CIFuzz_Replayer)

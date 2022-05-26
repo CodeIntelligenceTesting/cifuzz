@@ -9,9 +9,13 @@ target_sources(parser PUBLIC
 target_include_directories(parser PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(parser PRIVATE secrets)
 
-add_fuzz_test(parser_fuzz_test parser_fuzz_test.cpp)
-target_link_libraries(parser_fuzz_test PRIVATE parser)
+if(CIFUZZ_USE_DEPRECATED_MACROS)
+  add_fuzz_test(legacy_fuzz_test legacy_fuzz_test.cpp)
+else()
+  add_fuzz_test(parser_fuzz_test parser_fuzz_test.cpp)
+  target_link_libraries(parser_fuzz_test PRIVATE parser)
 
-add_fuzz_test(no_seed_corpus_fuzz_test crash_always_fuzz_target.cpp)
+  add_fuzz_test(no_seed_corpus_fuzz_test crash_always_fuzz_target.cpp)
 
-add_fuzz_test(c_fuzz_test c_fuzz_test.c)
+  add_fuzz_test(c_fuzz_test c_fuzz_test.c)
+endif()
