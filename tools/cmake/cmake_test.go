@@ -23,8 +23,6 @@ import (
 var baseTempDir string
 
 func TestMain(m *testing.M) {
-	testutil.RegisterTestDeps("testdata", "CIFuzz")
-
 	var err error
 	// Intentionally include a space here to test that we don't break on it.
 	baseTempDir, err = ioutil.TempDir("", "cifuzz cmake")
@@ -40,6 +38,7 @@ func TestIntegrationCtestDefaultSettings(t *testing.T) {
 		t.Skip()
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("testdata", "CIFuzz")
 
 	buildDir := build(t, nil)
 	runAndAssertTests(t, buildDir, map[string]bool{
@@ -57,6 +56,7 @@ func TestIntegrationCtestWithAddressSanitizer(t *testing.T) {
 		t.Skip()
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("testdata", "CIFuzz")
 
 	buildDir := build(t, map[string]string{"CIFUZZ_SANITIZERS": "address"})
 	runAndAssertTests(t, buildDir, map[string]bool{
@@ -77,6 +77,7 @@ func TestIntegrationCtestWithUndefinedBehaviorSanitizer(t *testing.T) {
 		t.Skip("MSVC does not support UndefinedBehaviorSanitizer")
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("testdata", "CIFuzz")
 
 	buildDir := build(t, map[string]string{"CIFUZZ_SANITIZERS": "undefined"})
 	runAndAssertTests(t, buildDir, map[string]bool{
@@ -97,6 +98,7 @@ func TestIntegrationBuildWithMultipleSanitizers(t *testing.T) {
 		t.Skip("MSVC does not support UndefinedBehaviorSanitizer")
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("testdata", "CIFuzz")
 
 	build(t, map[string]string{"CIFUZZ_SANITIZERS": "address;undefined"})
 }

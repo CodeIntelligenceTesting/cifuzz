@@ -14,13 +14,12 @@ func RegisterTestDeps(path ...string) {
 	// rerun the test if the data dir contents change. Without this explicit recursive walk, changes to files in
 	// subdirectories aren't picked up automatically.
 	for _, p := range path {
-		err := filepath.Walk(p, func(path string, info fs.FileInfo, _ error) error {
-			_, err := os.Stat(path)
+		err := filepath.Walk(p, func(path string, info fs.FileInfo, err error) error {
 			if err != nil {
-				// Fail hard if the declared test dep does not exist.
-				panic(err)
+				return err
 			}
-			return nil
+			_, err = os.Stat(path)
+			return err
 		})
 		if err != nil {
 			panic(err)
