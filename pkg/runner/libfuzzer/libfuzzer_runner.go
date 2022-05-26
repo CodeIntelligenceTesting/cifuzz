@@ -73,10 +73,12 @@ func (options *RunnerOptions) ValidateOptions() error {
 type Runner struct {
 	*RunnerOptions
 	SupportJazzer bool
+
+	cmd *executil.Cmd
 }
 
 func NewRunner(options *RunnerOptions) *Runner {
-	return &Runner{options, false}
+	return &Runner{RunnerOptions: options, SupportJazzer: false}
 }
 
 func (r *Runner) Run(ctx context.Context) error {
@@ -183,23 +185,23 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 		cmdCtx, cancelCmdCtx = context.WithCancel(ctx)
 	}
 	defer cancelCmdCtx()
-	cmd := executil.CommandContext(cmdCtx, args[0], args[1:]...)
-	cmd.TerminateProcessGroupWhenContextDone = true
+	r.cmd = executil.CommandContext(cmdCtx, args[0], args[1:]...)
+	r.cmd.TerminateProcessGroupWhenContextDone = true
 
-	cmd.Env = env
+	r.cmd.Env = env
 	// Write the command's stdout to stderr in order to only have
 	// reports printed to stdout.
-	cmd.Stdout = os.Stderr
+	r.cmd.Stdout = os.Stderr
 	// Write the command's stderr to both a pipe and os.Stderr, so that
 	// we can parse the output but still allow the caller to observe the
 	// status and progress in realtime.
-	stderrPipe, err := cmd.StderrTeePipe()
+	stderrPipe, err := r.cmd.StderrTeePipe()
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Command: %s", strings.Join(stringutil.QuotedStrings(cmd.Args), " "))
-	err = cmd.Start()
+	log.Debugf("Command: %s", strings.Join(stringutil.QuotedStrings(r.cmd.Args), " "))
+	err = r.cmd.Start()
 	if err != nil {
 		return err
 	}
@@ -218,7 +220,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 		// Wait for the command to exit in a go routine, so that below
 		// we can cancel waiting when the context is done
 		go func() {
-			waitErrCh <- cmd.Wait()
+			waitErrCh <- r.cmd.Wait()
 		}()
 
 		// Wait until the reporter has finished parsing stderr, so that
@@ -230,7 +232,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 
 		select {
 		case err := <-waitErrCh:
-			if cmd.TerminatedAfterContextDone() {
+			if r.cmd.TerminatedAfterContextDone() {
 				// The command was terminated because the timeout exceeded. We
 				// don't return an error in that case.
 				return nil
@@ -308,6 +310,12 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 	}
 
 	return env, nil
+}
+
+func (r *Runner) Cleanup() {
+	if r.cmd != nil {
+		r.cmd.TerminateProcessGroup()
+	}
 }
 
 func sendReports(handler report.Handler, reportsCh <-chan *report.Report) error {

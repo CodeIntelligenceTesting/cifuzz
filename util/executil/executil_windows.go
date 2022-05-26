@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func (c *Cmd) TerminateProcessGroup(pgid int) {
+func (c *Cmd) TerminateProcessGroup() {
 	// Based on https://stackoverflow.com/a/44551450/2804197
 	// Original author: https://stackoverflow.com/users/301049/rots
 	kill := exec.Command("TASKKILL", "/T", "/F", "/PID", strconv.Itoa(c.Process.Pid))
