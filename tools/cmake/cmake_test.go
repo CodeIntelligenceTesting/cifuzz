@@ -42,15 +42,14 @@ func TestIntegrationCtestDefaultSettings(t *testing.T) {
 	t.Parallel()
 
 	buildDir := build(t, nil)
-	testResults := runTests(t, buildDir)
-	assert.Equal(t, map[string]bool{
+	runAndAssertTests(t, buildDir, map[string]bool{
 		// Without sanitizers, the seed corpus entries do not crash this target.
 		"parser_fuzz_test_regression_test": true,
 		// The target returns a non-zero value on every input and the replayer always runs on the empty input.
 		"no_seed_corpus_fuzz_test_regression_test": false,
 		// Never crashes.
 		"c_fuzz_test_regression_test": true,
-	}, testResults)
+	})
 }
 
 func TestIntegrationCtestWithAddressSanitizer(t *testing.T) {
@@ -60,15 +59,14 @@ func TestIntegrationCtestWithAddressSanitizer(t *testing.T) {
 	t.Parallel()
 
 	buildDir := build(t, map[string]string{"CIFUZZ_SANITIZERS": "address"})
-	testResults := runTests(t, buildDir)
-	assert.Equal(t, map[string]bool{
+	runAndAssertTests(t, buildDir, map[string]bool{
 		// Crashes on the `asan_crash` input.
 		"parser_fuzz_test_regression_test": false,
 		// The target returns a non-zero value on every input and the replayer always runs on the empty input.
 		"no_seed_corpus_fuzz_test_regression_test": false,
 		// Never crashes.
 		"c_fuzz_test_regression_test": true,
-	}, testResults)
+	})
 }
 
 func TestIntegrationCtestWithUndefinedBehaviorSanitizer(t *testing.T) {
@@ -81,15 +79,14 @@ func TestIntegrationCtestWithUndefinedBehaviorSanitizer(t *testing.T) {
 	t.Parallel()
 
 	buildDir := build(t, map[string]string{"CIFUZZ_SANITIZERS": "undefined"})
-	testResults := runTests(t, buildDir)
-	assert.Equal(t, map[string]bool{
+	runAndAssertTests(t, buildDir, map[string]bool{
 		// Crashes on the `ubsan_crash` input.
 		"parser_fuzz_test_regression_test": false,
 		// The target returns a non-zero value on every input and the replayer always runs on the empty input.
 		"no_seed_corpus_fuzz_test_regression_test": false,
 		// Never crashes.
 		"c_fuzz_test_regression_test": true,
-	}, testResults)
+	})
 }
 
 func TestIntegrationBuildWithMultipleSanitizers(t *testing.T) {
@@ -119,10 +116,19 @@ func build(t *testing.T, cacheVariables map[string]string) string {
 	return buildDir
 }
 
-func runTests(t *testing.T, buildDir string) (testPassed map[string]bool) {
+func runAndAssertTests(t *testing.T, buildDir string, expectedTestStatus map[string]bool) {
+	// We expect ctest to exit with 0 if and only if all tests are expected to pass.
+	ctestFails := false
+	for _, status := range expectedTestStatus {
+		if !status {
+			ctestFails = true
+		}
+	}
+
 	junitReportFile := filepath.Join(buildDir, "report.xml")
-	runInDirExpectingFailure(
+	runInDirWithExpectedStatus(
 		t,
+		ctestFails,
 		buildDir,
 		"ctest",
 		"--verbose",
@@ -143,27 +149,19 @@ func runTests(t *testing.T, buildDir string) (testPassed map[string]bool) {
 	err = xml.Unmarshal(junitReportXml, &junitReport)
 	require.NoError(t, err)
 
+	actualTestStatus := make(map[string]bool)
 	// Parse the test report in JUnit's XML format to determine which tests passed.
-	testPassed = make(map[string]bool)
 	for _, testCase := range junitReport.TestCases {
-		if testCase.Status == "run" {
-			testPassed[testCase.Name] = true
-		} else {
-			testPassed[testCase.Name] = false
-		}
+		actualTestStatus[testCase.Name] = testCase.Status == "run"
 	}
-	return
+	assert.Equal(t, expectedTestStatus, actualTestStatus)
 }
 
 func runInDir(t *testing.T, dir, command string, args ...string) []byte {
-	return runInDirInternal(t, false, dir, command, args...)
+	return runInDirWithExpectedStatus(t, false, dir, command, args...)
 }
 
-func runInDirExpectingFailure(t *testing.T, dir, command string, args ...string) []byte {
-	return runInDirInternal(t, true, dir, command, args...)
-}
-
-func runInDirInternal(t *testing.T, expectFailure bool, dir string, command string, args ...string) []byte {
+func runInDirWithExpectedStatus(t *testing.T, expectFailure bool, dir string, command string, args ...string) []byte {
 	// A timeout of 5 minutes is long enough for all current tests, but stays well under the Go test timeout of
 	// 10 minutes.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
