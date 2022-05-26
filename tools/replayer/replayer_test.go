@@ -16,6 +16,7 @@ import (
 
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/testutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -201,8 +202,6 @@ var ubsanRunCase = runCase{
 var baseTempDir string
 
 func TestMain(m *testing.M) {
-	testutil.RegisterTestDeps("src", "testdata")
-
 	var err error
 	// Intentionally include a space here to test that we don't break on it.
 	baseTempDir, err = ioutil.TempDir("", "cifuzz replayer")
@@ -221,6 +220,7 @@ func TestIntegrationReplayerWithMsvc(t *testing.T) {
 		t.Skip("MSVC is only available on Windows")
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("src", "testdata")
 
 	// MSVC (cl.exe) does not support UBSan.
 	subtestCompileAndRunWithFuzzerInitialize(t, msvc, append(baseRunCases, asanRunCase))
@@ -235,6 +235,7 @@ func TestIntegrationReplayerWithClangCl(t *testing.T) {
 		t.Skip("clang-cl is only available on Windows")
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("src", "testdata")
 
 	// clang-cl does not seem to support sanitizers.
 	// CI runs fail with the error referenced in https://github.com/llvm/llvm-project/issues/52728.
@@ -250,6 +251,7 @@ func TestIntegrationReplayerWithClang(t *testing.T) {
 		t.Skip("clang on Windows is covered by the clang-cl test")
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("src", "testdata")
 
 	subtestCompileAndRunWithFuzzerInitialize(t, clang, append(baseRunCases, asanRunCase, ubsanRunCase))
 	subtestCompileAndRunWithoutFuzzerInitialize(t, clang)
@@ -263,6 +265,7 @@ func TestIntegrationReplayerWithGcc(t *testing.T) {
 		t.Skip("gcc on Windows is covered by the MinGW test")
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("src", "testdata")
 
 	subtestCompileAndRunWithFuzzerInitialize(t, gcc, append(baseRunCases, asanRunCase, ubsanRunCase))
 	subtestCompileAndRunWithoutFuzzerInitialize(t, gcc)
@@ -276,6 +279,7 @@ func TestIntegrationReplayerWithMingw(t *testing.T) {
 		t.Skip("MinGW is only available on Windows")
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("src", "testdata")
 
 	// MinGW does not support sanitizers.
 	subtestCompileAndRunWithFuzzerInitialize(t, mingw, baseRunCases)
@@ -287,6 +291,7 @@ func TestIntegrationReplayerWithNoAsserts(t *testing.T) {
 		t.Skip()
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("src", "testdata")
 
 	tempDir, err := ioutil.TempDir(baseTempDir, "")
 	require.NoError(t, err)
@@ -303,6 +308,7 @@ func TestIntegrationReplayerWithoutArgsRunsSeedCorpus(t *testing.T) {
 		t.Skip()
 	}
 	t.Parallel()
+	testutil.RegisterTestDeps("src", "testdata")
 
 	tempDir, err := ioutil.TempDir(baseTempDir, "")
 	require.NoError(t, err)
