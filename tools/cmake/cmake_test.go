@@ -103,6 +103,17 @@ func TestIntegrationBuildWithMultipleSanitizers(t *testing.T) {
 	build(t, map[string]string{"CIFUZZ_SANITIZERS": "address;undefined"})
 }
 
+func TestIntegrationBuildLegacyFuzzTests(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	t.Parallel()
+	testutil.RegisterTestDeps("testdata", "CIFuzz")
+
+	buildDir := build(t, map[string]string{"CIFUZZ_USE_DEPRECATED_MACROS": "ON"})
+	runAndAssertTests(t, buildDir, map[string]bool{"legacy_fuzz_test_regression_test": true})
+}
+
 func build(t *testing.T, cacheVariables map[string]string) string {
 	buildDir, err := ioutil.TempDir(baseTempDir, "build")
 	require.NoError(t, err)
