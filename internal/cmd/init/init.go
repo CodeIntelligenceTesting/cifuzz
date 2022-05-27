@@ -38,13 +38,13 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	log.Debugf("Using current working directory: %s\n", cwd)
+	log.Debugf("Using current working directory: %s", cwd)
 
 	configpath, err := config.CreateProjectConfig(cwd, opts.fs)
 	if err != nil {
 		// explicitly inform the user about an existing config file
 		if os.IsExist(errors.Cause(err)) && configpath != "" {
-			log.Warnf("Config already exists in %s\n", configpath)
+			log.Warnf("Config already exists in %s", configpath)
 			err = cmdutils.WrapSilentError(err)
 		}
 		log.Error(err, "Failed to create config")
