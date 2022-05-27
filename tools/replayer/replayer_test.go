@@ -14,11 +14,12 @@ import (
 	"strings"
 	"testing"
 
-	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/testutil"
-
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 //go:embed src/replayer.c
@@ -380,7 +381,8 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 
 				stdoutLines, stderr, err := runReplayer(t, tempDir, replayer, rc.inputs...)
 				if rc.normalExit {
-					if exitErr, ok := err.(*exec.ExitError); ok {
+					var exitErr *exec.ExitError
+					if errors.As(err, &exitErr) {
 						require.NoError(t, err, string(exitErr.Stderr))
 					} else {
 						require.NoError(t, err)
@@ -418,7 +420,8 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) 
 		)...)
 
 		stdoutLines, stderr, err := runReplayer(t, tempDir, replayer, "foo", "bar")
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			require.NoError(t, err, string(exitErr.Stderr))
 		} else {
 			require.NoError(t, err)
@@ -490,8 +493,10 @@ func outputWithStderr(cmd *exec.Cmd) (stdout []byte, stderr []byte, err error) {
 	stdout, err = cmd.Output()
 	stderr = stderrBuf.Bytes()
 	// Also store stderr in the ExitError in case of failure to remain compatible with cmd.Output.
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		exitErr.Stderr = stderr
+		err = exitErr
 	}
 	return
 }

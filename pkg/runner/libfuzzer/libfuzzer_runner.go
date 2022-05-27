@@ -327,9 +327,10 @@ func IsExpectedExitError(err error) bool {
 		fuzzer_runner.LibFuzzerOOMExitCode,
 		fuzzer_runner.LibFuzzerTimeoutExitCode,
 	}
-	exitError, ok := errors.Cause(err).(*exec.ExitError)
-	if !ok {
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		return false
 	}
-	return sliceutil.Contains(expectedExitCodes, exitError.ExitCode())
+	return sliceutil.Contains(expectedExitCodes, exitErr.ExitCode())
 }

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -183,7 +184,8 @@ func runInDirWithExpectedStatus(t *testing.T, expectFailure bool, dir string, co
 	c := exec.CommandContext(ctx, command, args...)
 	c.Dir = dir
 	out, err := c.Output()
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		msg := fmt.Sprintf("%q exited with %d:\nstderr:\n%s\nstdout:\n%s", c.String(), exitErr.ExitCode(), string(exitErr.Stderr), string(out))
 		if !expectFailure {
 			require.NoError(t, exitErr, msg)
