@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
@@ -38,5 +37,5 @@ func TestInitCmd(t *testing.T) {
 	// second execution should return a ErrSilent as the config file should aready exists
 	_, err = cmdutils.ExecuteCommand(t, New(), os.Stdin)
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, cmdutils.ErrSilent))
+	assert.ErrorIs(t, err, cmdutils.ErrSilent)
 }

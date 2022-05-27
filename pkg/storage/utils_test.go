@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -57,7 +56,7 @@ func TestGetOutDir_NoPerm(t *testing.T) {
 
 	outDir, err := GetOutDir(filepath.Join(projectDir, "fuzz-tests"))
 	assert.Error(t, err)
-	assert.True(t, os.IsPermission(errors.Cause(err)))
+	assert.ErrorIs(t, err, os.ErrPermission)
 	assert.Equal(t, filepath.Join(projectDir, "fuzz-tests"), outDir)
 
 	// directory should not exists
