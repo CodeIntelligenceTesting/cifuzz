@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hectane/go-acl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -53,7 +54,7 @@ func TestCreateProjectConfig_NoPerm(t *testing.T) {
 	// create read only project dir
 	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
 	require.NoError(t, err)
-	err = os.Chmod(projectDir, 0555)
+	err = acl.Chmod(projectDir, 0555)
 	require.NoError(t, err)
 
 	path, err := CreateProjectConfig(projectDir)
