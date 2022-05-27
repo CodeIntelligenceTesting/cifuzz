@@ -1,6 +1,7 @@
 package root
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,21 +10,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
-	"code-intelligence.com/cifuzz/pkg/storage"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 func TestRootCmd(t *testing.T) {
-	fs := storage.NewMemFileSystem()
-	_, err := cmdutils.ExecuteCommand(t, New(fs), os.Stdin)
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin)
 	assert.NoError(t, err)
 }
 
 func TestChangingToNonExistingDirectory(t *testing.T) {
-	// afero doesn't support Chdir and Getwd, so we have to use the
-	// OS filesystem here instead of the in-memory one.
-	fs := storage.WrapFileSystem()
-	testDir, err := fs.TempDir("", "test-")
+	testDir, err := ioutil.TempDir("", "test-")
 	require.NoError(t, err)
 	err = os.Chdir(testDir)
 	require.NoError(t, err)
@@ -40,7 +36,7 @@ func TestChangingToNonExistingDirectory(t *testing.T) {
 		// subcommand.
 		"init",
 	}
-	_, err = cmdutils.ExecuteCommand(t, New(fs), os.Stdin, args...)
+	_, err = cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
 	require.Error(t, err)
 
 	// Check that the working directory did not change
@@ -50,10 +46,7 @@ func TestChangingToNonExistingDirectory(t *testing.T) {
 }
 
 func TestChangingToExistingDirectory(t *testing.T) {
-	// afero doesn't support Chdir and Getwd, so we have to use the
-	// OS filesystem here instead of the in-memory one.
-	fs := storage.WrapFileSystem()
-	testDir, err := fs.TempDir("", "test-")
+	testDir, err := ioutil.TempDir("", "test-")
 	require.NoError(t, err)
 	err = os.Chdir(testDir)
 	require.NoError(t, err)
@@ -62,7 +55,7 @@ func TestChangingToExistingDirectory(t *testing.T) {
 	origWorkDir, err := os.Getwd()
 	require.NoError(t, err)
 
-	err = fs.Mkdir("foo", 0700)
+	err = os.Mkdir("foo", 0700)
 	require.NoError(t, err)
 
 	args := []string{
@@ -73,7 +66,7 @@ func TestChangingToExistingDirectory(t *testing.T) {
 		// subcommand.
 		"init",
 	}
-	_, err = cmdutils.ExecuteCommand(t, New(fs), os.Stdin, args...)
+	_, err = cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
 	require.NoError(t, err)
 
 	// Check that the working directory actually changed

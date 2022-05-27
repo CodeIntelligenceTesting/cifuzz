@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 )
 
 type projectConfig struct {
@@ -21,11 +20,11 @@ const projectConfigFile = "cifuzz.yaml"
 var projectConfigTemplate string
 
 // CreateProjectConfig creates a new project config in the given directory
-func CreateProjectConfig(path string, fs *afero.Afero) (configpath string, err error) {
+func CreateProjectConfig(path string) (configpath string, err error) {
 
 	// try to open the target file, returns error if already exists
 	configpath = filepath.Join(path, projectConfigFile)
-	f, err := fs.OpenFile(configpath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
+	f, err := os.OpenFile(configpath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
 	if err != nil {
 		if os.IsExist(err) {
 			return configpath, errors.WithStack(err)

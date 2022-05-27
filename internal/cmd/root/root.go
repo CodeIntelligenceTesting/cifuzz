@@ -5,9 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -16,10 +14,10 @@ import (
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
 	runCmd "code-intelligence.com/cifuzz/internal/cmd/run"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
-	"code-intelligence.com/cifuzz/pkg/storage"
+	"code-intelligence.com/cifuzz/pkg/log"
 )
 
-func New(fs *afero.Afero) *cobra.Command {
+func New() *cobra.Command {
 	var workdir string
 
 	rootCmd := &cobra.Command{
@@ -50,10 +48,10 @@ func New(fs *afero.Afero) *cobra.Command {
 		"Change the directory before performing any operations")
 	viper.BindPFlag("directory", rootCmd.PersistentFlags().Lookup("directory"))
 
-	rootCmd.AddCommand(initCmd.New(fs))
-	rootCmd.AddCommand(createCmd.New(fs))
+	rootCmd.AddCommand(initCmd.New())
+	rootCmd.AddCommand(createCmd.New())
 	rootCmd.AddCommand(buildCmd.New())
-	rootCmd.AddCommand(runCmd.New(fs))
+	rootCmd.AddCommand(runCmd.New())
 
 	return rootCmd
 }
@@ -61,8 +59,7 @@ func New(fs *afero.Afero) *cobra.Command {
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	fs := storage.WrapFileSystem()
-	rootCmd := New(fs)
+	rootCmd := New()
 	if cmd, err := rootCmd.ExecuteC(); err != nil {
 
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace

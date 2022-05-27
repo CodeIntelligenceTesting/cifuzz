@@ -3,21 +3,26 @@ package stubs
 import (
 	_ "embed"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"code-intelligence.com/cifuzz/internal/config"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
+
+	"code-intelligence.com/cifuzz/internal/config"
+	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 //go:embed fuzz-test.cpp.tmpl
 var cppStub []byte
 
 // Create creates a stub based for the given test type
-func Create(path string, testType config.FuzzTestType, fs *afero.Afero) error {
-
-	if _, err := fs.Stat(path); err == nil {
+func Create(path string, testType config.FuzzTestType) error {
+	exists, err := fileutil.Exists(path)
+	if err != nil {
+		return err
+	}
+	if exists {
 		return errors.WithStack(os.ErrExist)
 	}
 
@@ -30,7 +35,7 @@ func Create(path string, testType config.FuzzTestType, fs *afero.Afero) error {
 
 	// write stub
 	if content != nil && path != "" {
-		if err := fs.WriteFile(path, content, 0644); err != nil {
+		if err := ioutil.WriteFile(path, content, 0644); err != nil {
 			return errors.WithStack(err)
 		}
 	}
@@ -39,7 +44,7 @@ func Create(path string, testType config.FuzzTestType, fs *afero.Afero) error {
 
 // SuggestFilename returns a proposal for a filename,
 // depending on the test type and given directory
-func SuggestFilename(dir string, testType config.FuzzTestType, fs *afero.Afero) (string, error) {
+func SuggestFilename(dir string, testType config.FuzzTestType) (string, error) {
 	var basename, ext, filename string
 
 	switch testType {
@@ -50,19 +55,14 @@ func SuggestFilename(dir string, testType config.FuzzTestType, fs *afero.Afero) 
 		return "", errors.New("unable to suggest filename: unknown test type")
 	}
 
-	counter := 1
-	for {
+	for counter := 1; ; counter++ {
 		filename = fmt.Sprintf("%s_%d.%s", basename, counter, ext)
-		exists, err := fs.Exists(filepath.Join(dir, filename))
+		exists, err := fileutil.Exists(filepath.Join(dir, filename))
 		if err != nil {
-			return "", errors.WithStack(err)
+			return "", err
 		}
-		if exists {
-			counter += 1
-		} else {
-			break
+		if !exists {
+			return filename, nil
 		}
 	}
-
-	return filename, nil
 }
