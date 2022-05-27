@@ -3,7 +3,7 @@ module code-intelligence.com/cifuzz
 go 1.18
 
 require (
-	github.com/bazelbuild/rules_go v0.31.0
+	github.com/bazelbuild/rules_go v0.32.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
