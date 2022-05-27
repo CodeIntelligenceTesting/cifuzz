@@ -31,7 +31,7 @@ func IsDir(path string) bool {
 // Touch creates a file at the given path
 func Touch(path string) error {
 	file, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0644)
-	if err != nil && !os.IsExist(err) {
+	if err != nil && !errors.Is(err, os.ErrExist) {
 		return errors.WithStack(err)
 	}
 	err = file.Close()
@@ -43,10 +43,10 @@ func Touch(path string) error {
 
 func Exists(path string) (bool, error) {
 	_, err := os.Stat(path)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return false, errors.WithStack(err)
 	}
-	return !os.IsNotExist(err), nil
+	return !errors.Is(err, os.ErrNotExist), nil
 }
 
 // TempFile creates a temporary file in the Bazel test temp dir
