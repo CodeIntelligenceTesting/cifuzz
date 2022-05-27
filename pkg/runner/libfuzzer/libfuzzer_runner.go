@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
+	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/minijail"
 	libfuzzer_parser "code-intelligence.com/cifuzz/pkg/parser/libfuzzer"
 	"code-intelligence.com/cifuzz/pkg/report"
@@ -237,12 +237,24 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 				// don't return an error in that case.
 				return nil
 			}
-			if IsExpectedExitError(err) && reporter.FindingReported {
-				// Libfuzzer found an error and exited with an expected error
-				// code. We don't want to return an error in that case.
-				return nil
+
+			// If err is not an ExitError, something unexpected happened
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
+				return err
 			}
-			return err
+
+			if !IsExpectedExitError(err) {
+				return errors.WithMessagef(err, "Unexpected exit code %d", exitErr.ExitCode())
+			}
+
+			if !reporter.FindingReported {
+				return errors.WithMessagef(err, "libFuzzer exited with expected exit code %d but no finding was reported", exitErr.ExitCode())
+			}
+
+			// libFuzzer found an error and exited with an expected error
+			// code. We don't want to return an error in that case.
+			return nil
 		case <-routinesCtx.Done():
 			return routinesCtx.Err()
 		}
