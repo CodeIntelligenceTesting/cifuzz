@@ -26,7 +26,7 @@ func CreateProjectConfig(path string) (configpath string, err error) {
 	configpath = filepath.Join(path, projectConfigFile)
 	f, err := os.OpenFile(configpath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
 	if err != nil {
-		if os.IsExist(err) {
+		if errors.Is(err, os.ErrExist) {
 			return configpath, errors.WithStack(err)
 		}
 		return "", errors.WithStack(err)

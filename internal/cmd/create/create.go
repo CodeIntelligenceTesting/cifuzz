@@ -60,8 +60,8 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 
 	// get output directory
 	opts.outDir, err = storage.GetOutDir(opts.outDir)
-	if os.IsPermission(errors.Cause(err)) {
-		log.Errorf(err, "unable to write to given out directory, permission denied: %s", opts.outDir)
+	if errors.Is(err, os.ErrPermission) {
+		log.Errorf(err, "unable to write to given out directory, permission denied: %s\n", opts.outDir)
 		return cmdutils.WrapSilentError(err)
 	} else if err != nil {
 		return err
