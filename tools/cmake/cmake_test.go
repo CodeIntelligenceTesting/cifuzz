@@ -122,6 +122,7 @@ func build(t *testing.T, cacheVariables map[string]string) string {
 	for key, value := range cacheVariables {
 		cacheArgs = append(cacheArgs, "-D", fmt.Sprintf("%s=%s", key, value))
 	}
+	cacheArgs = append(cacheArgs, "-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON")
 
 	runInDir(t, buildDir, "cmake", append(cacheArgs, testDataDir(t))...)
 	runInDir(t, buildDir, "cmake", "--build", ".")
