@@ -7,23 +7,21 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"golang.org/x/exp/maps"
+
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/storage"
 	"code-intelligence.com/cifuzz/pkg/stubs"
-	"code-intelligence.com/cifuzz/pkg/workarounds"
-	"github.com/pkg/errors"
-	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
-	"golang.org/x/exp/maps"
 )
 
 type cmdOpts struct {
 	outDir   string
 	filename string
-	fs       *afero.Afero
 	testType config.FuzzTestType
 }
 
@@ -32,10 +30,8 @@ var supportedTestTypes = map[string]string{
 	"C/C++": string(config.CPP),
 }
 
-func New(fs *afero.Afero) *cobra.Command {
-	opts := &cmdOpts{
-		fs: fs,
-	}
+func New() *cobra.Command {
+	opts := &cmdOpts{}
 
 	createCmd := &cobra.Command{
 		Use:   fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTestTypes), "|")),
@@ -63,8 +59,8 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	log.Debugf("Selected fuzz test type: %s", opts.testType)
 
 	// get output directory
-	opts.outDir, err = storage.GetOutDir(opts.outDir, opts.fs)
-	if workarounds.IsPermission(errors.Cause(err)) {
+	opts.outDir, err = storage.GetOutDir(opts.outDir)
+	if os.IsPermission(errors.Cause(err)) {
 		log.Errorf(err, "unable to write to given out directory, permission denied: %s", opts.outDir)
 		return cmdutils.WrapSilentError(err)
 	} else if err != nil {
@@ -113,7 +109,7 @@ func determineFilename(opts *cmdOpts, stdin io.Reader) (string, error) {
 		return opts.filename, nil
 	}
 
-	suggestedFilename, err := stubs.SuggestFilename(opts.outDir, opts.testType, opts.fs)
+	suggestedFilename, err := stubs.SuggestFilename(opts.outDir, opts.testType)
 	if err != nil {
 		// as this error only results in a missing filename suggestion we just show
 		// it but do not stop the application

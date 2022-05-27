@@ -9,12 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/envutil"
@@ -22,8 +21,6 @@ import (
 )
 
 type runOptions struct {
-	fs *afero.Afero
-
 	buildCommand   string
 	fuzzTest       string
 	seedsDirs      []string
@@ -37,7 +34,7 @@ type runOptions struct {
 func (opts *runOptions) validate() error {
 	// Check if the seed dirs exist and can be accessed
 	for _, d := range opts.seedsDirs {
-		_, err := opts.fs.Stat(d)
+		_, err := os.Stat(d)
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
@@ -47,7 +44,7 @@ func (opts *runOptions) validate() error {
 
 	if opts.dictionary != "" {
 		// Check if the dictionary exists and can be accessed
-		_, err := opts.fs.Stat(opts.dictionary)
+		_, err := os.Stat(opts.dictionary)
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
@@ -63,8 +60,8 @@ type runCmd struct {
 	opts *runOptions
 }
 
-func New(fs *afero.Afero) *cobra.Command {
-	opts := &runOptions{fs: fs}
+func New() *cobra.Command {
+	opts := &runOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "run",

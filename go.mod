@@ -4,6 +4,8 @@ go 1.18
 
 require (
 	github.com/bazelbuild/rules_go v0.32.0
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/phst/runfiles v0.0.0-20220326201552-61ddb5beae0a
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
@@ -18,6 +20,7 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/spf13/afero v1.8.2 // indirect
 )
 
 require (
@@ -30,10 +33,9 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
-	github.com/spf13/afero v1.8.2
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.7.1
 	github.com/subosito/gotenv v1.3.0 // indirect
 	golang.org/x/exp v0.0.0-20220414153411-bcd21879b8fd

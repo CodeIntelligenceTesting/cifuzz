@@ -2,58 +2,84 @@ package stubs
 
 import (
 	"errors"
+	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 	"testing"
 
-	"code-intelligence.com/cifuzz/internal/config"
-	"code-intelligence.com/cifuzz/pkg/storage"
-	"code-intelligence.com/cifuzz/pkg/workarounds"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"code-intelligence.com/cifuzz/internal/config"
+	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
-func TestCreate(t *testing.T) {
-	stubFile := "tests/fuzz_test.cpp"
-	fs := storage.NewMemFileSystem()
+var baseTempDir string
 
-	err := Create(stubFile, config.CPP, fs)
+func TestMain(m *testing.M) {
+	var err error
+	baseTempDir, err = ioutil.TempDir("", "stubs-test-")
+	if err != nil {
+		log.Fatalf("Failed to create temp dir for tests: %+v", err)
+	}
+	defer fileutil.Cleanup(baseTempDir)
+	m.Run()
+}
+
+func TestCreate(t *testing.T) {
+	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	require.NoError(t, err)
+
+	stubFile := filepath.Join(projectDir, "fuzz_test.cpp")
+	err = Create(stubFile, config.CPP)
 	assert.NoError(t, err)
 
-	exists, err := fs.Exists(stubFile)
+	exists, err := fileutil.Exists(stubFile)
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
 
 func TestCreate_Exists(t *testing.T) {
-	stubFile := "tests/fuzz_test.cpp"
-	fs := storage.NewMemFileSystem()
+	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	require.NoError(t, err)
 
-	err := fs.WriteFile(stubFile, []byte("TEST"), 0644)
+	stubFile := filepath.Join(projectDir, "fuzz_test.cpp")
+	err = ioutil.WriteFile(stubFile, []byte("TEST"), 0644)
 	assert.NoError(t, err)
 
-	err = Create(stubFile, config.CPP, fs)
+	err = Create(stubFile, config.CPP)
 	assert.Error(t, err)
 	assert.True(t, errors.Is(err, os.ErrExist))
 }
 
 func TestCreate_NoPerm(t *testing.T) {
-	stubFile := "tests/fuzz_test.cpp"
-	fs := storage.NewReadOnlyFileSystem()
+	// create read only project dir
+	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	require.NoError(t, err)
+	err = os.Chmod(projectDir, 0555)
+	require.NoError(t, err)
 
-	err := Create(stubFile, config.CPP, fs)
+	stubFile := filepath.Join(projectDir, "fuzz_test.cpp")
+	err = Create(stubFile, config.CPP)
 	assert.Error(t, err)
-	assert.True(t, workarounds.IsPermission(err))
+	assert.ErrorIs(t, err, os.ErrPermission)
 }
 
-func TestSuggestFilenam(t *testing.T) {
-	fs := storage.NewMemFileSystem()
+func TestSuggestFilename(t *testing.T) {
+	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	require.NoError(t, err)
 
-	filename1, err := SuggestFilename("tests", config.CPP, fs)
+	filename1, err := SuggestFilename(projectDir, config.CPP)
 	assert.NoError(t, err)
 	assert.Equal(t, "my_fuzz_test_1.cpp", filename1)
 
-	fs.WriteFile("tests/my_fuzz_test_1.cpp", []byte("TEST"), 0644)
+	// TODO: Why doesn't SuggestFilename already return the full path?
+	fuzzTest := filepath.Join(projectDir, filename1)
+	err = ioutil.WriteFile(fuzzTest, []byte("TEST"), 0644)
+	require.NoError(t, err)
 
-	filename2, err := SuggestFilename("tests", config.CPP, fs)
+	filename2, err := SuggestFilename(projectDir, config.CPP)
 	assert.NoError(t, err)
 	assert.Equal(t, "my_fuzz_test_2.cpp", filename2)
 }

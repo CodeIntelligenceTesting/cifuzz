@@ -1,27 +1,46 @@
 package storage
 
 import (
+	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/workarounds"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
+var baseTempDir string
+
+func TestMain(m *testing.M) {
+	var err error
+	baseTempDir, err = ioutil.TempDir("", "storage-test-")
+	if err != nil {
+		log.Fatalf("Failed to create temp dir for tests: %+v", err)
+	}
+	defer fileutil.Cleanup(baseTempDir)
+
+	m.Run()
+}
+
 func TestGetOutDir(t *testing.T) {
-	fs := NewMemFileSystem()
-	outDir, err := GetOutDir("/fuzz-tests", fs)
+	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	require.NoError(t, err)
+
+	outDir, err := GetOutDir(filepath.Join(projectDir, "fuzz-tests"))
 	assert.NoError(t, err)
 
-	exists, err := fs.Exists(outDir)
+	exists, err := fileutil.Exists(outDir)
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
 
 func TestGetOutDir_Default(t *testing.T) {
-	fs := NewMemFileSystem()
-	outDir, err := GetOutDir("", fs)
+	outDir, err := GetOutDir("")
 	assert.NoError(t, err)
 
 	cwd, err := os.Getwd()
@@ -30,15 +49,19 @@ func TestGetOutDir_Default(t *testing.T) {
 }
 
 func TestGetOutDir_NoPerm(t *testing.T) {
-	fs := NewReadOnlyFileSystem()
+	// create read only project dir
+	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	require.NoError(t, err)
+	err = os.Chmod(projectDir, 0555)
+	require.NoError(t, err)
 
-	outDir, err := GetOutDir("/fuzz-tests", fs)
+	outDir, err := GetOutDir(filepath.Join(projectDir, "fuzz-tests"))
 	assert.Error(t, err)
-	assert.True(t, workarounds.IsPermission(errors.Cause(err)))
-	assert.Equal(t, "/fuzz-tests", outDir)
+	assert.True(t, os.IsPermission(errors.Cause(err)))
+	assert.Equal(t, filepath.Join(projectDir, "fuzz-tests"), outDir)
 
 	// directory should not exists
-	exists, err := fs.Exists("/fuzz-tests")
+	exists, err := fileutil.Exists(filepath.Join(projectDir, "fuzz-tests"))
 	assert.NoError(t, err)
 	assert.False(t, exists)
 }
