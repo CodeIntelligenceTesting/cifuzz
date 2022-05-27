@@ -80,15 +80,14 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 
 	// create stub
 	stubPath := filepath.Join(opts.outDir, opts.filename)
-	if err := stubs.Create(stubPath, opts.testType, opts.fs); err != nil {
-		if os.IsExist(errors.Cause(err)) {
-			log.Errorf(err, "Unable to created fuzz test, file already exists %s", stubPath)
-			return cmdutils.WrapSilentError(err)
-		}
+	err = stubs.Create(stubPath, opts.testType)
+	if err != nil {
+		log.Errorf(err, "Failed to create fuzz test stub %s: %s", stubPath, err.Error())
+		return cmdutils.WrapSilentError(err)
 	}
 
 	// show success message
-	log.Successf("Fuzz test stub created at %s", stubPath)
+	log.Successf("Created fuzz test stub %s", stubPath)
 	log.Info(`
 Note: Fuzz tests can be put anywhere in your repository, but it makes sense to keep them close to the tested code - just like regular unit tests.`)
 
