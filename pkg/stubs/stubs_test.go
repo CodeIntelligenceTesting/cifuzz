@@ -1,7 +1,6 @@
 package stubs
 
 import (
-	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -50,7 +49,7 @@ func TestCreate_Exists(t *testing.T) {
 
 	err = Create(stubFile, config.CPP)
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, os.ErrExist))
+	assert.ErrorIs(t, err, os.ErrExist)
 }
 
 func TestCreate_NoPerm(t *testing.T) {

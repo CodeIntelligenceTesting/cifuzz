@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -59,7 +58,7 @@ func TestCreateProjectConfig_NoPerm(t *testing.T) {
 
 	path, err := CreateProjectConfig(projectDir)
 	assert.Error(t, err)
-	assert.True(t, os.IsPermission(errors.Cause(err)))
+	assert.ErrorIs(t, err, os.ErrPermission)
 	assert.Empty(t, path)
 
 	// file should not exists
@@ -80,7 +79,7 @@ func TestCreateProjectConfig_Exists(t *testing.T) {
 	path, err := CreateProjectConfig(filepath.Dir(existingPath))
 	assert.Error(t, err)
 	// check if path of the existing config is return and the error indicates it too
-	assert.True(t, os.IsExist(errors.Cause(err)))
+	assert.ErrorIs(t, err, os.ErrExist)
 	assert.Equal(t, existingPath, path)
 
 	// file should not exists
