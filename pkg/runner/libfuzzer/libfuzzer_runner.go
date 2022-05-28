@@ -337,7 +337,7 @@ func IsExpectedExitError(err error) bool {
 	}
 
 	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if !errors.As(err, &exitErr) {
 		return false
 	}
 	return sliceutil.Contains(expectedExitCodes, exitErr.ExitCode())
