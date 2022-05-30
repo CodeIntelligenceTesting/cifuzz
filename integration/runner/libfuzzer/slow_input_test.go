@@ -21,8 +21,9 @@ func TestIntegration_SlowInput(t *testing.T) {
 		_, _, reports := test.Run(t)
 
 		utils.CheckReports(t, reports, &utils.CheckReportOptions{
-			ErrorType: report.ErrorType_WARNING,
-			Details:   "Slow input detected",
+			ErrorType:   report.ErrorType_WARNING,
+			Details:     "Slow input detected",
+			NumFindings: 1,
 		})
 	})
 }

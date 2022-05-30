@@ -19,9 +19,10 @@ func TestIntegration_OOM(t *testing.T) {
 		_, _, reports := test.Run(t)
 
 		utils.CheckReports(t, reports, &utils.CheckReportOptions{
-			ErrorType:  report.ErrorType_CRASH,
-			SourceFile: "trigger_oom.cpp",
-			Details:    "out-of-memory",
+			ErrorType:   report.ErrorType_CRASH,
+			SourceFile:  "trigger_oom.cpp",
+			Details:     "out-of-memory",
+			NumFindings: 1,
 		})
 
 		// We don't check here that the seed corpus is non-empty because

@@ -13,10 +13,12 @@ type CheckReportOptions struct {
 	SourceFile          string
 	Details             string
 	AllowEmptyInputData bool
+	NumFindings         int
 }
 
 // CheckReports offers an easy way to check a set of reports against some options
 func CheckReports(t *testing.T, reports []*report.Report, options *CheckReportOptions) {
+	numFindings := 0
 	for _, report := range reports {
 		require.NotNil(t, report)
 
@@ -25,7 +27,9 @@ func CheckReports(t *testing.T, reports []*report.Report, options *CheckReportOp
 		if finding == nil {
 			continue
 		}
-		require.Equal(t, finding.Type, options.ErrorType)
+		numFindings++
+
+		require.Equal(t, options.ErrorType, finding.Type)
 
 		logs := strings.Join(finding.Logs, "\n")
 
@@ -44,4 +48,5 @@ func CheckReports(t *testing.T, reports []*report.Report, options *CheckReportOp
 			require.NotEmpty(t, finding.InputData, "InputData is empty")
 		}
 	}
+	require.Equal(t, options.NumFindings, numFindings)
 }
