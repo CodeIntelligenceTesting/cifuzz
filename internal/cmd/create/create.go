@@ -62,7 +62,7 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	opts.outDir, err = storage.GetOutDir(opts.outDir)
 	if errors.Is(err, os.ErrPermission) {
 		log.Errorf(err, "unable to write to given out directory, permission denied: %s\n", opts.outDir)
-		return cmdutils.WrapSilentError(err)
+		return cmdutils.ErrSilent
 	} else if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	err = stubs.Create(stubPath, opts.testType)
 	if err != nil {
 		log.Errorf(err, "Failed to create fuzz test stub %s: %s", stubPath, err.Error())
-		return cmdutils.WrapSilentError(err)
+		return cmdutils.ErrSilent
 	}
 
 	// show success message
@@ -98,7 +98,7 @@ func getTestType(args []string, stdin io.Reader) (config.FuzzTestType, error) {
 	userSelectedType, err := dialog.Select("Select type of the fuzz test", supportedTestTypes, stdin)
 	if err != nil {
 		fmt.Printf("%+v \n", err)
-		return "", cmdutils.WrapSilentError(err)
+		return "", cmdutils.ErrSilent
 	}
 	return config.FuzzTestType(userSelectedType), nil
 }

@@ -43,7 +43,7 @@ func (opts *runOptions) validate() error {
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
-			return cmdutils.WrapSilentError(err)
+			return cmdutils.ErrSilent
 		}
 	}
 
@@ -53,7 +53,7 @@ func (opts *runOptions) validate() error {
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
-			return cmdutils.WrapSilentError(err)
+			return cmdutils.ErrSilent
 		}
 	}
 

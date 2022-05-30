@@ -41,7 +41,7 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 		// explicitly inform the user about an existing config file
 		if errors.Is(err, os.ErrExist) && configpath != "" {
 			log.Warnf("Config already exists in %s", configpath)
-			err = cmdutils.WrapSilentError(err)
+			err = cmdutils.ErrSilent
 		}
 		log.Error(err, "Failed to create config")
 		return err
