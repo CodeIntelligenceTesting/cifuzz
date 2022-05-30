@@ -257,7 +257,7 @@ func (c *runCmd) runFuzzTest() error {
 
 	go func() {
 		s := <-sigs
-		log.Infof("Received %s", s.String())
+		log.Infof("\nReceived %s", s.String())
 		runner.Cleanup()
 		os.Exit(128 + int(s.(syscall.Signal)))
 	}()
