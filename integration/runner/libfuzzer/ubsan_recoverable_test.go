@@ -22,6 +22,7 @@ func TestIntegration_UBSANRecoverable(t *testing.T) {
 			Details:             "undefined behaviour",
 			SourceFile:          "trigger_ubsan.cpp",
 			AllowEmptyInputData: true,
+			NumFindings:         1,
 		})
 
 		// We don't check here that the seed corpus is non-empty because
