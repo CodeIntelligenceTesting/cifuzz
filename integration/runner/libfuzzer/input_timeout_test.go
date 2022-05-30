@@ -1,6 +1,7 @@
 package libfuzzer
 
 import (
+	"runtime"
 	"testing"
 
 	"code-intelligence.com/cifuzz/integration/utils"
@@ -20,10 +21,15 @@ func TestIntegration_InputTimeout(t *testing.T) {
 
 		_, _, reports := test.Run(t)
 
-		utils.CheckReports(t, reports, &utils.CheckReportOptions{
-			ErrorType:  report.ErrorType_CRASH,
-			SourceFile: "trigger_timeout.cpp",
-			Details:    "timeout",
-		})
+		options := &utils.CheckReportOptions{
+			ErrorType:   report.ErrorType_CRASH,
+			Details:     "timeout",
+			NumFindings: 1,
+		}
+		if runtime.GOOS == "linux" {
+			options.SourceFile = "trigger_timeout.cpp"
+		}
+
+		utils.CheckReports(t, reports, options)
 	})
 }
