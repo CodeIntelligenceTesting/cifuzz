@@ -211,9 +211,11 @@ func runInDirWithExpectedStatus(t *testing.T, expectFailure bool, dir string, co
 	t.Logf("Working directory: %s", c.Dir)
 	t.Logf("Command: %s", c.String())
 	out, err := c.Output()
+	// Prints compiler command invocations to the test logs.
+	t.Log(string(out))
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {
-		msg := fmt.Sprintf("%q exited with %d:\nstderr:\n%s\nstdout:\n%s", c.String(), exitErr.ExitCode(), string(exitErr.Stderr), string(out))
+		msg := fmt.Sprintf("%q exited with %d:\nstderr:\n%s", c.String(), exitErr.ExitCode(), string(exitErr.Stderr))
 		if !expectFailure {
 			require.NoError(t, exitErr, msg)
 		} else {
@@ -223,7 +225,7 @@ func runInDirWithExpectedStatus(t *testing.T, expectFailure bool, dir string, co
 		}
 		return nil
 	} else {
-		msg := fmt.Sprintf("%q failed to execute with error:%v\nstdout:\n%s", c.String(), err, string(out))
+		msg := fmt.Sprintf("%q failed to execute with error:%v\n", c.String(), err)
 		// Non-ExitErrors or context errors are never expected.
 		require.NoError(t, err, msg)
 		require.NoError(t, ctx.Err(), msg)
