@@ -20,5 +20,5 @@ var ErrIncorrectUsage = errors.New("IncorrectUsageError")
 // ErrIncorrectUsage so we can print a usage message when this error
 // is handled.
 func WrapIncorrectUsageError(err error) error {
-	return fmt.Errorf("%w:\n%+v", ErrSilent, err)
+	return fmt.Errorf("%w:\n%+v", ErrIncorrectUsage, err)
 }
