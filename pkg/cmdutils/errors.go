@@ -8,12 +8,6 @@ import (
 
 var ErrSilent = errors.New("SilentError")
 
-// WrapSilentError wraps an existing error into ErrSilent
-// so we can silently fail if an expected error happens
-func WrapSilentError(err error) error {
-	return fmt.Errorf("%w:\n%+v", ErrSilent, err)
-}
-
 var ErrIncorrectUsage = errors.New("IncorrectUsageError")
 
 // WrapIncorrectUsageError wraps an existing error into

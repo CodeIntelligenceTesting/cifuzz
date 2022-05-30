@@ -33,7 +33,7 @@ func New() *cobra.Command {
 				if err != nil {
 					err = errors.WithStack(err)
 					log.Error(err, err.Error())
-					return cmdutils.WrapSilentError(err)
+					return cmdutils.ErrSilent
 				}
 			}
 			return nil
