@@ -70,7 +70,8 @@ func Execute() {
 		// We only want to print the usage message if an ErrIncorrectUsage
 		// was returned or it's an error produced by cobra which was
 		// caused by incorrect usage
-		if errors.Is(err, cmdutils.ErrIncorrectUsage) ||
+		var usageErr *cmdutils.IncorrectUsageError
+		if errors.As(err, &usageErr) ||
 			strings.HasPrefix(err.Error(), "required flag") ||
 			strings.HasPrefix(err.Error(), "unknown command") {
 			// Ensure that there is an extra newline between the error
