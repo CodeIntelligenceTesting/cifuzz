@@ -54,7 +54,7 @@ func FindSystemJavaHome() (string, error) {
 		return javaHome, nil
 	}
 
-	if strings.HasPrefix(runtime.GOOS, "darwin") {
+	if runtime.GOOS == "darwin" {
 		// On some macOS installations, an executable 'java_home' exists
 		// which prints the JAVA_HOME of the default installation to stdout
 		var outbuf bytes.Buffer

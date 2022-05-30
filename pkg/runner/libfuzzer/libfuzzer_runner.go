@@ -50,7 +50,7 @@ type RunnerOptions struct {
 
 func (options *RunnerOptions) ValidateOptions() error {
 	if options.UseMinijail {
-		if !strings.HasPrefix(runtime.GOOS, "linux") {
+		if runtime.GOOS != "linux" {
 			return errors.Errorf("Minijail is only supported on Linux")
 		}
 
