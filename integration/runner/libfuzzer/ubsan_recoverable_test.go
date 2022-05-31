@@ -1,6 +1,7 @@
 package libfuzzer
 
 import (
+	"runtime"
 	"testing"
 
 	"code-intelligence.com/cifuzz/integration/utils"
@@ -8,7 +9,8 @@ import (
 )
 
 func TestIntegration_UBSANRecoverable(t *testing.T) {
-	if testing.Short() {
+	// We are using msvc on windows, which does not support UBSan yet.
+	if testing.Short() || runtime.GOOS == "windows" {
 		t.Skip()
 	}
 
