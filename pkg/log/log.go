@@ -7,22 +7,29 @@ import (
 	"github.com/fatih/color"
 	"github.com/mattn/go-colorable"
 	"github.com/spf13/viper"
+	"golang.org/x/term"
 )
 
 func init() {
 	// Make the color package print color control sequences to stderr
 	// instead of stdout
 	color.Output = colorable.NewColorableStderr()
+
+	// The color package disables color if stdout is not a terminal, but
+	// we print to stderr, so we disable color if stderr is not a
+	// terminal.
+	color.NoColor = !term.IsTerminal(int(os.Stderr.Fd()))
 }
 
 func log(msgColor color.Attribute, icon, msg string, args ...interface{}) {
 	color.Set(msgColor)
+	defer color.Unset()
+
 	s := fmt.Sprintf(icon+msg, args...)
 	if len(s) == 0 || s[len(s)-1] != '\n' {
 		s += "\n"
 	}
 	_, _ = fmt.Fprint(os.Stderr, s)
-	defer color.Unset()
 }
 
 // Successf highlights a message as successful
