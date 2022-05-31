@@ -11,9 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 
+	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/parser/sanitizer"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/util/regexutil"
@@ -110,7 +111,11 @@ func (p *parser) sendReport(ctx context.Context, report *report.Report) error {
 	}
 }
 
-func (p *parser) parseLine(ctx context.Context, line string) error {
+func (p *parser) parseLine(ctx context.Context, possiblyColorizedLine string) error {
+	// Sanitizer reports can be colorized, but the ANSI escapes used for colors
+	// should not be included in logs.
+	line := pterm.RemoveColorFromString(possiblyColorizedLine)
+
 	metric := p.parseAsFuzzingMetric(line)
 	if metric != nil {
 		log.Debug("Sending metric report")
