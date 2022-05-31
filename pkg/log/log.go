@@ -5,8 +5,15 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-colorable"
 	"github.com/spf13/viper"
 )
+
+func init() {
+	// Make the color package print color control sequences to stderr
+	// instead of stdout
+	color.Output = colorable.NewColorableStderr()
+}
 
 func log(msgColor color.Attribute, icon, msg string, args ...interface{}) {
 	color.Set(msgColor)
