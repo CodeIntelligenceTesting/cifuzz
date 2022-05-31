@@ -2,6 +2,7 @@ package libfuzzer
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -46,6 +47,7 @@ type RunnerOptions struct {
 	ReportHandler       report.Handler
 	Timeout             time.Duration
 	UseMinijail         bool
+	Verbose             bool
 }
 
 func (options *RunnerOptions) ValidateOptions() error {
@@ -169,6 +171,8 @@ func (r *Runner) Run(ctx context.Context) error {
 }
 
 func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env []string) error {
+	var err error
+
 	// Ideally, libfuzzer exits on its own after the timeout, because we
 	// specified `-max_total_time` above. For the case that it does not,
 	// we still set up a timeout handler here which sends a SIGTERM and
@@ -187,17 +191,26 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 	defer cancelCmdCtx()
 	r.cmd = executil.CommandContext(cmdCtx, args[0], args[1:]...)
 	r.cmd.TerminateProcessGroupWhenContextDone = true
-
 	r.cmd.Env = env
-	// Write the command's stdout to stderr in order to only have
-	// reports printed to stdout.
-	r.cmd.Stdout = os.Stderr
-	// Write the command's stderr to both a pipe and os.Stderr, so that
-	// we can parse the output but still allow the caller to observe the
-	// status and progress in realtime.
-	stderrPipe, err := r.cmd.StderrTeePipe()
-	if err != nil {
-		return err
+
+	var stderrPipe io.ReadCloser
+	if r.Verbose {
+		// Write the command's stdout to stderr in order to only have
+		// reports printed to stdout.
+		r.cmd.Stdout = os.Stderr
+
+		// Write the command's stderr to both a pipe and os.Stderr, so that
+		// we can parse the output but still allow the caller to observe the
+		// status and progress in realtime.
+		stderrPipe, err = r.cmd.StderrTeePipe()
+		if err != nil {
+			return err
+		}
+	} else {
+		stderrPipe, err = r.cmd.StderrPipe()
+		if err != nil {
+			return err
+		}
 	}
 
 	log.Debugf("Command: %s", strings.Join(stringutil.QuotedStrings(r.cmd.Args), " "))

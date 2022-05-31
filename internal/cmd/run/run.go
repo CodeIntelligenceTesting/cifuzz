@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
@@ -281,6 +282,7 @@ func (c *runCmd) runFuzzTest() error {
 		ReportHandler:       &reportHandler{},
 		Timeout:             c.opts.timeout,
 		UseMinijail:         c.opts.useSandbox,
+		Verbose:             viper.GetBool("verbose"),
 	}
 	runner := libfuzzer.NewRunner(runnerOpts)
 
