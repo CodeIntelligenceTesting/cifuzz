@@ -149,7 +149,7 @@ func (c *runCmd) buildWithCMake() error {
 	}
 
 	// Create the build directory if it doesn't exist
-	c.buildDir = filepath.Join(c.projectDir, ".build", engine, strings.Join(sanitizers, "+"))
+	c.buildDir = filepath.Join(c.projectDir, ".cifuzz-build", engine, strings.Join(sanitizers, "+"))
 	exists, err := fileutil.Exists(c.buildDir)
 	if err != nil {
 		return err
