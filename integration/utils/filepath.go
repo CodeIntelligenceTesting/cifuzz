@@ -29,6 +29,9 @@ func GetFuzzTargetBuildDir(t *testing.T) string {
 }
 
 func GetFuzzTargetPath(t *testing.T, fuzzTarget string) string {
+	if runtime.GOOS == "windows" {
+		fuzzTarget += ".exe"
+	}
 	fuzzTargetPath := filepath.Join(GetFuzzTargetBuildDir(t), fuzzTarget)
 	require.FileExists(t, fuzzTargetPath)
 

@@ -48,5 +48,5 @@ func CheckReports(t *testing.T, reports []*report.Report, options *CheckReportOp
 			require.NotEmpty(t, finding.InputData, "InputData is empty")
 		}
 	}
-	require.Equal(t, options.NumFindings, numFindings)
+	require.Equal(t, options.NumFindings, numFindings, "total amount of findings not as expected")
 }
