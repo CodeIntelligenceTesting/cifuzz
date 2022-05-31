@@ -21,6 +21,13 @@ import (
 )
 
 var (
+	nonEmptyCorpusPattern = regexp.MustCompile(
+		`INFO: seed corpus: files: (?P<num_seeds>\d+) min: (?P<min_size>\w+) max: (?P<max_size>\w+) total: (?P<total_size>\w+) rss: (?P<peak_rss>\w+)`,
+	)
+	emptyCorpusPattern = regexp.MustCompile(
+		`INFO: A corpus is not provided, starting from an empty corpus`,
+	)
+
 	libfuzzerTimeoutErrorPattern = regexp.MustCompile(
 		`ALARM: working on the last Unit for (?P<timeout_seconds>\d+) seconds`,
 	)
@@ -34,8 +41,11 @@ var (
 	javaAssertionErrorPattern = regexp.MustCompile(
 		`== Java Assertion Error`)
 
-	coveragePattern = regexp.MustCompile(
-		`#(?P<total_execs>\d+).*cov:\s(?P<edges>\d+)\sft:\s(?P<features>\d+)\scorp:\s(?P<corpus_size>\d+)/.*exec/s:\s(?P<executions_per_second>\d+)\s`)
+	// Examples for matching strings:
+	// #2	INITED cov: 10 ft: 11 corp: 1/1b exec/s: 0 rss: 30Mb
+	// #670	REDUCE cov: 13 ft: 15 corp: 4/5b lim: 8 exec/s: 0 rss: 31Mb L: 1/2 MS: 2 CopyPart-EraseBytes-
+	statsPattern = regexp.MustCompile(
+		`#(?P<total_execs>\d+)\s(?P<status>.*)\scov:\s(?P<edges>\d+)\sft:\s(?P<features>\d+)\scorp:\s(?P<corpus_size>\d+)/.*exec/s:\s(?P<executions_per_second>\d+)\s`)
 	testInputFilePattern = regexp.MustCompile(
 		`Test unit written to\s*(?P<test_input_file>.*)`)
 	slowInputPattern = regexp.MustCompile(
@@ -43,12 +53,21 @@ var (
 	goPanicPattern = regexp.MustCompile(`^panic:\s+\S+`)
 )
 
+var errNotFound = errors.New("not found")
+
 type parser struct {
 	*Options
 
 	FindingReported bool
 
 	reportsCh chan *report.Report
+
+	// Whether we parsed the message which indicates that libFuzzer
+	// started the initialization
+	initStarted bool
+	// Whether we parsed the message which indicates that libFuzzer
+	// finished the initialization
+	initFinished bool
 
 	// A finding that was found in the libfuzzer output but wasn't sent
 	// yet, because we keep reading more output lines for some time and
@@ -78,13 +97,6 @@ func (p *parser) Parse(ctx context.Context, input io.Reader, reportsCh chan *rep
 	defer close(p.reportsCh)
 	scanner := bufio.NewScanner(input)
 
-	// Send an initial report, to notify the server that the fuzzer is now running
-	log.Debug("Sending initial report")
-	err := p.sendReport(ctx, &report.Report{Status: report.RunStatus_INITIALIZING})
-	if err != nil {
-		return err
-	}
-
 	for scanner.Scan() {
 		err := p.parseLine(ctx, scanner.Text())
 		if err != nil {
@@ -94,7 +106,7 @@ func (p *parser) Parse(ctx context.Context, input io.Reader, reportsCh chan *rep
 
 	// The fuzzer output was closed, which means that the fuzzer exited.
 	// If there is still a pending finding, send it now.
-	err = p.sendPendingFindingIfAny(ctx)
+	err := p.sendPendingFindingIfAny(ctx)
 	if err != nil {
 		return err
 	}
@@ -116,13 +128,42 @@ func (p *parser) parseLine(ctx context.Context, possiblyColorizedLine string) er
 	// should not be included in logs.
 	line := pterm.RemoveColorFromString(possiblyColorizedLine)
 
+	if !p.initStarted && !p.initFinished {
+		// We're not interested in any lines until we find the line that
+		// tells us that libFuzzer started initializing with the seed
+		// corpus
+		numSeeds, err := parseAsSeedCorpusMessage(line)
+		if errors.Is(err, errNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		p.initStarted = true
+
+		if numSeeds == 0 {
+			p.initFinished = true
+		}
+
+		// Report that the fuzzer is now initializing and how many seeds
+		// are used for initialization
+		log.Debug("Sending initial report")
+		return p.sendReport(ctx, &report.Report{
+			Status:   report.RunStatus_INITIALIZING,
+			NumSeeds: numSeeds,
+		})
+	}
+
 	metric := p.parseAsFuzzingMetric(line)
 	if metric != nil {
 		log.Debug("Sending metric report")
-		err := p.sendReport(ctx, &report.Report{
-			Status: report.RunStatus_RUNNING,
-			Metric: metric,
-		})
+		r := &report.Report{Metric: metric}
+		if p.initFinished {
+			r.Status = report.RunStatus_RUNNING
+		} else {
+			r.Status = report.RunStatus_INITIALIZING
+		}
+		err := p.sendReport(ctx, r)
 		if err != nil {
 			return err
 		}
@@ -347,7 +388,7 @@ func (p *parser) parseAsJazzerFinding(line string) *report.Finding {
 }
 
 func (p *parser) parseAsFuzzingMetric(log string) *report.FuzzingMetric {
-	if result, found := regexutil.FindNamedGroupsMatch(coveragePattern, log); found {
+	if result, found := regexutil.FindNamedGroupsMatch(statsPattern, log); found {
 		totalExecs, err := strconv.ParseUint(result["total_execs"], 10, 64)
 		if err != nil {
 			return nil
@@ -381,6 +422,11 @@ func (p *parser) parseAsFuzzingMetric(log string) *report.FuzzingMetric {
 			p.lastEdges = edges
 			secondsSinceLastEdge = 0
 		}
+
+		if !p.initFinished && result["status"] == "INITED" {
+			p.initFinished = true
+		}
+
 		return &report.FuzzingMetric{
 			Timestamp:               time.Now(),
 			ExecutionsPerSecond:     int32(execsPerSec),
@@ -412,6 +458,39 @@ func parseAsSlowInput(log string) *report.Finding {
 		}
 	}
 	return nil
+}
+
+func parseAsSeedCorpusMessage(line string) (numSeeds uint, err error) {
+	numSeeds, err = parseAsNonEmptyCorpusMessage(line)
+	if err == nil {
+		return numSeeds, nil
+	}
+	if !errors.Is(err, errNotFound) {
+		// Unexpected error
+		return 0, err
+	}
+	found := parseAsEmptyCorpusMessage(line)
+	if found {
+		return 0, nil
+	}
+	return 0, errNotFound
+}
+
+func parseAsNonEmptyCorpusMessage(line string) (numSeeds uint, err error) {
+	result, found := regexutil.FindNamedGroupsMatch(nonEmptyCorpusPattern, line)
+	if !found {
+		return 0, errNotFound
+	}
+	numSeedsUInt64, err := strconv.ParseUint(result["num_seeds"], 10, 0)
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+	return uint(numSeedsUInt64), nil
+}
+
+func parseAsEmptyCorpusMessage(line string) (found bool) {
+	matches := emptyCorpusPattern.FindStringSubmatch(line)
+	return matches != nil
 }
 
 func (p *parser) sendPendingFindingIfAny(ctx context.Context) error {

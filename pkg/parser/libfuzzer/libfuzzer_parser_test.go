@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/pkg/report"
@@ -19,6 +21,7 @@ import (
 const maxBufferedReports = 10
 
 func TestMain(m *testing.M) {
+	viper.Set("verbose", true)
 	flag.Parse()
 
 	res := m.Run()
@@ -39,15 +42,14 @@ func TestLibFuzzerAdapter_ReportsParsing(t *testing.T) {
 		expected []*report.Report
 	}{
 		{
-			name: "empty logs",
-			logs: "",
-			expected: []*report.Report{
-				{Status: report.RunStatus_INITIALIZING},
-			},
+			name:     "empty logs",
+			logs:     "",
+			expected: []*report.Report{},
 		},
 		{
 			name: "multiple coverage logs",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 #4749	NEW    cov: 6 ft: 4 corp: 3/8b exec/s: 10 rss: 47Mb L: 4/4 MS: 5 ChangeBit-InsertByte
 #4805	REDUCE cov: 6 ft: 4 corp: 3/7b exec/s: 12 rss: 47Mb L: 3/3 MS: 1 EraseBytes-
 #22045	REDUCE cov: 7 ft: 5 corp: 4/11b exec/s: 123 rss: 81Mb L: 4/4 MS 5 CopyPart-ChangeByte-
@@ -93,6 +95,7 @@ some invalid logs`,
 		{
 			name: "Progress and crash report",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 #4805	REDUCE cov: 6 ft: 4 corp: 3/7b exec/s: 10 rss: 47Mb L: 3/3 MS: 1 EraseBytes-
 ==8141==ERROR: AddressSanitizer: global-buffer-overflow on address 0x00
 error info 1
@@ -192,7 +195,8 @@ SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior fuzz_targets/manual.cpp:
 		},
 		{
 			name: "long operations warning",
-			logs: "#128 pulse cov: 4 ft: 2 corp: 27/1688b exec/s: 1 rss: 905Mb\n" +
+			logs: "INFO: A corpus is not provided, starting from an empty corpus\n" +
+				"#128 pulse cov: 4 ft: 2 corp: 27/1688b exec/s: 1 rss: 905Mb\n" +
 				"#256 pulse cov: 4 ft: 2 corp: 41/2726b exec/s: 1 rss: 941Mb\n" +
 				"Slowest unit: 26 s: \n" +
 				fmt.Sprintf("artifact_prefix='./'; Test unit written to %s\n", testInputFile.Name()) +
@@ -253,6 +257,7 @@ SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior fuzz_targets/manual.cpp:
 		{
 			name: "non-aborting ASan",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 =================================================================
 ==16==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7fffb9492184 at pc 0x0000004969aa bp 0x7fffb9492150 sp 0x7fffb9491918
 [...]
@@ -310,6 +315,7 @@ Base64: i/SIw2hR3wI=`,
 		{
 			name: "MSan Bugs",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 #4805	REDUCE cov: 6 ft: 4 corp: 3/7b exec/s: 10 rss: 47Mb L: 3/3 MS: 1 EraseBytes-
 ==2248837==WARNING: MemorySanitizer: use-of-uninitialized-value
 error info 1
@@ -345,6 +351,7 @@ error info 2`,
 		{
 			name: "java libfuzzer driver crash",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 == Java Exception: java.lang.ArrayIndexOutOfBoundsException: Index 22 out of bounds for length 8
 	at com.example.parser.Parser.parseBytes(Parser.java:11)
 	at fuzz_targets.FuzzParser.fuzzerTestOneInput(FuzzParser.java:23)
@@ -384,6 +391,7 @@ Base64: ZGVhZGJlZWY=`,
 		{
 			name: "jazzer FuzzerSecurityIssue",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 == Java Exception: com.code_intelligence.jazzer.api.FuzzerSecurityIssueHigh: Output contains </script
 at com.example.JsonSanitizerXSSFuzzer.fuzzerTestOneInput(JsonSanitizerXSSFuzzer.java:44)
 Caused by: com.code_intelligence.jazzer.api.FuzzerSecurityIssueHigh: Output contains </script
@@ -417,6 +425,7 @@ Base64: UVFcb1w8L1xzY3JpcHQt`,
 		{
 			name: "java assertion error",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 == Java Assertion Error
 == libFuzzer crashing input ==
 MS: 0 ; base unit: 0000000000000000000000000000000000000000
@@ -448,6 +457,7 @@ Base64: ZGVhZGJlZWY=`,
 		{
 			name: "segfault at the end",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 ==16== ERROR: libFuzzer: deadly signal
     #0 0x4be181 in __sanitizer_print_stack_trace /llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3
 
@@ -481,6 +491,7 @@ Base64: CiMKIQoDZm9vEhoaGGJeAABkZWFkYmVlZjEyMzQ1Njc4OVfHng==`,
 		{
 			name: "metric line in the middle of a report",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 ==16== ERROR: libFuzzer: deadly signal
 #38	INITED cov: 15 ft: 39 corp: 8/147b exec/s: 38 rss: 44Mb
     #0 0x4a0021 in __sanitizer_print_stack_trace /llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3
@@ -527,6 +538,7 @@ Base64: J3JycnJiYXJycnJycnJycmZvb3IAcgAAAXJyAAAAAHJycnJycnJycnJycnJycnJycnJycnJy
 		{
 			name: "missing end of report",
 			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
 ==16==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7fffb9492184 at pc 0x0000004969aa bp 0x7fffb9492150 sp 0x7fffb9491918
 [...end of report not detected...]
 3280532619
@@ -724,7 +736,6 @@ func TestOOMCrashLogs(t *testing.T) {
 
 func assertCorrectCrashesParsing(t *testing.T, errorDetails, crashFile string, crashingInput []byte, logs []string) {
 	expectedReports := []*report.Report{
-		{Status: report.RunStatus_INITIALIZING},
 		{
 			Status: report.RunStatus_RUNNING,
 			Finding: &report.Finding{
@@ -739,6 +750,7 @@ func assertCorrectCrashesParsing(t *testing.T, errorDetails, crashFile string, c
 	r, w := io.Pipe()
 
 	reporter := NewLibfuzzerOutputParser(nil)
+	reporter.initFinished = true
 	reportsCh := make(chan *report.Report, maxBufferedReports)
 	reporterErrCh := make(chan error)
 
@@ -758,10 +770,10 @@ func assertCorrectCrashesParsing(t *testing.T, errorDetails, crashFile string, c
 	go func() {
 		i := 0
 		for report := range reportsCh {
-			require.Equal(t, expectedReports[i], report)
+			assert.Equal(t, expectedReports[i], report)
 			i += 1
 		}
-		require.Equal(t, len(expectedReports), i)
+		assert.Equal(t, len(expectedReports), i)
 		doneCh <- struct{}{}
 	}()
 
