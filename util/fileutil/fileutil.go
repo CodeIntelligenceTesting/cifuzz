@@ -4,10 +4,13 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
+
+	"code-intelligence.com/cifuzz/pkg/log"
 )
 
 func IsSymlink(path string) bool {
@@ -89,4 +92,23 @@ func CopyFile(src, dest string, perm fs.FileMode) error {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+// PrettifyPath prints a possibly shortened path for display purposes.
+// If path is located under the current working directory, the relative path to
+// it is returned, otherwise or in case of an error the path is returned
+// unchanged.
+func PrettifyPath(path string) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return path
+	}
+	rel, err := filepath.Rel(cwd, path)
+	if err != nil {
+		return path
+	}
+	if strings.HasPrefix(rel, "..") {
+		return path
+	}
+	return rel
 }

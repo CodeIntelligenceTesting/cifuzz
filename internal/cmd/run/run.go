@@ -102,7 +102,6 @@ func New() *cobra.Command {
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
 	useMinijailDefault := runtime.GOOS == "linux"
 	cmd.Flags().BoolVar(&opts.useSandbox, "sandbox", useMinijailDefault, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
-	cmdutils.MarkFlagsRequired(cmd, "seeds-dir")
 
 	return cmd
 }
@@ -250,6 +249,22 @@ func (c *runCmd) runFuzzTest() error {
 		return err
 	}
 	log.Debugf("executable: %s", fuzzTestExecutable)
+
+	if len(c.opts.seedsDirs) == 0 {
+		// If no seeds directory is specified, use a single persistent corpus
+		// directory per fuzz test in a hidden subdirectory. In most cases,
+		// corpora are not checked into source control, so a hidden directory
+		// is an appropriate default that can always be overridden via the
+		// --seeds-dir flag.
+		defaultCorpusDir := filepath.Join(c.projectDir, ".cifuzz-corpus", c.opts.fuzzTest)
+		err := os.MkdirAll(defaultCorpusDir, 0755)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		log.Infof("Storing corpus in %s", fileutil.PrettifyPath(defaultCorpusDir))
+		c.opts.seedsDirs = []string{defaultCorpusDir}
+	}
+
 	runnerOpts := &libfuzzer.RunnerOptions{
 		FuzzTarget:          fuzzTestExecutable,
 		SeedsDir:            c.opts.seedsDirs[0],
