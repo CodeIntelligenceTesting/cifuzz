@@ -13,19 +13,19 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
+	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
-	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
 // The CMake configuration (also called "build type") to use for fuzzing runs.
@@ -42,6 +42,7 @@ type runOptions struct {
 	fuzzTargetArgs []string
 	timeout        time.Duration
 	useSandbox     bool
+	printJSON      bool
 }
 
 func (opts *runOptions) validate() error {
@@ -72,8 +73,9 @@ type runCmd struct {
 	*cobra.Command
 	opts *runOptions
 
-	projectDir string
-	buildDir   string
+	projectDir    string
+	buildDir      string
+	reportHandler *report_handler.ReportHandler
 }
 
 func New() *cobra.Command {
@@ -92,7 +94,10 @@ func New() *cobra.Command {
 			return opts.validate()
 		},
 		RunE: func(c *cobra.Command, args []string) error {
-			cmd := runCmd{Command: c, opts: opts}
+			cmd := runCmd{
+				Command: c,
+				opts:    opts,
+			}
 			return cmd.run()
 		},
 	}
@@ -105,6 +110,7 @@ func New() *cobra.Command {
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
 	useMinijailDefault := runtime.GOOS == "linux"
 	cmd.Flags().BoolVar(&opts.useSandbox, "sandbox", useMinijailDefault, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
+	cmd.Flags().BoolVar(&opts.printJSON, "json", false, "Print output as JSON")
 
 	return cmd
 }
@@ -122,7 +128,20 @@ func (c *runCmd) run() error {
 		return err
 	}
 
+	// Initialize the report handler. Only do this right before we start
+	// the fuzz test, because this is storing a timestamp which is used
+	// to figure out how long the fuzzing run is running.
+	c.reportHandler, err = report_handler.NewReportHandler(c.opts.printJSON, viper.GetBool("verbose"))
+	if err != nil {
+		return err
+	}
+
 	err = c.runFuzzTest()
+	if err != nil {
+		return err
+	}
+
+	err = c.printFinalMetrics()
 	if err != nil {
 		return err
 	}
@@ -258,6 +277,7 @@ func (c *runCmd) buildWithUnknownBuildSystem() error {
 }
 
 func (c *runCmd) runFuzzTest() error {
+	log.Infof("Running %s", pterm.LightYellow(c.opts.fuzzTest))
 	fuzzTestExecutable, err := c.findFuzzTestExecutable(c.opts.fuzzTest)
 	if err != nil {
 		return err
@@ -286,10 +306,11 @@ func (c *runCmd) runFuzzTest() error {
 		Dictionary:          c.opts.dictionary,
 		EngineArgs:          c.opts.engineArgs,
 		FuzzTargetArgs:      c.opts.fuzzTargetArgs,
-		ReportHandler:       &reportHandler{},
+		ReportHandler:       c.reportHandler,
 		Timeout:             c.opts.timeout,
 		UseMinijail:         c.opts.useSandbox,
 		Verbose:             viper.GetBool("verbose"),
+		KeepColor:           !c.opts.printJSON,
 	}
 	runner := libfuzzer.NewRunner(runnerOpts)
 
@@ -337,6 +358,15 @@ func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
 		return "", errors.Errorf("Could not find executable for fuzz test %s", fuzzTest)
 	}
 	return executable, nil
+}
+
+func (c *runCmd) printFinalMetrics() error {
+	numSeeds, err := countSeeds(c.opts.seedsDirs)
+	if err != nil {
+		return err
+	}
+
+	return c.reportHandler.PrintFinalMetrics(numSeeds)
 }
 
 func commonBuildEnv() ([]string, error) {
@@ -452,13 +482,30 @@ func setBuildFlagsEnvVars(env []string) ([]string, error) {
 	return env, nil
 }
 
-type reportHandler struct{}
-
-func (s *reportHandler) Handle(report *report.Report) error {
-	jsonString, err := stringutil.ToJsonString(report)
-	if err != nil {
-		return err
+func countSeeds(seedDirs []string) (numSeeds uint, err error) {
+	for _, dir := range seedDirs {
+		var seedsInDir uint
+		err = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() {
+				return nil
+			}
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			// Don't count empty files, same as libFuzzer
+			if info.Size() != 0 {
+				seedsInDir += 1
+			}
+			return nil
+		})
+		if err != nil {
+			return 0, errors.WithStack(err)
+		}
+		numSeeds += seedsInDir
 	}
-	fmt.Println(jsonString)
-	return nil
+	return numSeeds, nil
 }

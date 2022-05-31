@@ -48,6 +48,7 @@ type RunnerOptions struct {
 	Timeout             time.Duration
 	UseMinijail         bool
 	Verbose             bool
+	KeepColor           bool
 }
 
 func (options *RunnerOptions) ValidateOptions() error {
@@ -195,14 +196,20 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 
 	var stderrPipe io.ReadCloser
 	if r.Verbose {
-		// Write the command's stdout to stderr in order to only have
-		// reports printed to stdout.
-		r.cmd.Stdout = os.Stderr
+		// Print the command's stdout and stderr via pterm to avoid that
+		// the output messes with the pterm output or gets overwritten
+		// by it.
+		// Note that this causes the command's stdout to be printed to
+		// stderr, which is what we want, because we only want reports
+		// printed to stdout.
+		ptermWriter := log.NewPTermWriter()
+		r.cmd.Stdout = ptermWriter
 
-		// Write the command's stderr to both a pipe and os.Stderr, so that
-		// we can parse the output but still allow the caller to observe the
-		// status and progress in realtime.
-		stderrPipe, err = r.cmd.StderrTeePipe(os.Stderr)
+		// Write the command's stderr to both a pipe and the pterm
+		// writer which prints it to stderr, so that we can parse the
+		// output but still allow the caller to observe the status and
+		// progress in realtime.
+		stderrPipe, err = r.cmd.StderrTeePipe(ptermWriter)
 		if err != nil {
 			return err
 		}
@@ -221,6 +228,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 
 	reporter := libfuzzer_parser.NewLibfuzzerOutputParser(&libfuzzer_parser.Options{
 		SupportJazzer: r.SupportJazzer,
+		KeepColor:     r.KeepColor,
 	})
 	reportsCh := make(chan *report.Report, MaxBufferedReports)
 

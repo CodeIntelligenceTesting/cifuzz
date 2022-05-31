@@ -35,6 +35,18 @@ func log(msgColor pterm.Color, icon string, a ...any) {
 		s = pterm.Style{msgColor}.Sprint(s)
 	}
 
+	// Clear the updating printer output if any. We don't use
+	// pterm.Fprint here, which also tries to clear spinner printer
+	// output, because that only works when the spinner printer and this
+	// function write to the same output stream, which is not always the
+	// case, because we let the spinner printer write to stdout unless
+	// --json was used. The advantage of that is that it allows piping
+	// stderr to a log file while still seeing the output that's mostly
+	// relevant during execution. But if that continues to add complexity
+	// to our code, we might want to reassess the cost/benefit.
+	if ActiveUpdatingPrinter != nil {
+		ActiveUpdatingPrinter.Clear()
+	}
 	_, _ = fmt.Fprint(Output, s)
 }
 

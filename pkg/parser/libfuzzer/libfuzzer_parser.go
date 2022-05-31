@@ -82,6 +82,7 @@ type parser struct {
 
 type Options struct {
 	SupportJazzer bool
+	KeepColor     bool
 }
 
 func NewLibfuzzerOutputParser(options *Options) *parser {
@@ -122,10 +123,12 @@ func (p *parser) sendReport(ctx context.Context, report *report.Report) error {
 	}
 }
 
-func (p *parser) parseLine(ctx context.Context, possiblyColorizedLine string) error {
-	// Sanitizer reports can be colorized, but the ANSI escapes used for colors
-	// should not be included in logs.
-	line := pterm.RemoveColorFromString(possiblyColorizedLine)
+func (p *parser) parseLine(ctx context.Context, line string) error {
+	if !p.KeepColor {
+		// Sanitizer reports can be colorized, but the ANSI escapes used
+		// for colors should not be included in logs.
+		line = pterm.RemoveColorFromString(line)
+	}
 
 	if !p.initStarted && !p.initFinished {
 		// We're not interested in any lines until we find the line that
