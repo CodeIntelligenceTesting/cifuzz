@@ -1,10 +1,14 @@
 package runner
 
 import (
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
+
+	"golang.org/x/exp/maps"
+	"golang.org/x/term"
 
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
@@ -47,6 +51,16 @@ const LibFuzzerOOMExitCode = 71
 //   https://llvm.org/docs/LibFuzzer.html
 //
 const LibFuzzerTimeoutExitCode = 70
+
+var defaultSanitizerOptions = map[string]string{
+	// color defaults to "auto", which lets sanitizers detects whether colorized
+	// output is supported by determining whether their stdout is a tty. Since
+	// the sanitizers run in a subprocess that has its output redirected to a
+	// pipe, this will never detect a tty even if cifuzz is running in one.
+	// Instead, enable colored reports if and only if cifuzz itself runs in a
+	// tty.
+	"color": sanitizerOptionsColorValue(),
+}
 
 // Sender is an interface to something that can send.
 type Sender interface {
@@ -97,6 +111,7 @@ func SetASANOptions(env []string, defaults map[string]string, overrides map[stri
 }
 
 func SetCommonASANOptions(env []string) ([]string, error) {
+	defaultOptions := maps.Clone(defaultSanitizerOptions)
 	overrideOptions := map[string]string{
 		// The default exit code when a sanitizer finds something is 1,
 		// which makes it hard to differentiate between the case that
@@ -108,18 +123,19 @@ func SetCommonASANOptions(env []string) ([]string, error) {
 		//
 		"exitcode": strconv.Itoa(SanitizerErrorExitCode),
 	}
-	return SetASANOptions(env, nil, overrideOptions)
+	return SetASANOptions(env, defaultOptions, overrideOptions)
 }
 
 func SetCommonUBSANOptions(env []string) ([]string, error) {
-	defaultOptions := map[string]string{
+	defaultOptions := maps.Clone(defaultSanitizerOptions)
+	maps.Copy(defaultOptions, map[string]string{
 		// Instruct UBSAN (enabled for all sanitizers) to print full stack traces
 		// instead of only the top stack frame with a relative file path.
 		// This allows us to set more breakpoints while debugging undefined behaviour
 		// findings and also ensures absolute file paths in the stack trace which can
 		// be mapped to the project build directory.
 		"print_stacktrace": "1",
-	}
+	})
 	options := envutil.Getenv(env, "UBSAN_OPTIONS")
 	options = SetSanitizerOptions(options, defaultOptions, nil)
 	return envutil.Setenv(env, "UBSAN_OPTIONS", options)
@@ -176,4 +192,15 @@ func SetLDLibraryPath(env []string, libraryDirs []string) ([]string, error) {
 	var libDirsList string
 	libDirsList = envutil.AddToColonSeparatedList(libDirsList, libraryDirs...)
 	return envutil.Setenv(env, "LD_LIBRARY_PATH", libDirsList)
+}
+
+func sanitizerOptionsColorValue() string {
+	// Colorize sanitizer reports if cifuzz itself is running in an interactive
+	// terminal. Since we redirect unstructured output from fuzzer binaries to
+	// stderr, that is the file descriptor we should check for tty-ness.
+	if term.IsTerminal(int(os.Stderr.Fd())) {
+		return "always"
+	} else {
+		return "never"
+	}
 }
