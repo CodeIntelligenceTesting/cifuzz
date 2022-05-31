@@ -77,23 +77,24 @@ func New() *cobra.Command {
 	opts := &runOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "run",
+		Use:   "run [flags] <fuzz test>",
 		Short: "Build and run a fuzz test",
 		// TODO: Write long description (easier once we support more
-		//       than just the fallback mode).
+		//       than just the fallback mode). In particular, explain how a
+		//       "fuzz test" is identified on the CLI.
 		Long: "",
-		Args: cobra.NoArgs,
+		Args: cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			return opts.validate()
 		},
 		RunE: func(c *cobra.Command, args []string) error {
+			opts.fuzzTest = args[0]
 			cmd := runCmd{Command: c, opts: opts}
 			return cmd.run()
 		},
 	}
 
 	cmd.Flags().StringVar(&opts.buildCommand, "build-command", "", "The command to build the fuzz test. Example: \"make clean && make my-fuzz-test\"")
-	cmd.Flags().StringVarP(&opts.fuzzTest, "fuzz-test", "f", "", "Path where the fuzz test executable can be found after running the build command.")
 	cmd.Flags().StringArrayVarP(&opts.seedsDirs, "seeds-dir", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
 	cmd.Flags().StringVar(&opts.dictionary, "dict", "", "A file containing input language keywords or other interesting byte sequences.\nSee https://llvm.org/docs/LibFuzzer.html#dictionaries and\nhttps://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md.")
 	cmd.Flags().StringArrayVar(&opts.engineArgs, "engine-arg", nil, "Command-line argument to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options and\nhttps://www.mankier.com/8/afl-fuzz.")
@@ -101,7 +102,7 @@ func New() *cobra.Command {
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
 	useMinijailDefault := runtime.GOOS == "linux"
 	cmd.Flags().BoolVar(&opts.useSandbox, "sandbox", useMinijailDefault, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
-	cmdutils.MarkFlagsRequired(cmd, "seeds-dir", "fuzz-test")
+	cmdutils.MarkFlagsRequired(cmd, "seeds-dir")
 
 	return cmd
 }
