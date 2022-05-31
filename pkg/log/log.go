@@ -21,11 +21,15 @@ func init() {
 	color.NoColor = !term.IsTerminal(int(os.Stderr.Fd()))
 }
 
-func log(msgColor color.Attribute, icon, msg string, args ...interface{}) {
+func logf(msgColor color.Attribute, icon, format string, a ...any) {
+	log(msgColor, icon, fmt.Sprintf(format, a...))
+}
+
+func log(msgColor color.Attribute, icon string, a ...any) {
 	color.Set(msgColor)
 	defer color.Unset()
 
-	s := fmt.Sprintf(icon+msg, args...)
+	s := icon + fmt.Sprint(a...)
 	if len(s) == 0 || s[len(s)-1] != '\n' {
 		s += "\n"
 	}
@@ -33,49 +37,52 @@ func log(msgColor color.Attribute, icon, msg string, args ...interface{}) {
 }
 
 // Successf highlights a message as successful
-func Successf(msg string, args ...interface{}) {
-	log(color.FgGreen, "✅ ", msg, args...)
+func Successf(format string, a ...any) {
+	logf(color.FgGreen, "✅ ", format, a...)
 }
 
-func Success(msg string) {
-	Successf(msg + "\n")
+func Success(a ...any) {
+	log(color.FgGreen, "✅ ", a...)
 }
 
 // Warnf highlights a message as a warning
-func Warnf(msg string, args ...interface{}) {
-	log(color.FgYellow, "⚠️ ", msg, args...)
+func Warnf(format string, a ...any) {
+	logf(color.FgYellow, "⚠️ ", format, a...)
 }
 
-func Warn(msg string) {
-	Warnf(msg + "\n")
+func Warn(a ...any) {
+	log(color.FgYellow, "⚠️ ", a...)
 }
 
 // Errorf highlights a message as an error and shows the stack strace if the --verbose flag is active
-func Errorf(err error, msg string, args ...interface{}) {
-	log(color.FgRed, "❌ ", msg, args...)
+func Errorf(err error, format string, a ...any) {
+	logf(color.FgRed, "❌ ", format, a...)
 	Debugf("%+v", err)
 }
 
-func Error(err error, msg string) {
-	Errorf(err, msg+"\n")
+func Error(err error, a ...any) {
+	log(color.FgRed, "❌ ", a...)
+	Debugf("%+v", err)
 }
 
 // Infof outputs a regular user message without any highlighting
-func Infof(msg string, args ...interface{}) {
-	log(color.FgWhite, "", msg, args...)
+func Infof(format string, a ...any) {
+	logf(color.FgWhite, "", format, a...)
 }
 
-func Info(msg string) {
-	Infof(msg + "\n")
+func Info(a ...any) {
+	log(color.FgWhite, "", a...)
 }
 
 // Debugf outputs additional information when the --verbose flag is active
-func Debugf(msg string, args ...interface{}) {
+func Debugf(format string, a ...any) {
 	if viper.GetBool("verbose") {
-		log(color.FgWhite, "🔍 ", msg, args...)
+		logf(color.FgWhite, "🔍 ", format, a...)
 	}
 }
 
-func Debug(msg string) {
-	Debugf(msg + "\n")
+func Debug(a ...any) {
+	if viper.GetBool("verbose") {
+		log(color.FgWhite, "🔍 ", a...)
+	}
 }
