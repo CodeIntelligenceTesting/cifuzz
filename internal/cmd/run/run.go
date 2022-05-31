@@ -25,6 +25,11 @@ import (
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
+// The CMake configuration (also called "build type") to use for fuzzing runs.
+// See enable_fuzz_testing in tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake for the rationale for using this
+// build type.
+const cmakeBuildConfiguration = "RelWithDebInfo"
+
 type runOptions struct {
 	buildCommand   string
 	fuzzTest       string
@@ -161,8 +166,10 @@ func (c *runCmd) buildWithCMake() error {
 		}
 
 		cacheVariables := map[string]string{
-			"CIFUZZ_SANITIZERS": strings.Join(sanitizers, ";"),
-			"CIFUZZ_ENGINE":     engine,
+			"CMAKE_BUILD_TYPE":    cmakeBuildConfiguration,
+			"CIFUZZ_ENGINE":       engine,
+			"CIFUZZ_SANITIZERS":   strings.Join(sanitizers, ";"),
+			"CIFUZZ_TESTING:BOOL": "ON",
 		}
 		var cacheArgs []string
 		for key, value := range cacheVariables {
@@ -185,7 +192,12 @@ func (c *runCmd) buildWithCMake() error {
 	}
 
 	// Build the project with CMake
-	cmd := exec.Command("cmake", "--build", c.buildDir, "--target", c.opts.fuzzTest)
+	cmd := exec.Command(
+		"cmake",
+		"--build", c.buildDir,
+		"--config", cmakeBuildConfiguration,
+		"--target", c.opts.fuzzTest,
+	)
 	cmd.Stdout = c.OutOrStdout()
 	cmd.Stderr = c.ErrOrStderr()
 	cmd.Env = env
