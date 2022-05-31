@@ -5,6 +5,13 @@ function(enable_fuzz_testing)
   # metadata for renamed or removed targets doesn't linger around.
   file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/$<CONFIG>/.cifuzz")
 
+  # Conceptually, "building for fuzzing" is similar to a build type such as Release or RelWithDebInfo. We instead use
+  # a cache variable that adds flags to a base configuration we assume to be RelWithDebInfo for multiple reasons:
+  # 1. Custom build types require defining a potentially unknown set of cache variables and are thus hard to maintain.
+  # 2. Since custom build types store the flags in cache variables, cifuzz updates changing the flags would require
+  #    regenerating CMake build directories rather than just building them.
+  # 3. Many projects contain checks for the name of the build type, which makes us more compatible if we use an existing
+  #    one.
   if(CIFUZZ_TESTING)
     add_compile_definitions(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
     if(MSVC)
