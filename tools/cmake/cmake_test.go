@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestIntegrationCtestDefaultSettings(t *testing.T) {
+func TestIntegration_Ctest_DefaultSettings(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -57,7 +57,7 @@ func TestIntegrationCtestDefaultSettings(t *testing.T) {
 	})
 }
 
-func TestIntegrationCtestWithAddressSanitizer(t *testing.T) {
+func TestIntegration_Ctest_WithAddressSanitizer(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -78,7 +78,7 @@ func TestIntegrationCtestWithAddressSanitizer(t *testing.T) {
 	})
 }
 
-func TestIntegrationCtestWithUndefinedBehaviorSanitizer(t *testing.T) {
+func TestIntegration_Ctest_WithUndefinedBehaviorSanitizer(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -102,7 +102,7 @@ func TestIntegrationCtestWithUndefinedBehaviorSanitizer(t *testing.T) {
 	})
 }
 
-func TestIntegrationBuildWithMultipleSanitizers(t *testing.T) {
+func TestIntegration_Build_WithMultipleSanitizers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -118,7 +118,7 @@ func TestIntegrationBuildWithMultipleSanitizers(t *testing.T) {
 	})
 }
 
-func TestIntegrationBuildLegacyFuzzTests(t *testing.T) {
+func TestIntegration_Build_LegacyFuzzTests(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -129,7 +129,7 @@ func TestIntegrationBuildLegacyFuzzTests(t *testing.T) {
 	runAndAssertTests(t, buildDir, cifuzzCmakeBuildType, map[string]bool{"legacy_fuzz_test_regression_test": true})
 }
 
-func TestIntegrationCifuzzInfoIsCreated(t *testing.T) {
+func TestIntegration_CifuzzInfoIsCreated(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}

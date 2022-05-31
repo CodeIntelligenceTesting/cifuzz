@@ -213,7 +213,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestIntegrationReplayerWithMsvc(t *testing.T) {
+func TestIntegration_Replayer_WithMsvc(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -228,7 +228,7 @@ func TestIntegrationReplayerWithMsvc(t *testing.T) {
 	subtestCompileAndRunWithoutFuzzerInitialize(t, msvc)
 }
 
-func TestIntegrationReplayerWithClangCl(t *testing.T) {
+func TestIntegration_Replayer_WithClangCl(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -244,7 +244,7 @@ func TestIntegrationReplayerWithClangCl(t *testing.T) {
 	subtestCompileAndRunWithoutFuzzerInitialize(t, clangCl)
 }
 
-func TestIntegrationReplayerWithClang(t *testing.T) {
+func TestIntegration_Replayer_WithClang(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -258,7 +258,7 @@ func TestIntegrationReplayerWithClang(t *testing.T) {
 	subtestCompileAndRunWithoutFuzzerInitialize(t, clang)
 }
 
-func TestIntegrationReplayerWithGcc(t *testing.T) {
+func TestIntegration_Replayer_WithGcc(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -272,7 +272,7 @@ func TestIntegrationReplayerWithGcc(t *testing.T) {
 	subtestCompileAndRunWithoutFuzzerInitialize(t, gcc)
 }
 
-func TestIntegrationReplayerWithMingw(t *testing.T) {
+func TestIntegration_Replayer_WithMingw(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -287,7 +287,7 @@ func TestIntegrationReplayerWithMingw(t *testing.T) {
 	subtestCompileAndRunWithoutFuzzerInitialize(t, mingw)
 }
 
-func TestIntegrationReplayerWithNoAsserts(t *testing.T) {
+func TestIntegration_Replayer_WithNoAsserts(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -304,7 +304,7 @@ func TestIntegrationReplayerWithNoAsserts(t *testing.T) {
 	}
 }
 
-func TestIntegrationReplayerWithoutArgsRunsSeedCorpus(t *testing.T) {
+func TestIntegration_Replayer_WithoutArgsRunsSeedCorpus(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -338,7 +338,7 @@ func TestIntegrationReplayerWithoutArgsRunsSeedCorpus(t *testing.T) {
 }
 
 func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs []runCase) {
-	t.Run("WithFuzzerInitialize", func(t *testing.T) {
+	t.Run("_WithFuzzerInitialize", func(t *testing.T) {
 		t.Parallel()
 
 		tempDir, err := ioutil.TempDir(baseTempDir, "")
@@ -408,7 +408,7 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 }
 
 func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) {
-	t.Run("WithoutFuzzerInitialize", func(t *testing.T) {
+	t.Run("_WithoutFuzzerInitialize", func(t *testing.T) {
 		t.Parallel()
 
 		tempDir, err := ioutil.TempDir(baseTempDir, "")
