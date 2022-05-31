@@ -40,7 +40,7 @@ func prepareTestDir(t *testing.T) (string, string) {
 	return cifuzzPath, dir
 }
 
-func TestIntegration(t *testing.T) {
+func TestIntegration_InitCreate(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -72,7 +72,7 @@ func TestIntegration(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestIntegrationDirectoryFlagAndOutFlag(t *testing.T) {
+func TestIntegration_InitCreate_DirectoryFlagAndOutFlag(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
