@@ -72,7 +72,7 @@ func TestIntegration(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDirectoryFlagAndOutFlag(t *testing.T) {
+func TestIntegrationDirectoryFlagAndOutFlag(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
