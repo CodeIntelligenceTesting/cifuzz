@@ -63,7 +63,8 @@ func Execute() {
 	if cmd, err := rootCmd.ExecuteC(); err != nil {
 
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
-		if !errors.Is(err, cmdutils.ErrSilent) {
+		var silentErr *cmdutils.SilentError
+		if !errors.As(err, &silentErr) {
 			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%+v\n", err)
 		}
 
@@ -80,6 +81,11 @@ func Execute() {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr())
 			}
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), cmd.UsageString())
+		}
+
+		var signalErr *cmdutils.SignalError
+		if errors.As(err, &signalErr) {
+			os.Exit(128 + int(signalErr.Signal))
 		}
 
 		os.Exit(1)

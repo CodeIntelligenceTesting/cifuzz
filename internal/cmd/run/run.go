@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
 
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
@@ -288,17 +289,28 @@ func (c *runCmd) runFuzzTest() error {
 
 	// Handle cleanup (terminating the fuzzer process) when receiving
 	// termination signals
+	signalHandlerCtx, cancelSignalHandler := context.WithCancel(context.Background())
+	routines, routinesCtx := errgroup.WithContext(signalHandlerCtx)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	routines.Go(func() error {
+		select {
+		case <-signalHandlerCtx.Done():
+			return nil
+		case s := <-sigs:
+			log.Infof("\nReceived %s", s.String())
+			runner.Cleanup()
+			return errors.WithStack(cmdutils.NewSignalError(s.(syscall.Signal)))
+		}
+	})
 
-	go func() {
-		s := <-sigs
-		log.Infof("\nReceived %s", s.String())
-		runner.Cleanup()
-		os.Exit(128 + int(s.(syscall.Signal)))
-	}()
+	// Run the fuzzer
+	routines.Go(func() error {
+		defer cancelSignalHandler()
+		return runner.Run(routinesCtx)
+	})
 
-	return runner.Run(context.Background())
+	return routines.Wait()
 }
 
 func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
