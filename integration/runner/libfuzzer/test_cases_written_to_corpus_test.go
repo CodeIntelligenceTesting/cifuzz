@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/integration/utils"
-	"code-intelligence.com/cifuzz/pkg/report"
 )
 
 func TestIntegration_CasesWrittenToCorpus(t *testing.T) {
@@ -13,15 +12,12 @@ func TestIntegration_CasesWrittenToCorpus(t *testing.T) {
 	}
 
 	utils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := utils.NewLibfuzzerTest(t, "do_stuff_fuzzer", disableMinijail)
+		test := utils.NewLibfuzzerTest(t, "new_paths_fuzzer", disableMinijail)
 
 		_, _, reports := test.Run(t)
 
 		utils.CheckReports(t, reports, &utils.CheckReportOptions{
-			ErrorType:   report.ErrorType_CRASH,
-			SourceFile:  "do_stuff_fuzzer.cpp",
-			Details:     "heap-buffer-overflow",
-			NumFindings: 1,
+			NumFindings: 0,
 		})
 
 		test.RequireSeedCorpusNotEmpty(t)
