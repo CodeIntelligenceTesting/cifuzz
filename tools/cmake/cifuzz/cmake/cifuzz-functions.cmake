@@ -200,7 +200,9 @@ function(add_fuzz_test name)
        OUTPUT "$<SHELL_PATH:${_seed_corpus_info_file}>"
        CONTENT "${_source_seed_corpus}")
 
-  add_test(NAME "${name}_regression_test" COMMAND "${name}")
+  set(_test_name "${name}_regression_test")
+  add_test(NAME "${_test_name}" COMMAND "${name}")
+  set_tests_properties("${_test_name}" PROPERTIES LABELS "cifuzz_regression_test")
 
   # Define an install component cifuzz_internal_deps_${name} that, when "installed", prints the full paths of the
   # transitive runtime dependencies, including system libraries, of the fuzz target to stdout in the form:
