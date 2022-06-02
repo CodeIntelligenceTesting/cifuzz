@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	buildCmd "code-intelligence.com/cifuzz/internal/cmd/build"
 	createCmd "code-intelligence.com/cifuzz/internal/cmd/create"
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
 	runCmd "code-intelligence.com/cifuzz/internal/cmd/run"
@@ -78,7 +77,6 @@ func New() *cobra.Command {
 
 	rootCmd.AddCommand(initCmd.New())
 	rootCmd.AddCommand(createCmd.New(cmdConfig))
-	rootCmd.AddCommand(buildCmd.New())
 	rootCmd.AddCommand(runCmd.New(cmdConfig))
 
 	return rootCmd
