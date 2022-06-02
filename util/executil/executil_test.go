@@ -20,7 +20,7 @@ func TestCmd_StdoutTeePipe_ReadAsync(t *testing.T) {
 
 	os.Stdout = outFile
 	cmd := Command("echo", "foo")
-	pipe, err := cmd.StdoutTeePipe()
+	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
 	err = cmd.Start()
@@ -58,7 +58,7 @@ func TestCmd_StdoutTeePipe_ReadAsyncMultiline(t *testing.T) {
 	require.NoError(t, err)
 
 	cmd := Command("yes")
-	pipe, err := cmd.StdoutTeePipe()
+	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
 	err = cmd.Start()
@@ -87,7 +87,7 @@ func TestCmd_StdoutTeePipe_ReadSync(t *testing.T) {
 
 	os.Stdout = outFile
 	cmd := Command("echo", "foo")
-	pipe, err := cmd.StdoutTeePipe()
+	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
 	err = cmd.Start()
@@ -119,7 +119,7 @@ func TestCmd_StdoutTeePipe_ReadSyncWithRun(t *testing.T) {
 
 	os.Stdout = outFile
 	cmd := Command("echo", "foo")
-	pipe, err := cmd.StdoutTeePipe()
+	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
 	err = cmd.Run()
@@ -148,7 +148,7 @@ func TestCmd_StdoutTeePipe_NoRead(t *testing.T) {
 
 	os.Stdout = outFile
 	cmd := Command("echo", "foo")
-	pipe, err := cmd.StdoutTeePipe()
+	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
 	err = cmd.Start()
@@ -176,7 +176,7 @@ func TestCmd_StdoutTeePipe_NoReadWithRun(t *testing.T) {
 
 	os.Stdout = outFile
 	cmd := Command("echo", "foo")
-	pipe, err := cmd.StdoutTeePipe()
+	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
 	err = cmd.Run()

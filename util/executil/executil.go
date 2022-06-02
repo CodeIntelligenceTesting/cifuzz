@@ -47,12 +47,12 @@ func CommandContext(ctx context.Context, name string, arg ...string) *Cmd {
 }
 
 // StdoutTeePipe is similar to StdoutPipe, but everything written to the
-// pipe is also copied to stdout (like tee(1) does).
+// pipe is also copied to the specified writer (similar to tee(1)).
 //
 // In contrast to StdoutPipe, Wait will *not* automatically close the
 // pipe, so it's the caller's responsibility to close the pipe. In effect,
 // it is fine to call Wait before all reads from the pipe have completed.
-func (c *Cmd) StdoutTeePipe() (io.ReadCloser, error) {
+func (c *Cmd) StdoutTeePipe(writer io.Writer) (io.ReadCloser, error) {
 	if c.Stdout != nil {
 		return nil, errors.New("exec: Stdout already set")
 	}
@@ -63,13 +63,13 @@ func (c *Cmd) StdoutTeePipe() (io.ReadCloser, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	c.Stdout = io.MultiWriter(os.Stdout, pw)
+	c.Stdout = io.MultiWriter(writer, pw)
 	c.CloseAfterWait = append(c.CloseAfterWait, pw)
 	return pr, nil
 }
 
 // Same as StdoutTeePipe but for stderr.
-func (c *Cmd) StderrTeePipe() (io.ReadCloser, error) {
+func (c *Cmd) StderrTeePipe(writer io.Writer) (io.ReadCloser, error) {
 	if c.Stderr != nil {
 		return nil, errors.New("exec: Stderr already set")
 	}
@@ -80,7 +80,7 @@ func (c *Cmd) StderrTeePipe() (io.ReadCloser, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	c.Stderr = io.MultiWriter(os.Stderr, pw)
+	c.Stderr = io.MultiWriter(writer, pw)
 	c.CloseAfterWait = append(c.CloseAfterWait, pw)
 	return pr, nil
 }

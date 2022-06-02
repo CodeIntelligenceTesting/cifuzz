@@ -202,7 +202,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 		// Write the command's stderr to both a pipe and os.Stderr, so that
 		// we can parse the output but still allow the caller to observe the
 		// status and progress in realtime.
-		stderrPipe, err = r.cmd.StderrTeePipe()
+		stderrPipe, err = r.cmd.StderrTeePipe(os.Stderr)
 		if err != nil {
 			return err
 		}
