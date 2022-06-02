@@ -188,7 +188,9 @@ func (c *runCmd) buildWithCMake() error {
 	// we either get a helpful error message or the build step will succeed if
 	// the user fixed the issue in the meantime.
 	cmd := exec.Command("cmake", append(cacheArgs, c.projectDir)...)
-	cmd.Stdout = c.OutOrStdout()
+	// Redirect the build command's stdout to stderr to only have
+	// reports printed to stdout
+	cmd.Stdout = c.ErrOrStderr()
 	cmd.Stderr = c.ErrOrStderr()
 	cmd.Env = env
 	cmd.Dir = c.buildDir
@@ -206,7 +208,9 @@ func (c *runCmd) buildWithCMake() error {
 		"--config", cmakeBuildConfiguration,
 		"--target", c.opts.fuzzTest,
 	)
-	cmd.Stdout = c.OutOrStdout()
+	// Redirect the build command's stdout to stderr to only have
+	// reports printed to stdout
+	cmd.Stdout = c.ErrOrStderr()
 	cmd.Stderr = c.ErrOrStderr()
 	cmd.Env = env
 	log.Debugf("Command: %s", cmd.String())
@@ -240,7 +244,9 @@ func (c *runCmd) buildWithUnknownBuildSystem() error {
 
 	// Run the build command
 	cmd := exec.Command("/bin/sh", "-c", c.opts.buildCommand)
-	cmd.Stdout = c.OutOrStdout()
+	// Redirect the build command's stdout to stderr to only have
+	// reports printed to stdout
+	cmd.Stdout = c.ErrOrStderr()
 	cmd.Stderr = c.ErrOrStderr()
 	cmd.Env = env
 	log.Debugf("Command: %s", cmd.String())
