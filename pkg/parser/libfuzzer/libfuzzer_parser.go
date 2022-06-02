@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/parser/sanitizer"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/util/regexutil"
@@ -147,7 +146,6 @@ func (p *parser) parseLine(ctx context.Context, possiblyColorizedLine string) er
 
 		// Report that the fuzzer is now initializing and how many seeds
 		// are used for initialization
-		log.Debug("Sending initial report")
 		return p.sendReport(ctx, &report.Report{
 			Status:   report.RunStatus_INITIALIZING,
 			NumSeeds: numSeeds,
@@ -156,7 +154,6 @@ func (p *parser) parseLine(ctx context.Context, possiblyColorizedLine string) er
 
 	metric := p.parseAsFuzzingMetric(line)
 	if metric != nil {
-		log.Debug("Sending metric report")
 		r := &report.Report{Metric: metric}
 		if p.initFinished {
 			r.Status = report.RunStatus_RUNNING
@@ -511,7 +508,6 @@ func (p *parser) sendPendingFinding(ctx context.Context) error {
 }
 
 func (p *parser) sendFinding(ctx context.Context, finding *report.Finding) error {
-	log.Debug("Sending finding")
 	p.FindingReported = true
 
 	return p.sendReport(ctx, &report.Report{
