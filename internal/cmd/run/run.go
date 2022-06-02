@@ -256,7 +256,7 @@ func (c *runCmd) runFuzzTest() error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("executable: %s", fuzzTestExecutable)
+	log.Debugf("Executable: %s", fuzzTestExecutable)
 
 	if len(c.opts.seedsDirs) == 0 {
 		// If no seeds directory is specified, use a single persistent corpus
