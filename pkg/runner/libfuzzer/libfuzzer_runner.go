@@ -321,6 +321,17 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 		return nil, err
 	}
 
+	overrideOptions := map[string]string{
+		// Per default this is set to false, except for darwin.
+		// To have consistent behaviour on all supported operating systems
+		// we are setting this explicitly to false
+		"abort_on_error": "0",
+	}
+	env, err = fuzzer_runner.SetASANOptions(env, nil, overrideOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	return env, nil
 }
 
