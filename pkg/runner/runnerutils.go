@@ -122,10 +122,6 @@ func SetCommonASANOptions(env []string) ([]string, error) {
 		//   https://github.com/google/sanitizers/wiki/SanitizerCommonFlags
 		//
 		"exitcode": strconv.Itoa(SanitizerErrorExitCode),
-		// Per default this is set to false, except for darwin.
-		// To have consistent behaviour on all supported operating systems
-		// we are setting this explicitly to false
-		"abort_on_error": "0",
 	}
 	return SetASANOptions(env, defaultOptions, overrideOptions)
 }
