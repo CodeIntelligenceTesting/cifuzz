@@ -4,6 +4,7 @@
 tmp/
 bin/
 lib/
+scratch/
 
 coverage.out
 
