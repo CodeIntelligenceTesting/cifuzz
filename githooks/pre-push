@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -e
+set -u
+
+# This pre-push hook runs various checks on the files that were modified
+# on this branch.
+#
+# To push without running the pre-push hook, use `git push --no-verify`
+
+GIT_ROOT=$(git rev-parse --show-toplevel)
+
+if [ -n "$(git status --porcelain)" ]; then
+    echo >&2 "Error: The working tree has uncommitted changes."
+    exit 1
+fi
+
+echo >&2 "pre-push: Running \`make fmt\`"
+make -C "${GIT_ROOT}" --quiet fmt
+if [ -n "$(git status --porcelain)" ]; then
+    echo >&2 "pre-push: Error: Files were modified by \"make fmt\""
+    exit 1
+fi
+
+echo >&2 "pre-push: Running \`go mod tidy\` "
+go mod tidy
+if [ -n "$(git status --porcelain)" ]; then
+    echo >&2 "pre-push: Error: Files were modified by go mod tidy"
+    exit 1
+fi
+
+echo >&2 "pre-push: Running \`staticcheck\`"
+staticcheck ./...
+
+echo >&2 "pre-push: Running \`go vet\`"
+go vet ./...
+
+# Check if the string "DO-NOT-PUSH" is present anywhere in this
+# repository (except for this file itself)
+if [ -n "$(git grep DO-NOT-PUSH -- ':(exclude)*/pre-push')" ]; then
+    echo >&2 "pre-push: Error: Found string DO-NOT-PUSH"
+    exit 1
+fi
