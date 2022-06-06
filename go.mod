@@ -3,7 +3,7 @@ module code-intelligence.com/cifuzz
 go 1.18
 
 require (
-	github.com/bazelbuild/rules_go v0.32.0
+	github.com/bazelbuild/rules_go v0.33.0
 	github.com/hectane/go-acl v0.0.0-20190604041725-da78bae5fc95
 	github.com/mattn/go-colorable v0.1.12
 	github.com/pkg/errors v0.9.1
