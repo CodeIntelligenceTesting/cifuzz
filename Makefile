@@ -56,11 +56,11 @@ lint: deps/dev
 
 .PHONY: fmt
 fmt:
-	go fmt ./...
+	goimports -w -local code-intelligence.com .
 
 .PHONY: fmt/check
 fmt/check:
-	if [ "$$(gofmt -d -l . | wc -l)" -gt 0 ]; then exit 1; fi;
+	if [ -n "$$(goimports -l -local code-intelligence.com .)" ]; then exit 1; fi;
 
 .PHONY: test
 test: deps build/$(current_os) build/test/fuzz-targets

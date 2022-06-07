@@ -21,7 +21,7 @@ jobs:
         with:
           go-version: "^1.18"
 
-      - name: Run gofmt and print changes
+      - name: Check file formatting
         run: make fmt/check
 
       - name: Run linting check
