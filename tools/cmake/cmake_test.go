@@ -252,9 +252,9 @@ func runInDir(t *testing.T, dir, command string, args ...string) []byte {
 }
 
 func runInDirWithExpectedStatus(t *testing.T, expectFailure bool, dir string, command string, args ...string) []byte {
-	// A timeout of 5 minutes is long enough for all current tests, but stays well under the Go test timeout of
+	// A timeout of 9 minutes is long enough for all current tests, but stays well under the Go test timeout of
 	// 10 minutes.
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 9*time.Minute)
 	defer cancel()
 	c := exec.CommandContext(ctx, command, args...)
 	c.Dir = dir
