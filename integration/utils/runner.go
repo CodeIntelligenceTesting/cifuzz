@@ -95,6 +95,7 @@ func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error 
 		EnvVars:             test.FuzzerEnv,
 		UseMinijail:         !test.DisableMinijail,
 		ReportHandler:       &ChannelPassthrough{ch: reportCh},
+		Verbose:             true,
 	}
 	defer close(reportCh)
 
