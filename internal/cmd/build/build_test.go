@@ -4,8 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"github.com/stretchr/testify/assert"
+
+	"code-intelligence.com/cifuzz/pkg/cmdutils"
 )
 
 func TestBuildCmd(t *testing.T) {

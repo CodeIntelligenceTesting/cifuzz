@@ -4,8 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/report"
 	"github.com/stretchr/testify/require"
+
+	"code-intelligence.com/cifuzz/pkg/report"
 )
 
 type CheckReportOptions struct {

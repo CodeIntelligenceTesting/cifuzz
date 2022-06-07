@@ -6,9 +6,10 @@ import (
 	"os"
 	"strings"
 
-	rootCmd "code-intelligence.com/cifuzz/internal/cmd/root"
 	"github.com/spf13/cobra/doc"
 	"github.com/spf13/pflag"
+
+	rootCmd "code-intelligence.com/cifuzz/internal/cmd/root"
 )
 
 func main() {

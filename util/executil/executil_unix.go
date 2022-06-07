@@ -6,8 +6,9 @@ import (
 	"syscall"
 	"time"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
+
+	"code-intelligence.com/cifuzz/pkg/log"
 )
 
 func (c *Cmd) TerminateProcessGroup() {

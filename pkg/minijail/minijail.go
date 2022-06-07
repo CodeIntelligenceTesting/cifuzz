@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"github.com/pkg/errors"
+
+	"code-intelligence.com/cifuzz/pkg/log"
 
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/envutil"
