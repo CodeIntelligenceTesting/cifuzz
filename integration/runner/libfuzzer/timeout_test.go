@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"code-intelligence.com/cifuzz/integration/utils"
 	"github.com/stretchr/testify/require"
+
+	"code-intelligence.com/cifuzz/integration/utils"
 )
 
 func TestIntegration_Timeout(t *testing.T) {

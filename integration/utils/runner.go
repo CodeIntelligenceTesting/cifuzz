@@ -9,12 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
-	"github.com/stretchr/testify/require"
 )
 
 // ChannelPassthrough pipes the reports from the runner package to a report channel

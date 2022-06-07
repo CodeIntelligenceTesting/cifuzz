@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"code-intelligence.com/cifuzz/pkg/minijail"
 	"github.com/pkg/errors"
+
+	"code-intelligence.com/cifuzz/pkg/minijail"
 
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
