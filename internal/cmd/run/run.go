@@ -85,10 +85,10 @@ func New() *cobra.Command {
 		Long: "",
 		Args: cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			opts.fuzzTest = args[0]
 			return opts.validate()
 		},
 		RunE: func(c *cobra.Command, args []string) error {
-			opts.fuzzTest = args[0]
 			cmd := runCmd{Command: c, opts: opts}
 			return cmd.run()
 		},
