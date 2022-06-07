@@ -24,6 +24,9 @@ jobs:
       - name: Check file formatting
         run: make fmt/check
 
+      - name: Check go mod tidy
+        run: make tidy/check
+
       - name: Run linting check
         run: make lint
 

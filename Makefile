@@ -62,6 +62,25 @@ fmt:
 fmt/check:
 	if [ -n "$$(goimports -l -local code-intelligence.com .)" ]; then exit 1; fi;
 
+.PHONY: tidy
+tidy:
+	go mod tidy
+
+.PHONY: tidy/check
+tidy/check:
+	# Replace with `go mod tidy -check` once that's available, see
+	# https://github.com/golang/go/issues/27005
+	if [ -n "$$(git status --porcelain go.mod go.sum)" ]; then       \
+		echo >&2 "Error: The working tree has uncommitted changes."; \
+		exit 1;                                                      \
+	fi
+	go mod tidy
+	if [ -n "$$(git status --porcelain go.mod go.sum)" ]; then \
+		echo >&2 "Error: Files were modified by go mod tidy";  \
+		git checkout go.mod go.sum;                            \
+		exit 1;                                                \
+	fi
+
 .PHONY: test
 test: deps build/$(current_os) build/test/fuzz-targets
 	go test ./...
