@@ -47,9 +47,30 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 		log.Error(err, "Failed to create config")
 		return err
 	}
-
 	log.Successf("Configuration saved in %s", configpath)
+
+	printBuildSystemInstructions(cwd)
+
 	log.Info(`
 Use 'cifuzz create' to create your first fuzz test`)
 	return
+}
+
+func printBuildSystemInstructions(cwd string) {
+	// Printing build system instructions is best-effort: Do not fail on errors.
+	cfg, err := config.ReadProjectConfig(cwd)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Debug(err)
+		}
+		return
+	}
+	if cfg.BuildSystem == config.BuildSystemCMake {
+		log.Infof(`
+Enable fuzz testing in your CMake project by adding the following lines to the top-level CMakeLists.txt:
+
+    find_package(CIFuzz)
+    enable_fuzz_testing()`)
+	}
+
 }
