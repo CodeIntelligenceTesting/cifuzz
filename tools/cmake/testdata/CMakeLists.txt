@@ -4,7 +4,6 @@ project(CmakeTest)
 
 enable_testing()
 
-list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/..")
 find_package(CIFuzz)
 enable_fuzz_testing()
 
