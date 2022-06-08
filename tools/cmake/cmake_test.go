@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"code-intelligence.com/cifuzz/tools/install"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/testutil"
 )
@@ -33,6 +34,18 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}
 	defer fileutil.Cleanup(baseTempDir)
+
+	// The CMake integration is installed globally once and used by all tests.
+	installer, err := install.NewInstaller(
+		&install.Options{InstallDir: filepath.Join(baseTempDir, "cmake-integration")})
+	if err != nil {
+		log.Fatalf("Failed to install CMake integration: %+v", err)
+	}
+	err = installer.InstallCMakeIntegration()
+	if err != nil {
+		log.Fatalf("Failed to install CMake integration: %+v", err)
+	}
+
 	m.Run()
 }
 

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/util/envutil"
@@ -64,6 +65,11 @@ func NewInstaller(opts *Options) (*installer, error) {
 		fileutil.Cleanup(opts.InstallDir)
 		return nil, errors.WithStack(err)
 	}
+	err = os.MkdirAll(i.shareDir(), 0700)
+	if err != nil {
+		fileutil.Cleanup(opts.InstallDir)
+		return nil, errors.WithStack(err)
+	}
 
 	return i, nil
 }
@@ -74,6 +80,10 @@ func (i *installer) binDir() string {
 
 func (i *installer) libDir() string {
 	return filepath.Join(i.InstallDir, "lib")
+}
+
+func (i *installer) shareDir() string {
+	return filepath.Join(i.InstallDir, "share")
 }
 
 func (i *installer) Cleanup() {
@@ -92,6 +102,11 @@ func (i *installer) InstallCIFuzzAndDeps() error {
 	}
 
 	err = i.InstallProcessWrapper()
+	if err != nil {
+		return err
+	}
+
+	err = i.InstallCMakeIntegration()
 	if err != nil {
 		return err
 	}
@@ -200,6 +215,39 @@ func (i *installer) InstallCIFuzz() error {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+func (i *installer) InstallCMakeIntegration() error {
+	cmakeSrc := filepath.Join(i.projectDir, "tools", "cmake", "CIFuzz")
+	cmakeDst := filepath.Join(i.shareDir(), "cmake", "CIFuzz")
+	opts := copy.Options{
+		// Skip copying the replayer, which is a symlink on UNIX but a file
+		// containing the relative path on Windows. It is handled below.
+		OnSymlink: func(string) copy.SymlinkAction {
+			return copy.Skip
+		},
+	}
+	err := copy.Copy(cmakeSrc, cmakeDst, opts)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// Copy the replayer, which is a symlink and thus may not have been copied
+	// correctly on Windows.
+	replayerSrc := filepath.Join(i.projectDir, "tools", "replayer", "src", "replayer.c")
+	replayerDir := filepath.Join(i.shareDir(), "cmake", "CIFuzz", "src")
+	err = os.MkdirAll(replayerDir, 0755)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	replayerDst := filepath.Join(replayerDir, "replayer.c")
+	err = copy.Copy(replayerSrc, replayerDst)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	cmakePackageDir := filepath.Join(cmakeDst, "share", "CIFuzz")
+	return registerCMakePackage(cmakePackageDir)
 }
 
 func findProjectDir() (string, error) {
