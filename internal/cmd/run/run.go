@@ -153,46 +153,51 @@ func (c *runCmd) buildWithCMake() error {
 		return err
 	}
 
-	// Create the build directory if it doesn't exist
+	// Ensure that the build directory exists.
+	// Note: Invoking CMake on the same build directory with different cache
+	// variables is a no-op. For this reason, we have to encode all choices made
+	// for the cache variables below in the path to the build directory.
+	// Currently, this includes the fuzzing engine and the choice of sanitizers.
 	c.buildDir = filepath.Join(c.projectDir, ".cifuzz-build", engine, strings.Join(sanitizers, "+"))
-	exists, err := fileutil.Exists(c.buildDir)
+	err = os.MkdirAll(c.buildDir, 0755)
 	if err != nil {
 		return err
 	}
-	if !exists {
-		err = os.MkdirAll(c.buildDir, 0755)
-		if err != nil {
-			return err
-		}
 
-		cacheVariables := map[string]string{
-			"CMAKE_BUILD_TYPE":    cmakeBuildConfiguration,
-			"CIFUZZ_ENGINE":       engine,
-			"CIFUZZ_SANITIZERS":   strings.Join(sanitizers, ";"),
-			"CIFUZZ_TESTING:BOOL": "ON",
-		}
-		var cacheArgs []string
-		for key, value := range cacheVariables {
-			cacheArgs = append(cacheArgs, "-D", fmt.Sprintf("%s=%s", key, value))
-		}
+	cacheVariables := map[string]string{
+		"CMAKE_BUILD_TYPE":    cmakeBuildConfiguration,
+		"CIFUZZ_ENGINE":       engine,
+		"CIFUZZ_SANITIZERS":   strings.Join(sanitizers, ";"),
+		"CIFUZZ_TESTING:BOOL": "ON",
+	}
+	var cacheArgs []string
+	for key, value := range cacheVariables {
+		cacheArgs = append(cacheArgs, "-D", fmt.Sprintf("%s=%s", key, value))
+	}
 
-		// Call cmake to "Generate a project buildsystem" (that's the
-		// phrasing used by the CMake man page).
-		cmd := exec.Command("cmake", append(cacheArgs, c.projectDir)...)
-		cmd.Stdout = c.OutOrStdout()
-		cmd.Stderr = c.ErrOrStderr()
-		cmd.Env = env
-		cmd.Dir = c.buildDir
-		log.Debugf("Working directory: %s", cmd.Dir)
-		log.Debugf("Command: %s", cmd.String())
-		err = cmd.Run()
-		if err != nil {
-			return err
-		}
+	// Call cmake to "Generate a project buildsystem" (that's the
+	// phrasing used by the CMake man page).
+	// Note: This is usually a no-op after the directory has been created once,
+	// even if cache variables change. However, if a previous invocation of this
+	// command failed during CMake generation and the command is run again, the
+	// build step would only result in a very unhelpful error message about
+	// missing Makefiles. By reinvoking CMake's configuration explicitly here,
+	// we either get a helpful error message or the build step will succeed if
+	// the user fixed the issue in the meantime.
+	cmd := exec.Command("cmake", append(cacheArgs, c.projectDir)...)
+	cmd.Stdout = c.OutOrStdout()
+	cmd.Stderr = c.ErrOrStderr()
+	cmd.Env = env
+	cmd.Dir = c.buildDir
+	log.Debugf("Working directory: %s", cmd.Dir)
+	log.Debugf("Command: %s", cmd.String())
+	err = cmd.Run()
+	if err != nil {
+		return err
 	}
 
 	// Build the project with CMake
-	cmd := exec.Command(
+	cmd = exec.Command(
 		"cmake",
 		"--build", c.buildDir,
 		"--config", cmakeBuildConfiguration,
