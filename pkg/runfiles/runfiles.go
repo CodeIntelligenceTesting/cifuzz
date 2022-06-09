@@ -18,6 +18,7 @@ type RunfilesFinder interface {
 	LLVMSymbolizerPath() (string, error)
 	Minijail0Path() (string, error)
 	ProcessWrapperPath() (string, error)
+	CifuzzIncludePath() (string, error)
 }
 
 var Finder RunfilesFinder

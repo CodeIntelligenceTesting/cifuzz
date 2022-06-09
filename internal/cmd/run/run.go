@@ -19,6 +19,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -405,6 +406,17 @@ func setBuildFlagsEnvVars(env []string) ([]string, error) {
 		"-fsanitize-link-c++-runtime",
 	}
 	env, err = envutil.Setenv(env, "LDFLAGS", strings.Join(ldflags, " "))
+	if err != nil {
+		return nil, err
+	}
+
+	// Users should pass the environment variable FUZZ_TEST_CFLAGS to the
+	// compiler command building the fuzz test.
+	cifuzzIncludePath, err := runfiles.Finder.CifuzzIncludePath()
+	if err != nil {
+		return nil, err
+	}
+	env, err = envutil.Setenv(env, "FUZZ_TEST_CFLAGS", "-I"+cifuzzIncludePath)
 	if err != nil {
 		return nil, err
 	}
