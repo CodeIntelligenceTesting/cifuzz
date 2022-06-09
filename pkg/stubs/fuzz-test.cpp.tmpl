@@ -1,14 +1,12 @@
-#include <stddef.h>
-#include <stdint.h>
+#include <cifuzz/cifuzz.h>
 
-extern "C" int
-FUZZ_INIT()
-{
-	return 0;
+FUZZ_TEST_SETUP() {
+  // Perform any one-time setup required by the FUZZ_TEST function.
 }
 
-extern "C" int
-FUZZ(const uint8_t *Data, size_t Size)
-{
-	return 0;
+FUZZ_TEST(const uint8_t *data, size_t size) {
+  // Call the functions you want to test with the provided data and optionally
+  // assert that the results are as expected.
+  int res = DoSomething(data, size);
+  assert(res != -1);
 }
