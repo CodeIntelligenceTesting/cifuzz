@@ -33,6 +33,10 @@ deps/dev: deps
 	go install honnef.co/go/tools/cmd/staticcheck@latest
 	go install github.com/incu6us/goimports-reviser/v2@latest
 
+.PHONY: install
+install:
+	go run cmd/installer/main.go
+
 .PHONY: build
 build: build/linux build/windows build/darwin ;
 
