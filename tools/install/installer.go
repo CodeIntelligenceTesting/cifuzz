@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/otiai10/copy"
@@ -96,14 +97,16 @@ func (i *installer) InstallCIFuzzAndDeps() error {
 		return err
 	}
 
-	err = i.InstallMinijail()
-	if err != nil {
-		return err
-	}
+	if runtime.GOOS == "linux" {
+		err = i.InstallMinijail()
+		if err != nil {
+			return err
+		}
 
-	err = i.InstallProcessWrapper()
-	if err != nil {
-		return err
+		err = i.InstallProcessWrapper()
+		if err != nil {
+			return err
+		}
 	}
 
 	err = i.InstallCMakeIntegration()
