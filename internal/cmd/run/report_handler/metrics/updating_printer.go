@@ -70,7 +70,7 @@ func (p *UpdatingPrinter) printMetrics(metrics *report.FuzzingMetric) {
 	s := fmt.Sprint(
 		MetricsToString(metrics),
 		DelimString(" ("),
-		pterm.LightYellow(time.Since(p.startedAt).Round(time.Second).String()),
+		pterm.LightYellow(time.Since(p.startedAt).Truncate(time.Second).String()),
 		DelimString(")"),
 	)
 	p.UpdateText(s)

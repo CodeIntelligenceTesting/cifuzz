@@ -387,8 +387,8 @@ func (p *parser) parseAsJazzerFinding(line string) *report.Finding {
 	return nil
 }
 
-func (p *parser) parseAsFuzzingMetric(log string) *report.FuzzingMetric {
-	if result, found := regexutil.FindNamedGroupsMatch(statsPattern, log); found {
+func (p *parser) parseAsFuzzingMetric(line string) *report.FuzzingMetric {
+	if result, found := regexutil.FindNamedGroupsMatch(statsPattern, line); found {
 		totalExecs, err := strconv.ParseUint(result["total_execs"], 10, 64)
 		if err != nil {
 			return nil
@@ -410,13 +410,20 @@ func (p *parser) parseAsFuzzingMetric(log string) *report.FuzzingMetric {
 			return nil
 		}
 		now := time.Now()
-		secondsSinceLastFeature := now.Unix() - p.lastNewFeatureTime.Unix()
+		var secondsSinceLastFeature uint64
+		if !p.lastNewFeatureTime.IsZero() {
+			secondsSinceLastFeature = uint64(now.Sub(p.lastNewFeatureTime).Truncate(time.Second).Seconds())
+		}
+
 		if features > p.lastFeatures {
 			p.lastNewFeatureTime = now
 			p.lastFeatures = features
 			secondsSinceLastFeature = 0
 		}
-		secondsSinceLastEdge := now.Unix() - p.lastNewEdgeTime.Unix()
+		var secondsSinceLastEdge uint64
+		if !p.lastNewEdgeTime.IsZero() {
+			secondsSinceLastEdge = uint64(now.Sub(p.lastNewEdgeTime).Truncate(time.Second).Seconds())
+		}
 		if edges > p.lastEdges {
 			p.lastNewEdgeTime = now
 			p.lastEdges = edges
@@ -428,14 +435,14 @@ func (p *parser) parseAsFuzzingMetric(log string) *report.FuzzingMetric {
 		}
 
 		return &report.FuzzingMetric{
-			Timestamp:               time.Now(),
+			Timestamp:               now,
 			ExecutionsPerSecond:     int32(execsPerSec),
 			Features:                int32(features),
 			Edges:                   int32(edges),
 			CorpusSize:              int32(corpusSize),
 			TotalExecutions:         totalExecs,
-			SecondsSinceLastFeature: uint64(secondsSinceLastFeature),
-			SecondsSinceLastEdge:    uint64(secondsSinceLastEdge),
+			SecondsSinceLastFeature: secondsSinceLastFeature,
+			SecondsSinceLastEdge:    secondsSinceLastEdge,
 		}
 	}
 	return nil
