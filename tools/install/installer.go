@@ -1,6 +1,7 @@
 package install
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -260,6 +261,22 @@ func (i *installer) InstallCMakeIntegration() error {
 
 	cmakePackageDir := filepath.Join(cmakeDst, "share", "CIFuzz")
 	return registerCMakePackage(cmakePackageDir)
+}
+
+func (i *installer) PrintPathInstructions() {
+	if runtime.GOOS == "windows" {
+		// TODO: On Windows, users generally don't expect having to fiddle with their PATH. We should update it for
+		//       them, but that requires asking for admin access.
+		fmt.Fprintf(os.Stderr, `
+Please add the following directory to your PATH:
+    %s
+`, i.binDir())
+	} else {
+		fmt.Fprintf(os.Stderr, `
+Please add the following to ~/.profile or ~/.bash_profile:
+    export PATH="$PATH:%s"
+`, i.binDir())
+	}
 }
 
 func findProjectDir() (string, error) {
