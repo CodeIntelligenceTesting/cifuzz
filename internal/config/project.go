@@ -112,6 +112,9 @@ func FindProjectDir() (string, error) {
 		return "", err
 	}
 	for !configFileExists {
+		if dir == filepath.Dir(dir) {
+			return "", os.ErrNotExist
+		}
 		dir = filepath.Dir(dir)
 		configFileExists, err = fileutil.Exists(filepath.Join(dir, projectConfigFile))
 		if err != nil {
