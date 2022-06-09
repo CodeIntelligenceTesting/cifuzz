@@ -66,13 +66,17 @@ CIFUZZ_C_LINKAGE int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) { 
   LLVMFuzzerTestOneInputNoReturn(data, size);                                    \
   return 0;                                                                      \
 }                                                                                \
-CIFUZZ_C_LINKAGE const char *cifuzz_test_name() { return CIFUZZ_TEST_NAME; }     \
-CIFUZZ_C_LINKAGE const char *cifuzz_seed_corpus() { return CIFUZZ_SEED_CORPUS; } \
+CIFUZZ_C_LINKAGE const char *cifuzz_test_name(void) {                            \
+  return CIFUZZ_TEST_NAME;                                                       \
+}                                                                                \
+CIFUZZ_C_LINKAGE const char *cifuzz_seed_corpus(void) {                          \
+  return CIFUZZ_SEED_CORPUS;                                                     \
+}                                                                                \
 CLION_TEST_PLAY_BUTTON                                                           \
 void LLVMFuzzerTestOneInputNoReturn
 
 #define FUZZ_TEST_SETUP                                              \
-static void LLVMFuzzerInitializeNoReturn();                          \
+static void LLVMFuzzerInitializeNoReturn(void);                      \
 CIFUZZ_C_LINKAGE int LLVMFuzzerInitialize(int *argc, char ***argv) { \
   LLVMFuzzerInitializeNoReturn();                                    \
   return 0;                                                          \
