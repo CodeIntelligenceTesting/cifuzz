@@ -72,6 +72,8 @@ func NewReportHandler(printJSON, verbose bool) (*ReportHandler, error) {
 }
 
 func (h *ReportHandler) Handle(r *report.Report) error {
+	var err error
+
 	if r.Finding != nil {
 		// Count the number of findings for the final metrics
 		h.numFindings += 1
@@ -79,9 +81,19 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 
 	// Print report as JSON if the --json flag was specified
 	if h.printJSON {
-		jsonString, err := stringutil.ToJsonString(r)
-		if err != nil {
-			return err
+		var jsonString string
+		// Print with color if the output stream is a TTY
+		if file, ok := h.jsonOutput.(*os.File); !ok || !term.IsTerminal(int(file.Fd())) {
+			bytes, err := prettyjson.Marshal(r)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			jsonString = string(bytes)
+		} else {
+			jsonString, err = stringutil.ToJsonString(r)
+			if err != nil {
+				return err
+			}
 		}
 		if h.usingUpdatingPrinter {
 			// Clear the updating printer
