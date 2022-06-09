@@ -26,6 +26,7 @@ func main() {
 				log.Error(err, err.Error())
 				os.Exit(1)
 			}
+			installer.PrintPathInstructions()
 		},
 	}
 
