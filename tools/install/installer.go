@@ -36,18 +36,27 @@ func NewInstaller(opts *Options) (*installer, error) {
 		return nil, err
 	}
 
-	if opts.InstallDir == "" {
-		opts.InstallDir, err = ioutil.TempDir("", "cifuzz-install-dir-")
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-	}
 	if strings.HasPrefix(opts.InstallDir, "~") {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 		opts.InstallDir = home + strings.TrimPrefix(opts.InstallDir, "~")
+	}
+
+	if opts.InstallDir == "" {
+		opts.InstallDir, err = ioutil.TempDir("", "cifuzz-install-dir-")
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	} else {
+		exists, err := fileutil.Exists(opts.InstallDir)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if exists {
+			return nil, errors.Errorf("Install directory '%s' already exists. Please remove it to continue.", opts.InstallDir)
+		}
 	}
 
 	i := &installer{
