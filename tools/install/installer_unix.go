@@ -20,12 +20,12 @@ func registerCMakePackage(packageDir string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	cmakePackagesDir := filepath.Join(homeDir, ".cmake", "packages", "CIFuzz")
+	cmakePackagesDir := filepath.Join(homeDir, ".cmake", "packages", "cifuzz")
 	err = os.MkdirAll(cmakePackagesDir, 0755)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(cmakePackagesDir, "CIFuzz"), []byte(packageDir), 0644)
+	err = ioutil.WriteFile(filepath.Join(cmakePackagesDir, "cifuzz"), []byte(packageDir), 0644)
 	if err != nil {
 		return errors.WithStack(err)
 	}

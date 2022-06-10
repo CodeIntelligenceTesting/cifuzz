@@ -22,12 +22,12 @@ func registerCMakePackage(packageDir string) error {
 	if err == nil && isAdmin {
 		key = registry.LOCAL_MACHINE
 	}
-	key, _, err = registry.CreateKey(key, `Software\Kitware\CMake\Packages\CIFuzz`, registry.ALL_ACCESS)
+	key, _, err = registry.CreateKey(key, `Software\Kitware\CMake\Packages\cifuzz`, registry.ALL_ACCESS)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer key.Close()
-	err = key.SetStringValue("CIFuzz", packageDir)
+	err = key.SetStringValue("cifuzz", packageDir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
