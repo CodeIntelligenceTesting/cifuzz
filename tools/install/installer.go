@@ -233,12 +233,13 @@ func (i *installer) InstallCIFuzz() error {
 func (i *installer) InstallCMakeIntegration() error {
 	if runtime.GOOS != "windows" && os.Getuid() == 0 {
 		// On non-Windows systems, CMake doesn't have the concept of a system
-		// package registry. Instead, install the package into a well-known
-		// path
+		// package registry. Instead, install the package into the well-known
+		// prefix /usr/local using the following relative search path:
+		// /(lib/|lib|share)/<name>*/(cmake|CMake)/
 		// See:
 		// https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure
 		// https://gitlab.kitware.com/cmake/cmake/-/blob/5ed9232d781ccfa3a9fae709e12999c6649aca2f/Modules/Platform/UnixPaths.cmake#L30)
-		_, err := i.copyCMakeIntegration("/usr/local")
+		_, err := i.copyCMakeIntegration("/usr/local/share")
 		if err != nil {
 			return err
 		}
@@ -294,8 +295,8 @@ func findProjectDir() (string, error) {
 // the platform.
 // Directories are created as needed.
 func (i *installer) copyCMakeIntegration(destDir string) (string, error) {
-	cmakeSrc := filepath.Join(i.projectDir, "tools", "cmake", "CIFuzz")
-	cmakeDst := filepath.Join(destDir, "CIFuzz")
+	cmakeSrc := filepath.Join(i.projectDir, "tools", "cmake", "cifuzz")
+	cmakeDst := filepath.Join(destDir, "cifuzz")
 	opts := copy.Options{
 		// Skip copying the replayer, which is a symlink on UNIX but a file
 		// containing the relative path on Windows. It is handled below.
@@ -325,5 +326,5 @@ func (i *installer) copyCMakeIntegration(destDir string) (string, error) {
 	// The CMake package registry entry has to point directly to the directory
 	// containing the CIFuzzConfig.cmake file rather than any valid prefix for
 	// the config mode search procedure.
-	return filepath.Join(cmakeDst, "share", "CIFuzz"), nil
+	return filepath.Join(cmakeDst, "cmake"), nil
 }

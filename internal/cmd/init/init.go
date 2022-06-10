@@ -69,7 +69,7 @@ func printBuildSystemInstructions(cwd string) {
 		log.Infof(`
 Enable fuzz testing in your CMake project by adding the following lines to the top-level CMakeLists.txt:
 
-    find_package(CIFuzz)
+    find_package(cifuzz)
     enable_fuzz_testing()`)
 	}
 

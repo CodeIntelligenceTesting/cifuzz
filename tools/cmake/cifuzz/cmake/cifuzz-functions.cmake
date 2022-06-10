@@ -106,7 +106,7 @@ function(add_fuzz_test name)
   endif()
 
   if(CIFUZZ_ENGINE STREQUAL replayer)
-    target_link_libraries("${name}" PRIVATE CIFuzz_Replayer)
+    target_link_libraries("${name}" PRIVATE cifuzz_internal_replayer)
   elseif(CIFUZZ_ENGINE STREQUAL libfuzzer)
     if(MSVC)
       target_link_options("${name}" PRIVATE /fsanitize=fuzzer)
