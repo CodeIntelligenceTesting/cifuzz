@@ -15,7 +15,7 @@ int parse(const std::string &input) {
   if (bar + input[0] == std::numeric_limits<int>::max()) {
     return -1;
   }
-  if (input[0] == 'a' && input[1] == 'b' && input[2] == 'c') {
+  if (input.size() >= 3 && input[0] == 'a' && input[1] == 'b' && input[2] == 'c') {
     if (input.find(SECRET_VALUE) != std::string::npos) {
       char* some_string = static_cast<char *>(malloc(4));
       free(some_string);
