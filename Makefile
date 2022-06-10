@@ -14,6 +14,8 @@ endif
 binary_base_path = build/bin/cifuzz_
 test_fuzz_targets_path = testdata
 
+project := "code-intelligence.com/cifuzz"
+
 default:
 	@echo cifuzz
 
@@ -29,6 +31,7 @@ deps:
 .PHONY: deps/dev
 deps/dev: deps
 	go install honnef.co/go/tools/cmd/staticcheck@latest
+	go install github.com/incu6us/goimports-reviser/v2@latest
 
 .PHONY: build
 build: build/linux build/windows build/darwin ;
@@ -56,11 +59,15 @@ lint: deps/dev
 
 .PHONY: fmt
 fmt:
-	goimports -w -local code-intelligence.com .
+	find . -type f -name "*.go" -exec goimports-reviser -project-name $(project) -file-path {} \;
 
 .PHONY: fmt/check
 fmt/check:
-	if [ -n "$$(goimports -l -local code-intelligence.com .)" ]; then exit 1; fi;
+	@DIFF=$$(find . -type f -name "*.go" -exec goimports-reviser -project-name $(project) -list-diff -file-path {} \;); \
+	if [ -n "$$DIFF" ]; then \
+		echo >&2 "Unformatted files:\n$$DIFF"; \
+		exit 1; \
+	fi;
 
 .PHONY: tidy
 tidy:
