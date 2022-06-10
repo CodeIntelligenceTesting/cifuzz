@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -192,6 +193,35 @@ func TestIntegration_CifuzzInfoIsCreated(t *testing.T) {
 	assert.Equal(t, expectedFuzzTestPath, actualFuzzTestPath)
 }
 
+func TestIntegration_RuntimeDepsInfo(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	if runtime.GOOS != "linux" {
+		// TODO(fmeum): The CMake GET_RUNTIME_DEPENDENCIES feature doesn't seem to handle macOS' @rpath feature well.
+		//              When executed on macOS, this test fails with:
+		//              UNRESOLVED @rpath/libc++.1.dylib
+		//              Since @rpath is resolved based on information embedded into the executable loading the shared
+		//              library with this directive, it is possible that CMake fails to account for these paths when
+		//              parsing the dependencies of the library by itself.
+		//              It also fails on Windows with:
+		//              UNRESOLVED api-ms-win-appmodel-runtime-internal-l1-1-2.dll
+		t.Skip()
+	}
+	t.Parallel()
+	testutil.RegisterTestDeps("testdata", "cifuzz")
+
+	buildDir := build(t, cifuzzCmakeBuildType, nil)
+
+	assert.ElementsMatch(t, []string{
+		// Direct dependency
+		"src/parser/libparser.so",
+		// Transitive dependency
+		"src/utils/libhelper.so",
+	}, extractRuntimeDeps(t, buildDir, "parser_fuzz_test"))
+	assert.Empty(t, extractRuntimeDeps(t, buildDir, "c_fuzz_test"))
+}
+
 func build(t *testing.T, buildType string, cacheVariables map[string]string) string {
 	buildDir, err := ioutil.TempDir(baseTempDir, "build")
 	require.NoError(t, err)
@@ -297,6 +327,51 @@ func runInDirWithExpectedStatus(t *testing.T, expectFailure bool, dir string, co
 		require.Fail(t, fmt.Sprintf("%q exited with 0:\n%s", c.String(), string(out)))
 	}
 	return out
+}
+
+// extractRuntimeDeps returns the non-system runtime dependencies of the given target as paths relative to buildDir as
+// reported by the CMake integration.
+func extractRuntimeDeps(t *testing.T, buildDir, target string) []string {
+	cmd := exec.Command(
+		"cmake",
+		"--install", buildDir,
+		"--config", cifuzzCmakeBuildType,
+		"--component", "cifuzz_internal_deps_"+target,
+	)
+	stdout, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			require.NoError(t, exitErr, string(exitErr.Stderr))
+		} else {
+			require.NoError(t, err)
+		}
+	}
+
+	lines := strings.Split(string(stdout), "\n")
+	var buildDirRelativeDeps []string
+	for _, line := range lines {
+		// Skip over CMake output.
+		if !strings.HasPrefix(line, "-- CIFUZZ ") {
+			continue
+		}
+		statusAndDep := strings.TrimPrefix(line, "-- CIFUZZ ")
+		require.Truef(
+			t,
+			strings.HasPrefix(statusAndDep, "RESOLVED "),
+			"Does not start with %q: %q",
+			"RESOLVED ",
+			statusAndDep,
+		)
+		absoluteDep := strings.TrimPrefix(statusAndDep, "RESOLVED ")
+		// Skip over system deps.
+		if !strings.HasPrefix(absoluteDep, buildDir+"/") {
+			continue
+		}
+		relativeDep := strings.TrimPrefix(absoluteDep, buildDir+"/")
+		buildDirRelativeDeps = append(buildDirRelativeDeps, relativeDep)
+	}
+
+	return buildDirRelativeDeps
 }
 
 func testDataDir(t *testing.T) string {

@@ -146,4 +146,31 @@ function(add_fuzz_test name)
        CONTENT $<TARGET_FILE:${name}>)
 
   add_test(NAME "${name}_regression_test" COMMAND "${name}")
+
+  # Define an install component cifuzz_internal_deps_${name} that, when "installed", prints the full paths of the
+  # transitive runtime dependencies, including system libraries, of the fuzz target to stdout in the form:
+  #
+  # -- CIFUZZ RESOLVED /lib/x86_64-linux-gnu/libgcc_s.so.1
+  # -- CIFUZZ RESOLVED /home/user/git/cifuzz/tools/cmake/testdata/build/src/utils/libhelper.so
+  # -- CIFUZZ RESOLVED /lib/x86_64-linux-gnu/libstdc++.so.6
+  #
+  # If any library couldn't be resolved (unambiguously), it is reported with a leading UNRESOLVED or CONFLICTING.
+  install(CODE "
+    file(GET_RUNTIME_DEPENDENCIES
+        RESOLVED_DEPENDENCIES_VAR _resolved_deps
+        UNRESOLVED_DEPENDENCIES_VAR _unresolved_deps
+        CONFLICTING_DEPENDENCIES_PREFIX _conflicting_deps
+        EXECUTABLES \"$<TARGET_FILE:${name}>\"
+    )
+
+    foreach(_resolved_dep IN LISTS _resolved_deps)
+        message(STATUS \"CIFUZZ RESOLVED \${_resolved_dep}\")
+    endforeach()
+    foreach(_unresolved_dep IN LISTS _unresolved_deps)
+        message(STATUS \"CIFUZZ UNRESOLVED \${_unresolved_dep}\")
+    endforeach()
+    foreach(_conflicting_dep IN LISTS _conflicting_deps)
+        message(STATUS \"CIFUZZ CONFLICTING \${_conflicting_dep}\")
+    endforeach()
+  " COMPONENT "cifuzz_internal_deps_${name}")
 endfunction()
