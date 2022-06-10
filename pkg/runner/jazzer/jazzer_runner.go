@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/pkg/minijail"
-
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/envutil"
