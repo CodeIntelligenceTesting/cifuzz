@@ -1,10 +1,9 @@
 #include "parser.h"
 
-#include <cstdlib>
 #include <limits>
 #include <string>
 
-#include "secrets.h"
+#include "../utils/helper.h"
 
 int parse(const std::string &input) {
   if (input.empty()) {
@@ -15,14 +14,6 @@ int parse(const std::string &input) {
   if (bar + input[0] == std::numeric_limits<int>::max()) {
     return -1;
   }
-  if (input.size() >= 3 && input[0] == 'a' && input[1] == 'b' && input[2] == 'c') {
-    if (input.find(SECRET_VALUE) != std::string::npos) {
-      char* some_string = static_cast<char *>(malloc(4));
-      free(some_string);
-      // Crashes with AddressSanitizer, but should not crash without it: The
-      // allocated memory is addressable, but has been freed before the access.
-      return some_string[1];
-    }
-  }
+  do_something_weird(input);
   return 0;
 }

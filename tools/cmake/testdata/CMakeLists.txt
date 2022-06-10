@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.21)
 
 project(CmakeTest)
 
@@ -8,3 +8,4 @@ find_package(cifuzz)
 enable_fuzz_testing()
 
 add_subdirectory(src/parser)
+add_subdirectory(src/utils)
