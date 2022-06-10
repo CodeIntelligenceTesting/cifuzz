@@ -11,7 +11,10 @@ import (
 )
 
 func registerCMakePackage(packageDir string) error {
-	// Create ~/.cmake/packages/CIFuzz/CIFuzz containing the path to the root directory of the CMake integration.
+	// Install the CMake package for the current user only by registering it
+	// with the user package registry. This requires creating a file
+	// ~/.cmake/packages/CIFuzz/CIFuzz containing the path to the root directory
+	// of the CMake integration.
 	// See https://cmake.org/cmake/help/latest/manual/cmake-packages.7.html#user-package-registry
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -26,5 +29,6 @@ func registerCMakePackage(packageDir string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	return nil
 }
