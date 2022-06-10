@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -90,6 +91,18 @@ func (b *Builder) Configure() error {
 		"CIFUZZ_ENGINE":       b.Engine,
 		"CIFUZZ_SANITIZERS":   strings.Join(b.Sanitizers, ";"),
 		"CIFUZZ_TESTING:BOOL": "ON",
+	}
+	if runtime.GOOS != "windows" {
+		// Use relative paths in RPATH/RUNPATH so that binaries from the
+		// build directory can find their shared libraries even when
+		// packaged into an artifact.
+		// On Windows, where there is no RPATH, there are two ways the user or
+		// we can handle this:
+		// 1. Use the TARGET_RUNTIME_DLLS generator expression introduced in
+		//    CMake 3.21 to copy all DLLs into the directory of the executable
+		//    in a post-build action.
+		// 2. Add all library directories to PATH.
+		cacheVariables["CMAKE_BUILD_RPATH_USE_ORIGIN:BOOL"] = "ON"
 	}
 	var cacheArgs []string
 	for key, value := range cacheVariables {
