@@ -1,163 +1,76 @@
 package log
 
 import (
+	"bytes"
+	"io"
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var origStderr *os.File
+var testOut io.ReadWriter
 
 func TestMain(m *testing.M) {
-	origStderr = os.Stderr
+	testOut = bytes.NewBuffer([]byte{})
+	Output = testOut
+	disableColor = true
 
 	viper.Set("verbose", false)
 	m.Run()
 	viper.Set("verbose", false)
-
-	os.Stderr = origStderr
 }
 
-func redirectOutput(t *testing.T) (*os.File, *os.File) {
-	t.Helper()
-
-	rErr, wErr, _ := os.Pipe()
-	os.Stderr = wErr
-	return rErr, wErr
-}
-
-func restoreStderr(t *testing.T, rErr, wErr *os.File) string {
-	t.Helper()
-
-	wErr.Close()
-	defer rErr.Close()
-
-	stderr, _ := ioutil.ReadAll(rErr)
-
-	return string(stderr)
-}
-
-func TestDebugF_NoVerbose(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
+func TestDebug_NoVerbose(t *testing.T) {
 	Debugf("Test")
-
-	stderr := restoreStderr(t, rErr, wErr)
-
-	assert.Empty(t, stderr)
+	out, err := ioutil.ReadAll(testOut)
+	require.NoError(t, err)
+	assert.Empty(t, out)
 }
 
-func TestDebugF_Verbose(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
+func TestDebug_Verbose(t *testing.T) {
 	viper.Set("verbose", true)
 	Debugf("Test")
 	viper.Set("verbose", false)
-
-	stderr := restoreStderr(t, rErr, wErr)
-
-	assert.Contains(t, stderr, "Test")
+	checkOutput(t, "Test\n")
 }
 
-func TestDebug(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
-	viper.Set("verbose", true)
-	Debug("Test")
-	viper.Set("verbose", false)
-
-	stderr := restoreStderr(t, rErr, wErr)
-	assert.Contains(t, stderr, "Test\n")
-}
-
-func TestErrorF_Verbose(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
+func TestError_Verbose(t *testing.T) {
 	viper.Set("verbose", true)
 	Errorf(errors.New("test-error"), "Test")
 	viper.Set("verbose", false)
-
-	stderr := restoreStderr(t, rErr, wErr)
-
-	assert.Contains(t, stderr, "Test")
-	assert.Contains(t, stderr, "test-error")
+	checkOutput(t, "Test\n", "test-error")
 }
 
-func TestErrorF_NoVerbose(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
+func TestError_NoVerbose(t *testing.T) {
 	Errorf(errors.New("test-error"), "Test")
-
-	stderr := restoreStderr(t, rErr, wErr)
-
-	assert.Contains(t, stderr, "Test")
-	assert.NotContains(t, stderr, "test-error")
-}
-
-func TestError(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
-	Error(errors.New("test-error"), "Test")
-
-	stderr := restoreStderr(t, rErr, wErr)
-
-	assert.Contains(t, stderr, "Test\n")
-}
-
-func TestSuccessF(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
-	Successf("Test")
-
-	stderr := restoreStderr(t, rErr, wErr)
-	assert.Contains(t, stderr, "Test")
+	out := checkOutput(t, "Test\n")
+	require.NotContains(t, out, "test-error")
 }
 
 func TestSuccess(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
 	Success("Test")
-
-	stderr := restoreStderr(t, rErr, wErr)
-	assert.Contains(t, stderr, "Test\n")
-}
-
-func TestInfoF(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
-	Infof("Test")
-
-	stderr := restoreStderr(t, rErr, wErr)
-	assert.Contains(t, stderr, "Test\n")
+	checkOutput(t, "Test\n")
 }
 
 func TestInfo(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
 	Info("Test")
-
-	stderr := restoreStderr(t, rErr, wErr)
-	assert.Contains(t, stderr, "Test\n")
-}
-
-func TestWarnF(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
-	Warnf("Test")
-
-	stderr := restoreStderr(t, rErr, wErr)
-	assert.Contains(t, stderr, "Test")
+	checkOutput(t, "Test\n")
 }
 
 func TestWarn(t *testing.T) {
-	rErr, wErr := redirectOutput(t)
-
 	Warn("Test")
+	checkOutput(t, "Test\n")
+}
 
-	stderr := restoreStderr(t, rErr, wErr)
-	assert.Contains(t, stderr, "Test\n")
+func checkOutput(t *testing.T, a ...string) string {
+	out, err := ioutil.ReadAll(testOut)
+	require.NoError(t, err)
+	for _, s := range a {
+		require.Contains(t, string(out), s)
+	}
+	return string(out)
 }

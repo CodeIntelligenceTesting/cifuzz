@@ -2,87 +2,95 @@ package log
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/fatih/color"
-	"github.com/mattn/go-colorable"
+	"github.com/pterm/pterm"
 	"github.com/spf13/viper"
 	"golang.org/x/term"
 )
 
+var disableColor bool
+
+var Output io.Writer
+
 func init() {
-	// Make the color package print color control sequences to stderr
-	// instead of stdout
-	color.Output = colorable.NewColorableStderr()
-
-	// The color package disables color if stdout is not a terminal, but
-	// we print to stderr, so we disable color if stderr is not a
-	// terminal.
-	color.NoColor = !term.IsTerminal(int(os.Stderr.Fd()))
+	Output = os.Stderr
+	// Disable color if stderr is not a terminal. We don't use
+	// color.Disable() here because that would disable color for all
+	// pterm and color methods, but we might want to use color in output
+	// printed to stdout (if stdout is a terminal).
+	disableColor = !term.IsTerminal(int(os.Stderr.Fd()))
 }
 
-func logf(msgColor color.Attribute, icon, format string, a ...any) {
-	log(msgColor, icon, fmt.Sprintf(format, a...))
-}
-
-func log(msgColor color.Attribute, icon string, a ...any) {
-	color.Set(msgColor)
-	defer color.Unset()
-
+func log(msgColor pterm.Color, icon string, a ...any) {
 	s := icon + fmt.Sprint(a...)
 	if len(s) == 0 || s[len(s)-1] != '\n' {
 		s += "\n"
 	}
-	_, _ = fmt.Fprint(os.Stderr, s)
+
+	if disableColor {
+		s = pterm.RemoveColorFromString(s)
+	} else {
+		s = pterm.Style{msgColor}.Sprint(s)
+	}
+
+	_, _ = fmt.Fprint(Output, s)
 }
 
 // Successf highlights a message as successful
 func Successf(format string, a ...any) {
-	logf(color.FgGreen, "✅ ", format, a...)
+	Success(fmt.Sprintf(format, a...))
 }
 
 func Success(a ...any) {
-	log(color.FgGreen, "✅ ", a...)
+	log(pterm.FgGreen, "✅ ", a...)
 }
 
 // Warnf highlights a message as a warning
 func Warnf(format string, a ...any) {
-	logf(color.FgYellow, "⚠️ ", format, a...)
+	Warn(fmt.Sprintf(format, a...))
 }
 
 func Warn(a ...any) {
-	log(color.FgYellow, "⚠️ ", a...)
+	log(pterm.FgYellow, "⚠️ ", a...)
 }
 
 // Errorf highlights a message as an error and shows the stack strace if the --verbose flag is active
 func Errorf(err error, format string, a ...any) {
-	logf(color.FgRed, "❌ ", format, a...)
-	Debugf("%+v", err)
+	Error(err, fmt.Sprintf(format, a...))
 }
 
 func Error(err error, a ...any) {
-	log(color.FgRed, "❌ ", a...)
+	log(pterm.FgRed, "❌ ", a...)
 	Debugf("%+v", err)
 }
 
 // Infof outputs a regular user message without any highlighting
 func Infof(format string, a ...any) {
-	logf(color.FgWhite, "", format, a...)
+	Info(fmt.Sprintf(format, a...))
 }
 
 func Info(a ...any) {
-	log(color.FgWhite, "", a...)
+	log(pterm.FgWhite, "", a...)
 }
 
 // Debugf outputs additional information when the --verbose flag is active
 func Debugf(format string, a ...any) {
-	if viper.GetBool("verbose") {
-		logf(color.FgWhite, "🔍 ", format, a...)
-	}
+	Debug(fmt.Sprintf(format, a...))
 }
 
 func Debug(a ...any) {
 	if viper.GetBool("verbose") {
-		log(color.FgWhite, "🔍 ", a...)
+		log(pterm.FgWhite, "🔍 ", a...)
 	}
+}
+
+// Printf writes without any colors
+func Printf(format string, a ...any) {
+	Print(fmt.Sprintf(format, a...))
+}
+
+func Print(a ...any) {
+	log(pterm.FgDefault, "", a...)
 }
