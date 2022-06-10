@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-
 	"golang.org/x/exp/maps"
 	"golang.org/x/term"
 
