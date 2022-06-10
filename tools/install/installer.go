@@ -231,36 +231,23 @@ func (i *installer) InstallCIFuzz() error {
 }
 
 func (i *installer) InstallCMakeIntegration() error {
-	cmakeSrc := filepath.Join(i.projectDir, "tools", "cmake", "CIFuzz")
-	cmakeDst := filepath.Join(i.shareDir(), "cmake", "CIFuzz")
-	opts := copy.Options{
-		// Skip copying the replayer, which is a symlink on UNIX but a file
-		// containing the relative path on Windows. It is handled below.
-		OnSymlink: func(string) copy.SymlinkAction {
-			return copy.Skip
-		},
+	if runtime.GOOS != "windows" && os.Getuid() == 0 {
+		// On non-Windows systems, CMake doesn't have the concept of a system
+		// package registry. Instead, install the package into a well-known
+		// path
+		// See:
+		// https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure
+		// https://gitlab.kitware.com/cmake/cmake/-/blob/5ed9232d781ccfa3a9fae709e12999c6649aca2f/Modules/Platform/UnixPaths.cmake#L30)
+		_, err := i.copyCMakeIntegration("/usr/local")
+		if err != nil {
+			return err
+		}
 	}
-	err := copy.Copy(cmakeSrc, cmakeDst, opts)
+	dirForRegistry, err := i.copyCMakeIntegration(filepath.Join(i.shareDir(), "cmake"))
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
-
-	// Copy the replayer, which is a symlink and thus may not have been copied
-	// correctly on Windows.
-	replayerSrc := filepath.Join(i.projectDir, "tools", "replayer", "src", "replayer.c")
-	replayerDir := filepath.Join(i.shareDir(), "cmake", "CIFuzz", "src")
-	err = os.MkdirAll(replayerDir, 0755)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	replayerDst := filepath.Join(replayerDir, "replayer.c")
-	err = copy.Copy(replayerSrc, replayerDst)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	cmakePackageDir := filepath.Join(cmakeDst, "share", "CIFuzz")
-	return registerCMakePackage(cmakePackageDir)
+	return registerCMakePackage(dirForRegistry)
 }
 
 func (i *installer) PrintPathInstructions() {
@@ -300,4 +287,43 @@ func findProjectDir() (string, error) {
 		}
 	}
 	return projectDir, nil
+}
+
+// copyCMakeIntegration copies the CMake integration to destDir and returns the
+// path that should be registered with the CMake package registry, if needed on
+// the platform.
+// Directories are created as needed.
+func (i *installer) copyCMakeIntegration(destDir string) (string, error) {
+	cmakeSrc := filepath.Join(i.projectDir, "tools", "cmake", "CIFuzz")
+	cmakeDst := filepath.Join(destDir, "CIFuzz")
+	opts := copy.Options{
+		// Skip copying the replayer, which is a symlink on UNIX but a file
+		// containing the relative path on Windows. It is handled below.
+		OnSymlink: func(string) copy.SymlinkAction {
+			return copy.Skip
+		},
+	}
+	err := copy.Copy(cmakeSrc, cmakeDst, opts)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	// Copy the replayer, which is a symlink and thus may not have been copied
+	// correctly on Windows.
+	replayerSrc := filepath.Join(i.projectDir, "tools", "replayer", "src", "replayer.c")
+	replayerDir := filepath.Join(cmakeDst, "src")
+	err = os.MkdirAll(replayerDir, 0755)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	replayerDst := filepath.Join(replayerDir, "replayer.c")
+	err = copy.Copy(replayerSrc, replayerDst)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	// The CMake package registry entry has to point directly to the directory
+	// containing the CIFuzzConfig.cmake file rather than any valid prefix for
+	// the config mode search procedure.
+	return filepath.Join(cmakeDst, "share", "CIFuzz"), nil
 }
