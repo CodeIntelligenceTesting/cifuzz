@@ -90,27 +90,27 @@ tidy/check:
 
 .PHONY: test
 test: deps build/$(current_os) build/test/fuzz-targets
-	go test ./...
+	go test -v ./...
 
 .PHONY: test/unit
 test/unit: deps
-	go test ./... -short
+	go test -v ./... -short
 
 .PHONY: test/unit/concurrent
 test/unit/concurrent: deps
-	go test ./... -short -count=10 
+	go test -v ./... -short -count=10
 
 .PHONY: test/integration
 test/integration: deps build/$(current_os) build/test/fuzz-targets
-	go test ./... -run 'TestIntegration.*'
+	go test -v ./... -run 'TestIntegration.*'
 
 .PHONY: test/race
 test/race: deps build/$(current_os)
-	go test ./... -race
+	go test -v ./... -race
 
 .PHONY: test/coverage
 test/coverage: deps
-	go test ./... -coverprofile coverage.out
+	go test -v ./... -coverprofile coverage.out
 	go tool cover -html coverage.out
 
 .PHONY: site/setup
