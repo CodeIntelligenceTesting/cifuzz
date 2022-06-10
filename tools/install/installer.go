@@ -66,17 +66,17 @@ func NewInstaller(opts *Options) (*installer, error) {
 	}
 
 	// Create the directory layout
-	err = os.MkdirAll(i.binDir(), 0700)
+	err = os.MkdirAll(i.binDir(), 0755)
 	if err != nil {
 		fileutil.Cleanup(opts.InstallDir)
 		return nil, errors.WithStack(err)
 	}
-	err = os.MkdirAll(i.libDir(), 0700)
+	err = os.MkdirAll(i.libDir(), 0755)
 	if err != nil {
 		fileutil.Cleanup(opts.InstallDir)
 		return nil, errors.WithStack(err)
 	}
-	err = os.MkdirAll(i.shareDir(), 0700)
+	err = os.MkdirAll(i.shareDir(), 0755)
 	if err != nil {
 		fileutil.Cleanup(opts.InstallDir)
 		return nil, errors.WithStack(err)
