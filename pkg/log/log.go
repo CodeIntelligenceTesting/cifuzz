@@ -65,7 +65,7 @@ func Warnf(format string, a ...any) {
 }
 
 func Warn(a ...any) {
-	log(pterm.Style{pterm.FgYellow}, "⚠️ ", a...)
+	log(pterm.Style{pterm.Bold, pterm.FgYellow}, "⚠️ ", a...)
 }
 
 // Errorf highlights a message as an error and shows the stack strace if the --verbose flag is active
@@ -74,7 +74,7 @@ func Errorf(err error, format string, a ...any) {
 }
 
 func Error(err error, a ...any) {
-	log(pterm.Style{pterm.FgRed}, "❌ ", a...)
+	log(pterm.Style{pterm.Bold, pterm.FgRed}, "❌ ", a...)
 	Debugf("%+v", err)
 }
 
