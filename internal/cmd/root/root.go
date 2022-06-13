@@ -3,6 +3,7 @@ package root
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -74,7 +75,8 @@ func Execute() {
 		var usageErr *cmdutils.IncorrectUsageError
 		if errors.As(err, &usageErr) ||
 			strings.HasPrefix(err.Error(), "required flag") ||
-			strings.HasPrefix(err.Error(), "unknown command") {
+			strings.HasPrefix(err.Error(), "unknown command") ||
+			regexp.MustCompile(`(accepts|requires).*arg\(s\)`).MatchString(err.Error()) {
 			// Ensure that there is an extra newline between the error
 			// and the usage message
 			if !strings.HasSuffix(err.Error(), "\n") {
