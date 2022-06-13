@@ -22,7 +22,7 @@ func GetProjectRoot(t *testing.T) string {
 func GetFuzzTargetBuildDir(t *testing.T) string {
 	rootDir := GetProjectRoot(t)
 
-	fuzzTargetBuildPath := filepath.Join(rootDir, "testdata", "build")
+	fuzzTargetBuildPath := filepath.Join(rootDir, "integration", "testdata", "build")
 	require.DirExists(t, fuzzTargetBuildPath)
 
 	return fuzzTargetBuildPath
