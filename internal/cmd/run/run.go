@@ -327,7 +327,9 @@ func (c *runCmd) runFuzzTest() error {
 		case s := <-sigs:
 			log.Infof("\nReceived %s", s.String())
 			runner.Cleanup()
-			return errors.WithStack(cmdutils.NewSignalError(s.(syscall.Signal)))
+			err := cmdutils.NewSignalError(s.(syscall.Signal))
+			log.Error(err, err.Error())
+			return cmdutils.WrapSilentError(err)
 		}
 	})
 
