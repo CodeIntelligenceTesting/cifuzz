@@ -4,6 +4,7 @@ package process_wrapper
 
 import (
 	"bytes"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -15,7 +16,6 @@ import (
 
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/tools/install"
-	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 func TestMain(m *testing.M) {
@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 func TestProcessWrapper_ChangesDirectory(t *testing.T) {
 	processWrapperPath, err := runfiles.Finder.ProcessWrapperPath()
 	require.NoError(t, err)
-	tempDir, err := fileutil.TempDir("process_wrapper")
+	tempDir, err := ioutil.TempDir("", "process_wrapper")
 	require.NoError(t, err)
 
 	var errbuf bytes.Buffer
@@ -54,7 +54,7 @@ func TestProcessWrapper_ChangesDirectory(t *testing.T) {
 func TestProcessWrapper_SetsArgvAndEnvp(t *testing.T) {
 	processWrapperPath, err := runfiles.Finder.ProcessWrapperPath()
 	require.NoError(t, err)
-	tempDir, err := fileutil.TempDir("process_wrapper")
+	tempDir, err := ioutil.TempDir("", "process_wrapper")
 	require.NoError(t, err)
 
 	var errbuf bytes.Buffer

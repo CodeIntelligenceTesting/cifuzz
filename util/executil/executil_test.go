@@ -14,7 +14,7 @@ import (
 
 func TestCmd_StdoutTeePipe_ReadAsync(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := fileutil.TempFile("outFile")
+	outFile, err := ioutil.TempFile("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
@@ -81,7 +81,7 @@ func TestCmd_StdoutTeePipe_ReadAsyncMultiline(t *testing.T) {
 
 func TestCmd_StdoutTeePipe_ReadSync(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := fileutil.TempFile("outFile")
+	outFile, err := ioutil.TempFile("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
@@ -113,7 +113,7 @@ func TestCmd_StdoutTeePipe_ReadSync(t *testing.T) {
 
 func TestCmd_StdoutTeePipe_ReadSyncWithRun(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := fileutil.TempFile("outFile")
+	outFile, err := ioutil.TempFile("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
@@ -142,7 +142,7 @@ func TestCmd_StdoutTeePipe_ReadSyncWithRun(t *testing.T) {
 
 func TestCmd_StdoutTeePipe_NoRead(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := fileutil.TempFile("outFile")
+	outFile, err := ioutil.TempFile("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
@@ -170,7 +170,7 @@ func TestCmd_StdoutTeePipe_NoRead(t *testing.T) {
 
 func TestCmd_StdoutTeePipe_NoReadWithRun(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := fileutil.TempFile("outFile")
+	outFile, err := ioutil.TempFile("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 

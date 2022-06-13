@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
-	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
@@ -73,11 +73,11 @@ func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error 
 	var err error
 
 	if test.SeedCorpusDir == "" {
-		test.SeedCorpusDir, err = fileutil.TempDir("seeds")
+		test.SeedCorpusDir, err = ioutil.TempDir("", "seeds")
 		require.NoError(t, err)
 	}
 
-	additionalSeedDir, err := fileutil.TempDir("additional_seeds")
+	additionalSeedDir, err := ioutil.TempDir("", "additional_seeds")
 	require.NoError(t, err)
 
 	if test.RunsLimit != -1 {

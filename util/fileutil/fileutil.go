@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/pkg/log"
@@ -50,20 +49,6 @@ func Exists(path string) (bool, error) {
 		return false, errors.WithStack(err)
 	}
 	return !errors.Is(err, os.ErrNotExist), nil
-}
-
-// TempFile creates a temporary file in the Bazel test temp dir
-// if TEST_TMPDIR is defined, else in the OS default temp dir.
-func TempFile(pattern string) (*os.File, error) {
-	res, err := ioutil.TempFile(bazel.TestTmpDir(), pattern)
-	return res, errors.WithStack(err)
-}
-
-// TempDir just calls bazel.NewTmpDir(). We provide it only for
-// completeness, because TempFile is also provided by this package.
-func TempDir(prefix string) (string, error) {
-	res, err := bazel.NewTmpDir(prefix)
-	return res, errors.WithStack(err)
 }
 
 // Cleanup removes the specified file or directory and prints any errors

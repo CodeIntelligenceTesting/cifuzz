@@ -2,6 +2,7 @@ package minijail
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -219,7 +220,7 @@ func NewMinijail(opts *Options) (*minijail, error) {
 	// --- Create directories ---
 	// --------------------------
 	// Create chroot directory
-	chrootDir, err := fileutil.TempDir("minijail-chroot-")
+	chrootDir, err := ioutil.TempDir("", "minijail-chroot-")
 	if err != nil {
 		return nil, err
 	}
