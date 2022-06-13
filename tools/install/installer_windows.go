@@ -2,7 +2,6 @@ package install
 
 import (
 	"github.com/pkg/errors"
-
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
