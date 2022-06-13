@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -66,7 +67,7 @@ func Execute() {
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
 		var silentErr *cmdutils.SilentError
 		if !errors.As(err, &silentErr) {
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%+v\n", err)
+			_, _ = fmt.Fprint(cmd.ErrOrStderr(), pterm.Style{pterm.Bold, pterm.FgRed}.Sprintf("%+v\n", err))
 		}
 
 		// We only want to print the usage message if an ErrIncorrectUsage
