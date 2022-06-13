@@ -277,7 +277,7 @@ func (c *runCmd) buildWithUnknownBuildSystem() error {
 }
 
 func (c *runCmd) runFuzzTest() error {
-	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightYellow}.Sprintf(c.opts.fuzzTest))
+	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
 	fuzzTestExecutable, err := c.findFuzzTestExecutable(c.opts.fuzzTest)
 	if err != nil {
 		return err
