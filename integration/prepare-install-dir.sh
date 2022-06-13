@@ -7,14 +7,6 @@ mkdir -p "${CIFUZZ_INSTALL_ROOT}/bin"
 mkdir -p "${CIFUZZ_INSTALL_ROOT}/lib"
 
 function install() {
-  # Install Jazzer
-  pushd third-party/jazzer
-  bazel build //agent:jazzer_agent_deploy //driver:jazzer_driver
-  cp bazel-bin/agent/jazzer_agent_deploy.jar "${CIFUZZ_INSTALL_ROOT}/lib"
-  cp bazel-bin/driver/jazzer_driver "${CIFUZZ_INSTALL_ROOT}/bin"
-
-  popd
-
   # Install minijail0
   pushd third-party/minijail
   make 'CC_BINARY(minijail0)'

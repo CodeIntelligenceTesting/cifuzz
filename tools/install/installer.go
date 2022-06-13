@@ -102,11 +102,7 @@ func (i *installer) Cleanup() {
 }
 
 func (i *installer) InstallCIFuzzAndDeps() error {
-	err := i.InstallJazzer()
-	if err != nil {
-		return err
-	}
-
+  var err error
 	if runtime.GOOS == "linux" {
 		err = i.InstallMinijail()
 		if err != nil {
@@ -129,34 +125,6 @@ func (i *installer) InstallCIFuzzAndDeps() error {
 		return err
 	}
 
-	return nil
-}
-
-func (i *installer) InstallJazzer() error {
-	// Build Jazzer
-	cmd := exec.Command("bazel", "build", "//agent:jazzer_agent_deploy", "//driver:jazzer_driver")
-	cmd.Dir = filepath.Join(i.projectDir, "third-party/jazzer")
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	log.Printf("Command: %s", cmd.String())
-	err := cmd.Run()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	// Install Jazzer binaries
-	src := filepath.Join(i.projectDir, "third-party/jazzer/bazel-bin/agent/jazzer_agent_deploy.jar")
-	dest := filepath.Join(i.libDir(), "jazzer_agent_deploy.jar")
-	err = fileutil.CopyFile(src, dest, 0600)
-	if err != nil {
-		return err
-	}
-	src = filepath.Join(i.projectDir, "third-party/jazzer/bazel-bin/driver/jazzer_driver")
-	dest = filepath.Join(i.binDir(), "jazzer_driver")
-	err = fileutil.CopyFile(src, dest, 0700)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
