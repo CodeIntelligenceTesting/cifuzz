@@ -10,4 +10,5 @@ scratch/
 
 coverage.out
 
-cifuzz.yaml
+/cifuzz.yaml
+
