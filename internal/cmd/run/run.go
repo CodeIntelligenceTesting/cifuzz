@@ -325,7 +325,7 @@ func (c *runCmd) runFuzzTest() error {
 		case <-signalHandlerCtx.Done():
 			return nil
 		case s := <-sigs:
-			log.Infof("\nReceived %s", s.String())
+			log.Warnf("Received %s", s.String())
 			runner.Cleanup()
 			err := cmdutils.NewSignalError(s.(syscall.Signal))
 			log.Error(err, err.Error())
