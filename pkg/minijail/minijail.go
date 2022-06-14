@@ -111,7 +111,7 @@ func AddMinijailBindingDeprecated(path string, writable WritableOption) error {
 func AddMinijailBindingToEnv(env []string, binding *Binding) ([]string, error) {
 	bindings := envutil.Getenv(env, BindingsEnvVarName)
 	if bindings == "" {
-		bindings = binding.Source
+		bindings = binding.String()
 	} else {
 		bindings += ":" + binding.String()
 	}
