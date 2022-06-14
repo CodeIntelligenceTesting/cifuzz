@@ -6,6 +6,7 @@ require (
 	github.com/gookit/color v1.5.1
 	github.com/hectane/go-acl v0.0.0-20190604041725-da78bae5fc95
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
+	github.com/mattn/go-zglob v0.0.3
 	github.com/otiai10/copy v1.7.0
 	github.com/pkg/errors v0.9.1
 	github.com/pterm/pterm v0.12.41

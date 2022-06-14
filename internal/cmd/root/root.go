@@ -20,7 +20,6 @@ import (
 )
 
 func New() *cobra.Command {
-	var workdir string
 	cmdConfig := config.NewConfig()
 
 	rootCmd := &cobra.Command{
@@ -31,13 +30,10 @@ func New() *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if workdir != "" {
-				err := os.Chdir(workdir)
-				if err != nil {
-					err = errors.WithStack(err)
-					log.Error(err, err.Error())
-					return cmdutils.ErrSilent
-				}
+			err := cmdutils.Chdir()
+			if err != nil {
+				log.Error(err, err.Error())
+				return cmdutils.ErrSilent
 			}
 
 			if !cmdutils.NeedsConfig(cmd) {
@@ -71,7 +67,7 @@ func New() *cobra.Command {
 		"Show more verbose output, can be helpful for debugging problems")
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 
-	rootCmd.PersistentFlags().StringVarP(&workdir, "directory", "C", "",
+	rootCmd.PersistentFlags().StringP("directory", "C", "",
 		"Change the directory before performing any operations")
 	viper.BindPFlag("directory", rootCmd.PersistentFlags().Lookup("directory"))
 

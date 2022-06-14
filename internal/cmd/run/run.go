@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mattn/go-zglob"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -87,8 +88,9 @@ func New(config *config.Config) *cobra.Command {
 		// TODO: Write long description (easier once we support more
 		//       than just the fallback mode). In particular, explain how a
 		//       "fuzz test" is identified on the CLI.
-		Long: "",
-		Args: cobra.ExactArgs(1),
+		Long:              "",
+		ValidArgsFunction: validFuzzTests,
+		Args:              cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.fuzzTest = args[0]
 			return opts.validate()
@@ -506,4 +508,23 @@ func countSeeds(seedDirs []string) (numSeeds uint, err error) {
 		numSeeds += seedsInDir
 	}
 	return numSeeds, nil
+}
+
+func validFuzzTests(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	// Change the directory if the `--directory` flag was set
+	err := cmdutils.Chdir()
+	if err != nil {
+		log.Error(err, err.Error())
+		return nil, cobra.ShellCompDirectiveError
+	}
+
+	matches, err := zglob.Glob(".cifuzz-build/**/.cifuzz/fuzz_tests/*")
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	var res []string
+	for _, match := range matches {
+		res = append(res, filepath.Base(match))
+	}
+	return res, cobra.ShellCompDirectiveNoFileComp
 }
