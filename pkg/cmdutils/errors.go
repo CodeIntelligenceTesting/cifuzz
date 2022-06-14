@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ErrSilent = SilentError{err: errors.New("SilentError")}
+var ErrSilent = WrapSilentError(errors.New("SilentError"))
 
 // SilentError indicates that the error message should not be printed
 // when the error is handled.

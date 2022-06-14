@@ -15,7 +15,7 @@ type Printer interface {
 }
 
 func DescString(format string, a ...any) string {
-	return pterm.FgWhite.Sprintf(format, a...)
+	return pterm.FgDefault.Sprintf(format, a...)
 }
 
 func NumberString(format string, a ...any) string {
@@ -23,7 +23,7 @@ func NumberString(format string, a ...any) string {
 }
 
 func DelimString(format string, a ...any) string {
-	return pterm.FgLightWhite.Sprintf(format, a...)
+	return pterm.Fuzzy.Sprintf(format, a...)
 }
 
 func MetricsToString(metrics *report.FuzzingMetric) string {

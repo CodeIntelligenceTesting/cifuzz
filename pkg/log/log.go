@@ -23,7 +23,7 @@ func init() {
 	disableColor = !term.IsTerminal(int(os.Stderr.Fd()))
 }
 
-func log(msgColor pterm.Color, icon string, a ...any) {
+func log(style pterm.Style, icon string, a ...any) {
 	s := icon + fmt.Sprint(a...)
 	if len(s) == 0 || s[len(s)-1] != '\n' {
 		s += "\n"
@@ -32,7 +32,7 @@ func log(msgColor pterm.Color, icon string, a ...any) {
 	if disableColor {
 		s = pterm.RemoveColorFromString(s)
 	} else {
-		s = pterm.Style{msgColor}.Sprint(s)
+		s = style.Sprint(s)
 	}
 
 	// Clear the updating printer output if any. We don't use
@@ -56,7 +56,7 @@ func Successf(format string, a ...any) {
 }
 
 func Success(a ...any) {
-	log(pterm.FgGreen, "✅ ", a...)
+	log(pterm.Style{pterm.FgGreen}, "✅ ", a...)
 }
 
 // Warnf highlights a message as a warning
@@ -65,7 +65,7 @@ func Warnf(format string, a ...any) {
 }
 
 func Warn(a ...any) {
-	log(pterm.FgYellow, "⚠️ ", a...)
+	log(pterm.Style{pterm.Bold, pterm.FgYellow}, "⚠️ ", a...)
 }
 
 // Errorf highlights a message as an error and shows the stack strace if the --verbose flag is active
@@ -74,7 +74,7 @@ func Errorf(err error, format string, a ...any) {
 }
 
 func Error(err error, a ...any) {
-	log(pterm.FgRed, "❌ ", a...)
+	log(pterm.Style{pterm.Bold, pterm.FgRed}, "❌ ", a...)
 	Debugf("%+v", err)
 }
 
@@ -84,7 +84,7 @@ func Infof(format string, a ...any) {
 }
 
 func Info(a ...any) {
-	log(pterm.FgWhite, "", a...)
+	log(pterm.Style{pterm.Fuzzy}, "", a...)
 }
 
 // Debugf outputs additional information when the --verbose flag is active
@@ -94,7 +94,7 @@ func Debugf(format string, a ...any) {
 
 func Debug(a ...any) {
 	if viper.GetBool("verbose") {
-		log(pterm.FgWhite, "🔍 ", a...)
+		log(pterm.Style{pterm.Fuzzy}, "🔍 ", a...)
 	}
 }
 
@@ -104,5 +104,5 @@ func Printf(format string, a ...any) {
 }
 
 func Print(a ...any) {
-	log(pterm.FgDefault, "", a...)
+	log(pterm.Style{pterm.FgDefault}, "", a...)
 }

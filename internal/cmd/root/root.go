@@ -3,9 +3,11 @@ package root
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -65,7 +67,7 @@ func Execute() {
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
 		var silentErr *cmdutils.SilentError
 		if !errors.As(err, &silentErr) {
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%+v\n", err)
+			_, _ = fmt.Fprint(cmd.ErrOrStderr(), pterm.Style{pterm.Bold, pterm.FgRed}.Sprintf("%+v\n", err))
 		}
 
 		// We only want to print the usage message if an ErrIncorrectUsage
@@ -74,7 +76,8 @@ func Execute() {
 		var usageErr *cmdutils.IncorrectUsageError
 		if errors.As(err, &usageErr) ||
 			strings.HasPrefix(err.Error(), "required flag") ||
-			strings.HasPrefix(err.Error(), "unknown command") {
+			strings.HasPrefix(err.Error(), "unknown command") ||
+			regexp.MustCompile(`(accepts|requires).*arg\(s\)`).MatchString(err.Error()) {
 			// Ensure that there is an extra newline between the error
 			// and the usage message
 			if !strings.HasSuffix(err.Error(), "\n") {

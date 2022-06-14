@@ -277,7 +277,7 @@ func (c *runCmd) buildWithUnknownBuildSystem() error {
 }
 
 func (c *runCmd) runFuzzTest() error {
-	log.Infof("Running %s", pterm.LightYellow(c.opts.fuzzTest))
+	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
 	fuzzTestExecutable, err := c.findFuzzTestExecutable(c.opts.fuzzTest)
 	if err != nil {
 		return err
@@ -325,9 +325,11 @@ func (c *runCmd) runFuzzTest() error {
 		case <-signalHandlerCtx.Done():
 			return nil
 		case s := <-sigs:
-			log.Infof("\nReceived %s", s.String())
+			log.Warnf("Received %s", s.String())
 			runner.Cleanup()
-			return errors.WithStack(cmdutils.NewSignalError(s.(syscall.Signal)))
+			err := cmdutils.NewSignalError(s.(syscall.Signal))
+			log.Error(err, err.Error())
+			return cmdutils.WrapSilentError(err)
 		}
 	})
 
