@@ -2,7 +2,6 @@ package run
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -19,6 +18,8 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
+	"code-intelligence.com/cifuzz/internal/build"
+	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
@@ -28,11 +29,6 @@ import (
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
-
-// The CMake configuration (also called "build type") to use for fuzzing runs.
-// See enable_fuzz_testing in tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake for the rationale for using this
-// build type.
-const cmakeBuildConfiguration = "RelWithDebInfo"
 
 type runOptions struct {
 	buildCommand   string
@@ -167,71 +163,24 @@ func (c *runCmd) buildWithCMake() error {
 	engine := "libfuzzer"
 	sanitizers := []string{"address", "undefined"}
 
-	// Prepare the environment
-	env, err := commonBuildEnv()
+	builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
+		ProjectDir: c.config.ProjectDir,
+		Engine:     engine,
+		Sanitizers: sanitizers,
+		Stdout:     c.OutOrStdout(),
+		Stderr:     c.ErrOrStderr(),
+	})
+	if err != nil {
+		return err
+	}
+	c.buildDir = builder.BuildDir
+
+	err = builder.Configure()
 	if err != nil {
 		return err
 	}
 
-	// Ensure that the build directory exists.
-	// Note: Invoking CMake on the same build directory with different cache
-	// variables is a no-op. For this reason, we have to encode all choices made
-	// for the cache variables below in the path to the build directory.
-	// Currently, this includes the fuzzing engine and the choice of sanitizers.
-	c.buildDir = filepath.Join(c.config.ProjectDir, ".cifuzz-build", engine, strings.Join(sanitizers, "+"))
-	err = os.MkdirAll(c.buildDir, 0755)
-	if err != nil {
-		return err
-	}
-
-	cacheVariables := map[string]string{
-		"CMAKE_BUILD_TYPE":    cmakeBuildConfiguration,
-		"CIFUZZ_ENGINE":       engine,
-		"CIFUZZ_SANITIZERS":   strings.Join(sanitizers, ";"),
-		"CIFUZZ_TESTING:BOOL": "ON",
-	}
-	var cacheArgs []string
-	for key, value := range cacheVariables {
-		cacheArgs = append(cacheArgs, "-D", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	// Call cmake to "Generate a project buildsystem" (that's the
-	// phrasing used by the CMake man page).
-	// Note: This is usually a no-op after the directory has been created once,
-	// even if cache variables change. However, if a previous invocation of this
-	// command failed during CMake generation and the command is run again, the
-	// build step would only result in a very unhelpful error message about
-	// missing Makefiles. By reinvoking CMake's configuration explicitly here,
-	// we either get a helpful error message or the build step will succeed if
-	// the user fixed the issue in the meantime.
-	cmd := exec.Command("cmake", append(cacheArgs, c.config.ProjectDir)...)
-	// Redirect the build command's stdout to stderr to only have
-	// reports printed to stdout
-	cmd.Stdout = c.ErrOrStderr()
-	cmd.Stderr = c.ErrOrStderr()
-	cmd.Env = env
-	cmd.Dir = c.buildDir
-	log.Debugf("Working directory: %s", cmd.Dir)
-	log.Debugf("Command: %s", cmd.String())
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	// Build the project with CMake
-	cmd = exec.Command(
-		"cmake",
-		"--build", c.buildDir,
-		"--config", cmakeBuildConfiguration,
-		"--target", c.opts.fuzzTest,
-	)
-	// Redirect the build command's stdout to stderr to only have
-	// reports printed to stdout
-	cmd.Stdout = c.ErrOrStderr()
-	cmd.Stderr = c.ErrOrStderr()
-	cmd.Env = env
-	log.Debugf("Command: %s", cmd.String())
-	err = cmd.Run()
+	err = builder.Build(c.opts.fuzzTest)
 	if err != nil {
 		return err
 	}
@@ -241,7 +190,7 @@ func (c *runCmd) buildWithCMake() error {
 
 func (c *runCmd) buildWithUnknownBuildSystem() error {
 	// Prepare the environment
-	env, err := commonBuildEnv()
+	env, err := build.CommonBuildEnv()
 	if err != nil {
 		return err
 	}
@@ -367,39 +316,6 @@ func (c *runCmd) printFinalMetrics() error {
 	}
 
 	return c.reportHandler.PrintFinalMetrics(numSeeds)
-}
-
-func commonBuildEnv() ([]string, error) {
-	var err error
-	env := os.Environ()
-
-	// On Windows, our preferred compiler is MSVC, which can't easily be run
-	// from an arbitrary terminal as it requires about a dozen environment
-	// variables to be set correctly. Thus, we assume users to run cifuzz from
-	// a developer command prompt anyway and thus don't need to set the
-	// compiler explicitly.
-	if runtime.GOOS != "windows" {
-		// Set the C/C++ compiler to clang/clang++, which is needed to build a
-		// binary with fuzzing instrumentation (gcc doesn't have
-		// -fsanitize=fuzzer).
-		env, err = envutil.Setenv(env, "CC", "clang")
-		if err != nil {
-			return nil, err
-		}
-		env, err = envutil.Setenv(env, "CXX", "clang++")
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// We don't want to fail if ASan is set up incorrectly for tools
-	// built and executed during the build or they contain leaks.
-	env, err = envutil.Setenv(env, "ASAN_OPTIONS", "detect_leaks=0:verify_asan_link_order=0")
-	if err != nil {
-		return nil, err
-	}
-
-	return env, nil
 }
 
 func setBuildFlagsEnvVars(env []string) ([]string, error) {

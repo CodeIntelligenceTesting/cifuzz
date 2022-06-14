@@ -13,6 +13,7 @@ import (
 
 	createCmd "code-intelligence.com/cifuzz/internal/cmd/create"
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
+	reloadCmd "code-intelligence.com/cifuzz/internal/cmd/reload"
 	runCmd "code-intelligence.com/cifuzz/internal/cmd/run"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
@@ -74,6 +75,7 @@ func New() *cobra.Command {
 	rootCmd.AddCommand(initCmd.New())
 	rootCmd.AddCommand(createCmd.New(cmdConfig))
 	rootCmd.AddCommand(runCmd.New(cmdConfig))
+	rootCmd.AddCommand(reloadCmd.New())
 
 	return rootCmd
 }
