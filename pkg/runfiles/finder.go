@@ -38,7 +38,7 @@ func (f RunfilesFinderImpl) ProcessWrapperPath() (string, error) {
 }
 
 func (f RunfilesFinderImpl) CifuzzIncludePath() (string, error) {
-	return f.findFollowSymlinks("share/cmake/CIFuzz/include/cifuzz")
+	return f.findFollowSymlinks("share/cmake/cifuzz/include/cifuzz")
 }
 
 func (f RunfilesFinderImpl) findFollowSymlinks(relativePath string) (string, error) {
