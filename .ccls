@@ -1,0 +1,3 @@
+clang
+
+-I./tools/cmake/cifuzz/include/cifuzz/

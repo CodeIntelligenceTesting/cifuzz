@@ -1,4 +1,6 @@
 .idea
+.ccls-cache/
+
 /build/
 /site/
 tmp/
