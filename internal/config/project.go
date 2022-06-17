@@ -24,7 +24,7 @@ const (
 
 var buildSystemTypes = []string{BuildSystemAuto, BuildSystemCMake, BuildSystemUnknown}
 
-type projectConfig struct {
+type ProjectConfig struct {
 	LastUpdated string
 	BuildSystem string `yaml:"build_system"`
 }
@@ -48,7 +48,7 @@ func CreateProjectConfig(projectDir string) (configpath string, err error) {
 	}
 
 	// setup config struct with (default) values
-	config := projectConfig{
+	config := ProjectConfig{
 		LastUpdated: time.Now().Format("2006-01-02"),
 	}
 
@@ -64,7 +64,7 @@ func CreateProjectConfig(projectDir string) (configpath string, err error) {
 	return
 }
 
-func ReadProjectConfig(projectDir string) (*projectConfig, error) {
+func ReadProjectConfig(projectDir string) (*ProjectConfig, error) {
 	configpath := filepath.Join(projectDir, projectConfigFile)
 
 	bytes, err := ioutil.ReadFile(configpath)
@@ -72,7 +72,7 @@ func ReadProjectConfig(projectDir string) (*projectConfig, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	config := &projectConfig{}
+	config := &ProjectConfig{}
 	err = yaml.Unmarshal(bytes, config)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error parsing config file %s", configpath)

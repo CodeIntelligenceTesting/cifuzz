@@ -27,6 +27,8 @@ func New() *cobra.Command {
 		},
 	}
 
+	cmdutils.DisableConfigCheck(initCmd)
+
 	return initCmd
 }
 

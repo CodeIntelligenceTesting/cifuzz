@@ -73,12 +73,12 @@ type runCmd struct {
 	*cobra.Command
 	opts *runOptions
 
-	projectDir    string
+	config        *config.Config
 	buildDir      string
 	reportHandler *report_handler.ReportHandler
 }
 
-func New() *cobra.Command {
+func New(config *config.Config) *cobra.Command {
 	opts := &runOptions{}
 
 	cmd := &cobra.Command{
@@ -97,6 +97,7 @@ func New() *cobra.Command {
 			cmd := runCmd{
 				Command: c,
 				opts:    opts,
+				config:  config,
 			}
 			return cmd.run()
 		},
@@ -117,18 +118,6 @@ func New() *cobra.Command {
 
 func (c *runCmd) run() error {
 	var err error
-
-	c.projectDir, err = config.FindProjectDir()
-	if errors.Is(err, os.ErrNotExist) {
-		// The project directory doesn't exist, this is an expected
-		// error, so we print it and return a silent error to avoid
-		// printing a stack trace
-		log.Error(err, fmt.Sprintf("%s\nUse 'cifuzz init' to set up a project for use with cifuzz.", err.Error()))
-		return cmdutils.ErrSilent
-	}
-	if err != nil {
-		return err
-	}
 
 	err = c.buildFuzzTest()
 	if err != nil {
@@ -157,7 +146,7 @@ func (c *runCmd) run() error {
 }
 
 func (c *runCmd) buildFuzzTest() error {
-	conf, err := config.ReadProjectConfig(c.projectDir)
+	conf, err := config.ReadProjectConfig(c.config.ProjectDir)
 	if err != nil {
 		return err
 	}
@@ -187,7 +176,7 @@ func (c *runCmd) buildWithCMake() error {
 	// variables is a no-op. For this reason, we have to encode all choices made
 	// for the cache variables below in the path to the build directory.
 	// Currently, this includes the fuzzing engine and the choice of sanitizers.
-	c.buildDir = filepath.Join(c.projectDir, ".cifuzz-build", engine, strings.Join(sanitizers, "+"))
+	c.buildDir = filepath.Join(c.config.ProjectDir, ".cifuzz-build", engine, strings.Join(sanitizers, "+"))
 	err = os.MkdirAll(c.buildDir, 0755)
 	if err != nil {
 		return err
@@ -213,7 +202,7 @@ func (c *runCmd) buildWithCMake() error {
 	// missing Makefiles. By reinvoking CMake's configuration explicitly here,
 	// we either get a helpful error message or the build step will succeed if
 	// the user fixed the issue in the meantime.
-	cmd := exec.Command("cmake", append(cacheArgs, c.projectDir)...)
+	cmd := exec.Command("cmake", append(cacheArgs, c.config.ProjectDir)...)
 	// Redirect the build command's stdout to stderr to only have
 	// reports printed to stdout
 	cmd.Stdout = c.ErrOrStderr()
@@ -297,7 +286,7 @@ func (c *runCmd) runFuzzTest() error {
 		// corpora are not checked into source control, so a hidden directory
 		// is an appropriate default that can always be overridden via the
 		// --seeds-dir flag.
-		defaultCorpusDir := filepath.Join(c.projectDir, ".cifuzz-corpus", c.opts.fuzzTest)
+		defaultCorpusDir := filepath.Join(c.config.ProjectDir, ".cifuzz-corpus", c.opts.fuzzTest)
 		err := os.MkdirAll(defaultCorpusDir, 0755)
 		if err != nil {
 			return errors.WithStack(err)

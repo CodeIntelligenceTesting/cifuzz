@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
@@ -33,7 +34,7 @@ func TestCreateCmd(t *testing.T) {
 		"--name",
 		"fuzz-test.cpp",
 	}
-	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin, args...)
 	assert.NoError(t, err)
 }
 
@@ -41,7 +42,7 @@ func TestCreateCmd_InvalidType(t *testing.T) {
 	args := []string{
 		"foo",
 	}
-	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin, args...)
 	assert.Error(t, err)
 }
 
@@ -59,7 +60,7 @@ func TestCreateCmd_InputFilename(t *testing.T) {
 		"--out", filepath.Join(baseTempDir, "test/"),
 	}
 
-	_, err = cmdutils.ExecuteCommand(t, New(), r, args...)
+	_, err = cmdutils.ExecuteCommand(t, New(config.NewConfig()), r, args...)
 	assert.NoError(t, err)
 
 	exists, err := fileutil.Exists(filepath.Join(baseTempDir, "test/my_test_file.cpp"))

@@ -15,12 +15,14 @@ import (
 	createCmd "code-intelligence.com/cifuzz/internal/cmd/create"
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
 	runCmd "code-intelligence.com/cifuzz/internal/cmd/run"
+	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
 )
 
 func New() *cobra.Command {
 	var workdir string
+	cmdConfig := config.NewConfig()
 
 	rootCmd := &cobra.Command{
 		Use:   "cifuzz",
@@ -38,6 +40,30 @@ func New() *cobra.Command {
 					return cmdutils.ErrSilent
 				}
 			}
+
+			if !cmdutils.NeedsConfig(cmd) {
+				return nil
+			}
+
+			projectDir, err := config.FindProjectDir()
+			if errors.Is(err, os.ErrNotExist) {
+				// The project directory doesn't exist, this is an expected
+				// error, so we print it and return a silent error to avoid
+				// printing a stack trace
+				log.Error(err, fmt.Sprintf("%s\nUse 'cifuzz init' to set up a project for use with cifuzz.", err.Error()))
+				return cmdutils.ErrSilent
+			}
+			if err != nil {
+				return err
+			}
+
+			projectConfig, err := config.ReadProjectConfig(projectDir)
+			if err != nil {
+				return err
+			}
+			cmdConfig.ProjectDir = projectDir
+			cmdConfig.ProjectConfig = projectConfig
+
 			return nil
 		},
 	}
@@ -51,9 +77,9 @@ func New() *cobra.Command {
 	viper.BindPFlag("directory", rootCmd.PersistentFlags().Lookup("directory"))
 
 	rootCmd.AddCommand(initCmd.New())
-	rootCmd.AddCommand(createCmd.New())
+	rootCmd.AddCommand(createCmd.New(cmdConfig))
 	rootCmd.AddCommand(buildCmd.New())
-	rootCmd.AddCommand(runCmd.New())
+	rootCmd.AddCommand(runCmd.New(cmdConfig))
 
 	return rootCmd
 }
