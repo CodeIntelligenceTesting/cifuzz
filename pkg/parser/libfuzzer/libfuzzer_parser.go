@@ -131,28 +131,31 @@ func (p *parser) parseLine(ctx context.Context, line string) error {
 	}
 
 	if !p.initStarted && !p.initFinished {
-		// We're not interested in any lines until we find the line that
-		// tells us that libFuzzer started initializing with the seed
-		// corpus
+		// Try to parse the line as the libFuzzer message which tells us
+		// how many seeds the corpus contains.
+		// Note: We used to stop parsing lines until we saw the first
+		// seed corpus message, but that caused no finding report to be
+		// be sent when the fuzz target already crashes on the empty
+		// input, because in that case libFuzzer doesn't print the seed
+		// corpus message.
 		numSeeds, err := parseAsSeedCorpusMessage(line)
-		if errors.Is(err, errNotFound) {
-			return nil
-		}
-		if err != nil {
+		if err != nil && !errors.Is(err, errNotFound) {
 			return err
 		}
-		p.initStarted = true
+		if err == nil {
+			p.initStarted = true
 
-		if numSeeds == 0 {
-			p.initFinished = true
+			if numSeeds == 0 {
+				p.initFinished = true
+			}
+
+			// Report that the fuzzer is now initializing and how many seeds
+			// are used for initialization
+			return p.sendReport(ctx, &report.Report{
+				Status:   report.RunStatus_INITIALIZING,
+				NumSeeds: numSeeds,
+			})
 		}
-
-		// Report that the fuzzer is now initializing and how many seeds
-		// are used for initialization
-		return p.sendReport(ctx, &report.Report{
-			Status:   report.RunStatus_INITIALIZING,
-			NumSeeds: numSeeds,
-		})
 	}
 
 	metric := p.parseAsFuzzingMetric(line)
