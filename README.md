@@ -31,11 +31,13 @@ look at our [Glossary](docs/Glossary.md).
 
 
 **Ubuntu / Debian**
+<!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
 sudo apt install git make cmake clang llvm golang-go libcap-dev 
 ```
 
 **Arch**
+<!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
 sudo pacman -S git make cmake clang llvm go libcap
 ```

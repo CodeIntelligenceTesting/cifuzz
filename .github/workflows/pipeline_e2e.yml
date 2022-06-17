@@ -1,0 +1,133 @@
+# This Pipeline executes some kind of e2e test by running the instructions from the readme
+# To not unnecessarily lengthen the running time of the PR pipelines we just run these
+# tests after pushing into main. In the future we can run them only when releasing a new version.
+# If other installation methods were added (like installer/binary release) we should test them here, too
+name: E2E Installation/Example Test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  from_source_linux:
+    name: Linux - install from source 
+    runs-on: ubuntu-22.04
+    container: 
+      image: ${{ matrix.container}}
+      options: --privileged
+    strategy:
+      matrix:
+        container: ["ubuntu:22.04", "archlinux:latest"]
+    steps:
+      - name: Install dependencies with pacman
+        if: contains(matrix.container, 'archlinux')
+        # please make sure this is in sync with the README.md / installation docs
+        run: pacman -Sy --noconfirm git make cmake clang llvm go libcap
+
+      - name: Install dependencies with apt 
+        if: contains(matrix.container, 'ubuntu')
+        # please make sure this is in sync with the README.md / installation docs
+        run: |
+          apt update
+          apt --yes install git make cmake clang llvm golang-go libcap-dev 
+
+      - uses: actions/checkout@v3
+
+      - name: Install cifuzz
+        run: make install
+
+      - name: Run CMake Example
+        run: |
+          cd examples/cmake
+          ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
+          cat fuzzing.log | grep "Finding 1"
+          cat fuzzing.log | grep -E "Findings:\s+1"
+
+  from_source_mac:
+    name: MacOS - install from source 
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-12]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache LLVM and Clang
+        id: cache-llvm
+        uses: actions/cache@v3
+        with:
+          path: |
+            C:/Program Files/LLVM
+            ./llvm
+          key: ${{ matrix.os }}-llvm-13.0
+
+      # needed because the preinstalled "apple" clang/llvm is not working with libfuzzer
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@f0cccbdf563688c6e0f9273d4bc27a8c5278de85
+        with:
+          version: "13.0"
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+
+      # needed to fix MacOS clang/llvm after using the action above
+      # https://github.com/KyleMayes/install-llvm-action/issues/15
+      - name: Setup LLVM and Clang
+        run: |
+          LLVM_PATH=${{ env.LLVM_PATH }}
+          LLVM_VERSION=${{ matrix.clang }}
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
+          echo "CPATH=$LLVM_PATH/lib/clang/$LLVM_VERSION/include/" >> $GITHUB_ENV
+          echo "LDFLAGS=-L$LLVM_PATH/lib" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I$LLVM_PATH/include" >> $GITHUB_ENV
+          echo "CC=$LLVM_PATH/bin/clang" >> $GITHUB_ENV
+          echo "CXX=$LLVM_PATH/bin/clang++" >> $GITHUB_ENV
+
+      # needed because installing go 1.18 is not working with homebrew 
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "^1.18"
+
+      - name: Install cifuzz
+        run: make install 
+
+      - name: Run CMake Example
+        run: |
+          cd examples/cmake
+          ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
+          cat fuzzing.log | grep "Finding 1"
+          cat fuzzing.log | grep -E "Findings:\s+1"
+        shell: bash
+
+  # In general it would be nice to use windows container for testing this,
+  # but by now they are not available for windows based github runner
+  from_source_windows:
+    name: Windows - install from source
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: "^1.18"
+
+      - name: Install dependencies
+        run: |
+          choco install git make cmake llvm 
+
+      # Add cl.exe to the PATH on Windows for the replayer integration test.
+      # Pinned to the commit of the v1.10.0 tag on 2022-05-05.
+      - name: Setup - MSVC Windows
+        uses: ilammy/msvc-dev-cmd@d8610e2b41c6d0f0c3b4c46dad8df0fd826c68e1
+
+      - name: Install cifuzz
+        run: make install
+
+      - name: Run CMake Example 
+        run: |
+          cd examples/cmake
+          ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
+          cat fuzzing.log | grep "Finding 1"
+          cat fuzzing.log | grep -E "Findings:\s+1"
+        shell: bash
