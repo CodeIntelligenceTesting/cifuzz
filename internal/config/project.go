@@ -2,6 +2,7 @@ package config
 
 import (
 	_ "embed"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -113,7 +114,8 @@ func FindProjectDir() (string, error) {
 	}
 	for !configFileExists {
 		if dir == filepath.Dir(dir) {
-			return "", os.ErrNotExist
+			err := fmt.Errorf("not a cifuzz project (or any of the parent directories): %s %w", projectConfigFile, os.ErrNotExist)
+			return "", errors.WithStack(err)
 		}
 		dir = filepath.Dir(dir)
 		configFileExists, err = fileutil.Exists(filepath.Join(dir, projectConfigFile))
