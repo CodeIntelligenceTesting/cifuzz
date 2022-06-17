@@ -12,7 +12,7 @@ else
 endif
 
 binary_base_path = build/bin/cifuzz_
-test_fuzz_targets_path = integration/testdata
+test_fuzz_targets_path = pkg/runner/libfuzzer/integration-tests/testdata
 
 project := "code-intelligence.com/cifuzz"
 

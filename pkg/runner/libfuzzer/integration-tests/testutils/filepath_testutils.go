@@ -1,30 +1,23 @@
-package utils
+package testutils
 
 import (
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func GetProjectRoot(t *testing.T) string {
+func GetTestDataDir(t *testing.T) string {
 	_, filename, _, ok := runtime.Caller(0)
-	require.True(t, ok, "unable to get project root from runtime")
-
-	rootDir := strings.TrimSuffix(filename, "integration/utils/filepath.go")
-	require.DirExists(t, rootDir)
-
-	return rootDir
+	require.True(t, ok, "unable to get filename from runtime")
+	return filepath.Join(filepath.Dir(filepath.Dir(filename)), "testdata")
 }
 
 func GetFuzzTargetBuildDir(t *testing.T) string {
-	rootDir := GetProjectRoot(t)
-
-	fuzzTargetBuildPath := filepath.Join(rootDir, "integration", "testdata", "build")
+	testDataDir := GetTestDataDir(t)
+	fuzzTargetBuildPath := filepath.Join(testDataDir, "build")
 	require.DirExists(t, fuzzTargetBuildPath)
-
 	return fuzzTargetBuildPath
 }
 

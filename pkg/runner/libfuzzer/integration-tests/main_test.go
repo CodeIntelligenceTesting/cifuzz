@@ -1,4 +1,4 @@
-package libfuzzer
+package integration_tests
 
 import (
 	"io/ioutil"
