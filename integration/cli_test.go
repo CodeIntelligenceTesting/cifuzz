@@ -52,12 +52,14 @@ func TestIntegration_InitCreate(t *testing.T) {
 	//execute root command
 	cmd := exec.Command(executable)
 	cmd.Dir = dir
+	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	assert.NoError(t, err)
 
 	// execute init command
 	cmd = exec.Command(executable, "init")
 	cmd.Dir = dir
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	assert.NoError(t, err)
 
@@ -68,6 +70,7 @@ func TestIntegration_InitCreate(t *testing.T) {
 		"--name", "my_test.cpp",
 	)
 	cmd.Dir = dir
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	assert.NoError(t, err)
 }
