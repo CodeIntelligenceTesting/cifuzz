@@ -14,6 +14,8 @@ func TestIntegration_UBSANRecoverable(t *testing.T) {
 		t.Skip()
 	}
 
+	testutils.BuildFuzzTarget(t, "trigger_ubsan")
+
 	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := testutils.NewLibfuzzerTest(t, "trigger_ubsan", disableMinijail)
 

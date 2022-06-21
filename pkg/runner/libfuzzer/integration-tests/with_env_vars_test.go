@@ -15,6 +15,8 @@ func TestIntegration_WithEnvs_NoStatsPrinted(t *testing.T) {
 		t.Skip()
 	}
 
+	testutils.BuildFuzzTarget(t, "trigger_asan")
+
 	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := testutils.NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
 		test.FuzzerEnv = []string{"ASAN_OPTIONS=print_stats=0"}

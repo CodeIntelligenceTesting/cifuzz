@@ -12,7 +12,6 @@ else
 endif
 
 binary_base_path = build/bin/cifuzz_
-test_fuzz_targets_path = pkg/runner/libfuzzer/integration-tests/testdata
 
 project := "code-intelligence.com/cifuzz"
 
@@ -22,7 +21,6 @@ default:
 .PHONY: clean
 clean:
 	rm -rf build/
-	make -C $(test_fuzz_targets_path) clean
 
 .PHONY: deps
 deps:
@@ -51,10 +49,6 @@ build/windows: deps
 .PHONY: build/darwin
 build/darwin: deps
 	env GOOS=darwin GOARCH=amd64 go build -o $(binary_base_path)darwin cmd/cifuzz/main.go
-
-.PHONY: build/test/fuzz-targets
-build/test/fuzz-targets:
-	make -C $(test_fuzz_targets_path) all
 
 .PHONY: lint
 lint: deps/dev
@@ -93,7 +87,7 @@ tidy/check:
 	fi
 
 .PHONY: test
-test: deps build/$(current_os) build/test/fuzz-targets
+test: deps build/$(current_os)
 	go test -v ./...
 
 .PHONY: test/unit
@@ -105,7 +99,7 @@ test/unit/concurrent: deps
 	go test -v ./... -short -count=10
 
 .PHONY: test/integration
-test/integration: deps build/$(current_os) build/test/fuzz-targets
+test/integration: deps build/$(current_os)
 	go test -v ./... -run 'TestIntegration.*'
 
 .PHONY: test/race

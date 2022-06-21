@@ -12,6 +12,8 @@ func TestIntegration_SlowInput(t *testing.T) {
 		t.Skip()
 	}
 
+	testutils.BuildFuzzTarget(t, "trigger_slow_input")
+
 	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := testutils.NewLibfuzzerTest(t, "trigger_slow_input", disableMinijail)
 		// The input timeout should be reported on the first input

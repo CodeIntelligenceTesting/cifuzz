@@ -11,6 +11,8 @@ func TestIntegration_CasesWrittenToCorpus(t *testing.T) {
 		t.Skip()
 	}
 
+	testutils.BuildFuzzTarget(t, "new_paths_fuzzer")
+
 	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := testutils.NewLibfuzzerTest(t, "new_paths_fuzzer", disableMinijail)
 

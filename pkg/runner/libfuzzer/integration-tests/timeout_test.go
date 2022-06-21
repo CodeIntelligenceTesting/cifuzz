@@ -14,6 +14,8 @@ func TestIntegration_Timeout(t *testing.T) {
 		t.Skip()
 	}
 
+	testutils.BuildFuzzTarget(t, "do_nothing_fuzzer")
+
 	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := testutils.NewLibfuzzerTest(t, "do_nothing_fuzzer", disableMinijail)
 		test.Timeout = time.Second

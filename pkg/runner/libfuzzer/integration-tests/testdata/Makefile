@@ -52,7 +52,7 @@ endif
 ALL_PREREQUISITES = clean prepare $(FUZZ_TARGETS)
 
 ifeq ($(DISABLE_UBSAN), 0)
-	 ALL_PREREQUISITES += trigger_ubsan_non_recoverable;
+	 ALL_PREREQUISITES += $(FUZZ_TARGET_DIR)/trigger_ubsan_non_recoverable;
 	 FUZZ_TARGETS = $(shell find $(FUZZ_TARGET_DIR) -name '*.c*' | cut -f 1 -d '.')
 else
 	 FUZZ_TARGETS = $(shell find $(FUZZ_TARGET_DIR) -name '*.c*' ! -name '*ubsan*' | cut -f 1 -d '.')
@@ -81,17 +81,17 @@ $(FUZZ_TARGET_DIR)/trigger_asan_with_file_accesses: ${FUZZ_TARGET_DIR}/trigger_a
 	@echo "--> done: $(OUT)"
 	cp files/example.conf $(BUILD_DIR)/
 
-trigger_ubsan_non_recoverable: OUT=$(BUILD_DIR)/$(notdir $@)$(EXT)
-trigger_ubsan_non_recoverable: $(FUZZ_TARGET_DIR)/trigger_ubsan.cpp
+$(FUZZ_TARGET_DIR)/trigger_ubsan_non_recoverable: OUT=$(BUILD_DIR)/$(notdir $@)$(EXT)
+$(FUZZ_TARGET_DIR)/trigger_ubsan_non_recoverable: $(FUZZ_TARGET_DIR)/trigger_ubsan.cpp
 	$(CXX) $? $(CXXFLAGS) -fno-sanitize-recover=undefined $(OUT_OPTION)$(OUT) 
 	@echo "--> done: $(OUT)"
 
 $(FUZZ_TARGET_DIR)/%: OUT=$(BUILD_DIR)/$(notdir $@)$(EXT)
-$(FUZZ_TARGET_DIR)/%: $(FUZZ_TARGET_DIR)/%.c
-	$(CC) $? $(CFLAGS) $(OUT_OPTION)$(OUT)
+$(FUZZ_TARGET_DIR)/%: $(FUZZ_TARGET_DIR)/%.c prepare
+	$(CC) $< $(CFLAGS) $(OUT_OPTION)$(OUT)
 	@echo "--> done: $(OUT)"
 
 $(FUZZ_TARGET_DIR)/%: OUT=$(BUILD_DIR)/$(notdir $@)$(EXT)
-$(FUZZ_TARGET_DIR)/%: $(FUZZ_TARGET_DIR)/%.cpp
-	$(CXX) $? $(CXXFLAGS) $(OUT_OPTION)$(OUT)
+$(FUZZ_TARGET_DIR)/%: $(FUZZ_TARGET_DIR)/%.cpp prepare
+	$(CXX) $< $(CXXFLAGS) $(OUT_OPTION)$(OUT)
 	@echo "--> done: $(OUT)"
