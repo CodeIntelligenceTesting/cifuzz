@@ -11,7 +11,7 @@ else
 	endif
 endif
 
-binary_base_path = build/bin/cifuzz_
+binary_base_path = build/bin/cifuzz
 
 project := "code-intelligence.com/cifuzz"
 
@@ -36,19 +36,22 @@ install:
 	go run cmd/installer/main.go
 
 .PHONY: build
-build: build/linux build/windows build/darwin ;
+build: build/$(current_os)
+
+.PHONY: build/all
+build/all: build/linux build/windows build/darwin ;
 
 .PHONY: build/linux
 build/linux: deps
-	env GOOS=linux GOARCH=amd64 go build -o $(binary_base_path)linux cmd/cifuzz/main.go
+	env GOOS=linux GOARCH=amd64 go build -o $(binary_base_path)_linux cmd/cifuzz/main.go
 
 .PHONY: build/windows
 build/windows: deps
-	env GOOS=windows GOARCH=amd64 go build -o $(binary_base_path)windows.exe cmd/cifuzz/main.go
+	env GOOS=windows GOARCH=amd64 go build -o $(binary_base_path)_windows.exe cmd/cifuzz/main.go
 
 .PHONY: build/darwin
 build/darwin: deps
-	env GOOS=darwin GOARCH=amd64 go build -o $(binary_base_path)darwin cmd/cifuzz/main.go
+	env GOOS=darwin GOARCH=amd64 go build -o $(binary_base_path)_darwin cmd/cifuzz/main.go
 
 .PHONY: lint
 lint: deps/dev
@@ -99,7 +102,7 @@ test/unit/concurrent: deps
 	go test -v ./... -short -count=10
 
 .PHONY: test/integration
-test/integration: deps build/$(current_os)
+test/integration: deps
 	go test -v ./... -run 'TestIntegration.*'
 
 .PHONY: test/race

@@ -59,6 +59,7 @@ func NewInstaller(opts *Options) (*installer, error) {
 			return nil, errors.Errorf("Install directory '%s' already exists. Please remove it to continue.", opts.InstallDir)
 		}
 	}
+	log.Printf("Installing cifuzz to %v", opts.InstallDir)
 
 	i := &installer{
 		projectDir: projectDir,
@@ -95,6 +96,14 @@ func (i *installer) libDir() string {
 
 func (i *installer) shareDir() string {
 	return filepath.Join(i.InstallDir, "share", "cifuzz")
+}
+
+func (i *installer) CIFuzzExecutablePath() string {
+	path := filepath.Join(i.binDir(), "cifuzz")
+	if runtime.GOOS == "windows" {
+		path += ".exe"
+	}
+	return path
 }
 
 func (i *installer) Cleanup() {
@@ -185,8 +194,7 @@ func (i *installer) InstallProcessWrapper() error {
 
 func (i *installer) InstallCIFuzz() error {
 	// Build and install cifuzz
-	dest := filepath.Join(i.binDir(), "cifuzz")
-	cmd := exec.Command("go", "build", "-o", dest, "cmd/cifuzz/main.go")
+	cmd := exec.Command("go", "build", "-o", i.CIFuzzExecutablePath(), "cmd/cifuzz/main.go")
 	cmd.Dir = i.projectDir
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
