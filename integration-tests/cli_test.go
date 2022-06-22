@@ -64,10 +64,10 @@ func TestIntegration_InitCreate(t *testing.T) {
 	assert.NoError(t, err)
 
 	// execute create command
+	outputPath := "my_test.cpp"
 	cmd = exec.Command(executable,
 		"create", "cpp",
-		"--out", "fuzz-tests",
-		"--name", "my_test.cpp",
+		"--output", outputPath,
 	)
 	cmd.Dir = dir
 	cmd.Stderr = os.Stderr
@@ -95,15 +95,15 @@ func TestIntegration_InitCreate_DirectoryFlagAndOutFlag(t *testing.T) {
 	assert.NoError(t, err)
 
 	// execute create command
+	outputPath := "my_test.cpp"
 	cmd = exec.Command(executable,
 		"create", "cpp",
 		"-C", dir,
-		"--out", "fuzz-tests",
-		"--name", "my_test.cpp",
+		"--output", outputPath,
 	)
 	err = cmd.Run()
 	assert.NoError(t, err)
 
 	// check that the fuzz test was created in the correct directory
-	require.FileExists(t, filepath.Join(dir, "fuzz-tests", "my_test.cpp"))
+	require.FileExists(t, filepath.Join(dir, outputPath))
 }

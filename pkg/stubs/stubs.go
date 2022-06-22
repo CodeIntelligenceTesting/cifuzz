@@ -44,7 +44,7 @@ func Create(path string, testType config.FuzzTestType) error {
 
 // SuggestFilename returns a proposal for a filename,
 // depending on the test type and given directory
-func SuggestFilename(dir string, testType config.FuzzTestType) (string, error) {
+func SuggestFilename(testType config.FuzzTestType) (string, error) {
 	var basename, ext, filename string
 
 	switch testType {
@@ -56,8 +56,8 @@ func SuggestFilename(dir string, testType config.FuzzTestType) (string, error) {
 	}
 
 	for counter := 1; ; counter++ {
-		filename = fmt.Sprintf("%s_%d.%s", basename, counter, ext)
-		exists, err := fileutil.Exists(filepath.Join(dir, filename))
+		filename = filepath.Join(".", fmt.Sprintf("%s_%d.%s", basename, counter, ext))
+		exists, err := fileutil.Exists(filename)
 		if err != nil {
 			return "", err
 		}

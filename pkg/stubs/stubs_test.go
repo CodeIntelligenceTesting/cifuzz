@@ -69,17 +69,17 @@ func TestCreate_NoPerm(t *testing.T) {
 func TestSuggestFilename(t *testing.T) {
 	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
 	require.NoError(t, err)
-
-	filename1, err := SuggestFilename(projectDir, config.CPP)
-	assert.NoError(t, err)
-	assert.Equal(t, "my_fuzz_test_1.cpp", filename1)
-
-	// TODO: Why doesn't SuggestFilename already return the full path?
-	fuzzTest := filepath.Join(projectDir, filename1)
-	err = ioutil.WriteFile(fuzzTest, []byte("TEST"), 0644)
+	err = os.Chdir(projectDir)
 	require.NoError(t, err)
 
-	filename2, err := SuggestFilename(projectDir, config.CPP)
+	filename1, err := SuggestFilename(config.CPP)
 	assert.NoError(t, err)
-	assert.Equal(t, "my_fuzz_test_2.cpp", filename2)
+	assert.Equal(t, filepath.Join(".", "my_fuzz_test_1.cpp"), filename1)
+
+	err = ioutil.WriteFile(filename1, []byte("TEST"), 0644)
+	require.NoError(t, err)
+
+	filename2, err := SuggestFilename(config.CPP)
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(".", "my_fuzz_test_2.cpp"), filename2)
 }
