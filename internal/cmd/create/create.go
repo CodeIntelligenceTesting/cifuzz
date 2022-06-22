@@ -101,11 +101,7 @@ func determineOutputPath(opts *cmdOpts, stdin io.Reader) (string, error) {
 		log.Errorf(err, "unable to suggest filename for given test type %s", opts.testType)
 	}
 
-	outputPath, err := dialog.Input(
-		"Please enter filename",
-		suggestedFilename,
-		stdin,
-	)
+	outputPath, err := dialog.InputFilename(stdin, "Please enter filename", suggestedFilename)
 	if err != nil {
 		return "", err
 	}
