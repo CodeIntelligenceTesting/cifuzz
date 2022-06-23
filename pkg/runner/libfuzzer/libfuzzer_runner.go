@@ -191,7 +191,6 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 	}
 	defer cancelCmdCtx()
 	r.cmd = executil.CommandContext(cmdCtx, args[0], args[1:]...)
-	r.cmd.TerminateProcessGroupWhenContextDone = true
 	r.cmd.Env = env
 
 	var stderrPipe io.ReadCloser

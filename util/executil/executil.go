@@ -25,25 +25,33 @@ const (
 // methods.
 type Cmd struct {
 	*exec.Cmd
-	ctx            context.Context
-	waitDone       chan struct{}
-	CloseAfterWait []io.Closer
-	pgid           int
-	// When TerminateProcessGroupWhenContextDone is set to true,
-	// Cmd.Start() will terminate the process group when the command did
-	// not complete before the context is done. In that case,
-	// TerminatedAfterContextDone() will return true.
-	TerminateProcessGroupWhenContextDone bool
-	terminatedAfterContextDone           bool
-	terminatedAfterContextDoneMutex      sync.Mutex
+	ctx                             context.Context
+	waitDone                        chan struct{}
+	CloseAfterWait                  []io.Closer
+	pgid                            int
+	terminatedAfterContextDone      bool
+	terminatedAfterContextDoneMutex sync.Mutex
 }
 
 func Command(name string, arg ...string) *Cmd {
 	return &Cmd{Cmd: exec.Command(name, arg...)}
 }
 
+// CommandContext is like Command but includes a context.
+//
+// The provided context is used to terminate the process group (by first
+// sending SIGTERM to the process group and after a grace period of 3
+// seconds SIGKILL) if the context becomes done before the command
+// completes on its own.
+// In that case, Cmd.TerminatedAfterContextDone() returns true.
 func CommandContext(ctx context.Context, name string, arg ...string) *Cmd {
-	return &Cmd{Cmd: exec.CommandContext(ctx, name, arg...), ctx: ctx}
+	// We don't use exec.CommandContext here to avoid a race between
+	// the goroutine started by the exec package when
+	// exec.CommandContext is used, which immediately sends SIGKILL to
+	// the started process when the context is done, and the goroutine
+	// started by this package which first sends a SIGTERM to the
+	// process group and after a grace period a SIGKILL.
+	return &Cmd{Cmd: exec.Command(name, arg...), ctx: ctx}
 }
 
 // StdoutTeePipe is similar to StdoutPipe, but everything written to the
@@ -93,6 +101,16 @@ func (c *Cmd) Start() error {
 		return errors.New("exec: already started")
 	}
 
+	// Don't start the process if the context is already done
+	if c.ctx != nil {
+		select {
+		case <-c.ctx.Done():
+			c.closeDescriptors(c.CloseAfterWait)
+			return c.ctx.Err()
+		default:
+		}
+	}
+
 	c.prepareProcessGroupTermination()
 
 	err := c.Cmd.Start()
@@ -108,7 +126,7 @@ func (c *Cmd) Start() error {
 		return err
 	}
 
-	if c.TerminateProcessGroupWhenContextDone && c.ctx != nil {
+	if c.ctx != nil {
 		c.waitDone = make(chan struct{}, 1)
 		go func() {
 			select {
