@@ -94,7 +94,7 @@ func (i *installer) libDir() string {
 }
 
 func (i *installer) shareDir() string {
-	return filepath.Join(i.InstallDir, "share")
+	return filepath.Join(i.InstallDir, "share", "cifuzz")
 }
 
 func (i *installer) Cleanup() {
@@ -207,12 +207,12 @@ func (i *installer) InstallCMakeIntegration() error {
 		// See:
 		// https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure
 		// https://gitlab.kitware.com/cmake/cmake/-/blob/5ed9232d781ccfa3a9fae709e12999c6649aca2f/Modules/Platform/UnixPaths.cmake#L30)
-		_, err := i.copyCMakeIntegration("/usr/local/share")
+		_, err := i.copyCMakeIntegration("/usr/local/share/cifuzz")
 		if err != nil {
 			return err
 		}
 	}
-	dirForRegistry, err := i.copyCMakeIntegration(filepath.Join(i.shareDir(), "cmake"))
+	dirForRegistry, err := i.copyCMakeIntegration(i.shareDir())
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,6 @@ func findProjectDir() (string, error) {
 // Directories are created as needed.
 func (i *installer) copyCMakeIntegration(destDir string) (string, error) {
 	cmakeSrc := filepath.Join(i.projectDir, "tools", "cmake", "cifuzz")
-	cmakeDst := filepath.Join(destDir, "cifuzz")
 	opts := copy.Options{
 		// Skip copying the replayer, which is a symlink on UNIX but a file
 		// containing the relative path on Windows. It is handled below.
@@ -272,7 +271,7 @@ func (i *installer) copyCMakeIntegration(destDir string) (string, error) {
 			return copy.Skip
 		},
 	}
-	err := copy.Copy(cmakeSrc, cmakeDst, opts)
+	err := copy.Copy(cmakeSrc, destDir, opts)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -280,7 +279,7 @@ func (i *installer) copyCMakeIntegration(destDir string) (string, error) {
 	// Copy the replayer, which is a symlink and thus may not have been copied
 	// correctly on Windows.
 	replayerSrc := filepath.Join(i.projectDir, "tools", "replayer", "src", "replayer.c")
-	replayerDir := filepath.Join(cmakeDst, "src")
+	replayerDir := filepath.Join(destDir, "src")
 	err = os.MkdirAll(replayerDir, 0755)
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -294,5 +293,5 @@ func (i *installer) copyCMakeIntegration(destDir string) (string, error) {
 	// The CMake package registry entry has to point directly to the directory
 	// containing the CIFuzzConfig.cmake file rather than any valid prefix for
 	// the config mode search procedure.
-	return filepath.Join(cmakeDst, "cmake"), nil
+	return filepath.Join(destDir, "cmake"), nil
 }
