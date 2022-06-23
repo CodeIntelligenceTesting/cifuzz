@@ -1,3 +1,7 @@
+<a href="https://www.code-intelligence.com/">
+<img src="https://www.code-intelligence.com/hubfs/Logos/CI%20Logos/Logo_quer_white.png" alt="Code Intelligence logo" width="450px">
+</a>
+
 # cifuzz
 
 > **_IMPORTANT:_** This project is under active development. 
