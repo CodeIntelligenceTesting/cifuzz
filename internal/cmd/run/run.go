@@ -267,16 +267,16 @@ func (c *runCmd) runFuzzTest() error {
 	routines, routinesCtx := errgroup.WithContext(signalHandlerCtx)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	var signalErr error
 	routines.Go(func() error {
 		select {
 		case <-signalHandlerCtx.Done():
 			return nil
 		case s := <-sigs:
 			log.Warnf("Received %s", s.String())
+			signalErr = cmdutils.NewSignalError(s.(syscall.Signal))
 			runner.Cleanup()
-			err := cmdutils.NewSignalError(s.(syscall.Signal))
-			log.Error(err, err.Error())
-			return cmdutils.WrapSilentError(err)
+			return signalErr
 		}
 	})
 
@@ -286,7 +286,17 @@ func (c *runCmd) runFuzzTest() error {
 		return runner.Run(routinesCtx)
 	})
 
-	return routines.Wait()
+	err = routines.Wait()
+	// We use a separate variable to pass signal errors, because when
+	// a signal was received, the first goroutine terminates the second
+	// one, resulting in a race of which returns an error first. In that
+	// case, we always want to print the signal error, not the
+	// "Unexpected exit code" error from the runner.
+	if signalErr != nil {
+		log.Error(signalErr, signalErr.Error())
+		return cmdutils.WrapSilentError(signalErr)
+	}
+	return err
 }
 
 func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
