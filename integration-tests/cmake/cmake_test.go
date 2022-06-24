@@ -127,7 +127,8 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 	go func() {
 		s := <-sigs
 		t.Logf("Received %s", s.String())
-		cmd.TerminateProcessGroup()
+		err = cmd.TerminateProcessGroup()
+		require.NoError(t, err)
 	}()
 
 	t.Logf("Command: %s", cmd.String())
@@ -148,7 +149,8 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 		if expectedOutput.MatchString(scanner.Text()) {
 			seenExpectedOutput = true
 			if terminate {
-				cmd.TerminateProcessGroup()
+				err = cmd.TerminateProcessGroup()
+				require.NoError(t, err)
 			}
 		}
 	}

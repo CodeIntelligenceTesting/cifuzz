@@ -357,7 +357,10 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 
 func (r *Runner) Cleanup() {
 	if r.cmd != nil {
-		r.cmd.TerminateProcessGroup()
+		err := r.cmd.TerminateProcessGroup()
+		if err != nil {
+			log.Error(err, err.Error())
+		}
 	}
 }
 
