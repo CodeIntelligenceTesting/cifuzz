@@ -113,7 +113,7 @@ func copyTestdataDir(t *testing.T) string {
 func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.Regexp, terminate bool) {
 	t.Helper()
 
-	const timeout = 1 * time.Minute
+	const timeout = 2 * time.Minute
 	runCtx, closeRunCtx := context.WithTimeout(context.Background(), timeout)
 	defer closeRunCtx()
 	cmd := executil.CommandContext(runCtx, cifuzz, "run", "parser_fuzz_test")
