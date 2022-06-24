@@ -161,7 +161,14 @@ func (c *runCmd) buildFuzzTest() error {
 func (c *runCmd) buildWithCMake() error {
 	// TODO: Make these configurable
 	engine := "libfuzzer"
-	sanitizers := []string{"address", "undefined"}
+	sanitizers := []string{"address"}
+	// UBSan is not supported by MSVC
+	// TODO: Not needed anymore when sanitizers are configurable,
+	//       then we do want to fail if the user explicitly asked for
+	//       UBSan.
+	if runtime.GOOS != "windows" {
+		sanitizers = append(sanitizers, "undefined")
+	}
 
 	builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
 		ProjectDir: c.config.ProjectDir,
