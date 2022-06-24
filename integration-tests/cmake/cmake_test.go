@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -27,6 +28,9 @@ import (
 func TestIntegration_InitCreateRun(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("This test doesn't work on Windows yet")
 	}
 
 	installer, err := install.NewInstaller(nil)
