@@ -12,6 +12,7 @@ func TestIntegration_WithEnvs_NoStatsPrinted(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	t.Parallel()
 
 	BuildFuzzTarget(t, "trigger_asan")
 
@@ -29,6 +30,7 @@ func TestIntegration_WithEnvs_StatsPrinted(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	t.Parallel()
 
 	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
@@ -44,6 +46,7 @@ func TestIntegration_WithEnvs_SpacesInEnvFlag(t *testing.T) {
 	if testing.Short() || runtime.GOOS == "windows" {
 		t.Skip()
 	}
+	t.Parallel()
 
 	// Test that environment variables with spaces don't pass
 	// arbitrary minijail flags. A stray "foo" argument would cause

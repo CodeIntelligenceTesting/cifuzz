@@ -10,6 +10,7 @@ func TestIntegration_OOM(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	t.Parallel()
 
 	BuildFuzzTarget(t, "trigger_oom")
 

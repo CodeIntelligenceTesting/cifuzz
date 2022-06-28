@@ -10,6 +10,7 @@ func TestIntegration_ASAN(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	t.Parallel()
 
 	BuildFuzzTarget(t, "trigger_asan")
 

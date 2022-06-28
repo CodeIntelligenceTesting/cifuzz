@@ -12,6 +12,7 @@ func TestIntegration_UBSANRecoverable(t *testing.T) {
 	if testing.Short() || runtime.GOOS == "windows" {
 		t.Skip()
 	}
+	t.Parallel()
 
 	BuildFuzzTarget(t, "trigger_ubsan")
 

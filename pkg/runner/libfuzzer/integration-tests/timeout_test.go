@@ -11,6 +11,7 @@ func TestIntegration_Timeout(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	t.Parallel()
 
 	BuildFuzzTarget(t, "do_nothing_fuzzer")
 

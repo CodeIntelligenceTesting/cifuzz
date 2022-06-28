@@ -8,6 +8,7 @@ func TestIntegration_CasesWrittenToCorpus(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	t.Parallel()
 
 	BuildFuzzTarget(t, "new_paths_fuzzer")
 

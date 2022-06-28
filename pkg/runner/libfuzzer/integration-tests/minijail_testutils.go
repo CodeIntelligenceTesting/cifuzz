@@ -17,6 +17,7 @@ var installMutex sync.Mutex
 
 func TestWithAndWithoutMinijail(t *testing.T, f func(t *testing.T, disableMinijail bool)) {
 	t.Run("WithoutMinijail", func(t *testing.T) {
+		t.Parallel()
 		f(t, true)
 	})
 	t.Run("WithMinijail", func(t *testing.T) {
@@ -24,6 +25,7 @@ func TestWithAndWithoutMinijail(t *testing.T, f func(t *testing.T, disableMinija
 		if runtime.GOOS != "linux" {
 			t.Skip()
 		}
+		t.Parallel()
 
 		installMutex.Lock()
 		installOnce.Do(func() {

@@ -13,6 +13,7 @@ func TestIntegration_CrashOnEmptyInput(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	t.Parallel()
 
 	BuildFuzzTarget(t, "trigger_asan_on_empty_input")
 
