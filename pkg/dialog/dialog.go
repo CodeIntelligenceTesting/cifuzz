@@ -24,6 +24,9 @@ func Select(message string, items map[string]string, inReader io.Reader) (string
 		Stdin: io.NopCloser(inReader),
 	}
 	_, result, err := prompt.Run()
+	if err == promptui.ErrInterrupt {
+		return "", cmdutils.WrapSilentError(errors.WithStack(err))
+	}
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
