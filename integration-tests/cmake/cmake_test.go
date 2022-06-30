@@ -180,21 +180,12 @@ func followStepsPrintedByInitCommand(t *testing.T, initOutput io.Reader, cmakeLi
 	// `cifuzz init` tells us to add
 
 	// First, parse the `cifuzz init` output to find the lines we should
-	// add to CMakeLists.txt
+	// add to CMakeLists.txt - the ones that are indented.
 	scanner := bufio.NewScanner(initOutput)
 	var linesToAdd []string
-	var isLineToAdd bool
 	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), "Use 'cifuzz create' to create your first fuzz test") {
-			break
-		}
-		if strings.HasPrefix(scanner.Text(), "Enable fuzz testing in your CMake project by adding the following lines") {
-			isLineToAdd = true
-			continue
-		}
-		if isLineToAdd {
-			line := strings.TrimSpace(scanner.Text()) + "\n"
-			linesToAdd = append(linesToAdd, line)
+		if strings.HasPrefix(scanner.Text(), "    ") {
+			linesToAdd = append(linesToAdd, strings.TrimSpace(scanner.Text()))
 		}
 	}
 	if len(linesToAdd) == 0 {
@@ -240,19 +231,14 @@ func followStepsPrintedByCreateCommand(t *testing.T, initOutput io.Reader, cmake
 	// Parse the `cifuzz create` output to find the lines we should add
 	// to CMakeLists.txt
 	scanner := bufio.NewScanner(initOutput)
-	var toAdd []byte
-	var isLineToAdd bool
+	var cMakeListsSuffix []byte
 	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), "Create a CMake target for the fuzz test as follows ") {
-			isLineToAdd = true
-			continue
-		}
-		if isLineToAdd {
+		if strings.HasPrefix(scanner.Text(), "    ") {
 			line := strings.TrimSpace(scanner.Text()) + "\n"
-			toAdd = append(toAdd, []byte(line)...)
+			cMakeListsSuffix = append(cMakeListsSuffix, []byte(line)...)
 		}
 	}
-	if len(toAdd) == 0 {
+	if len(cMakeListsSuffix) == 0 {
 		require.FailNow(t, "`cictl create` didn't print the lines which should be added to CMakeLists.txt")
 	}
 
@@ -260,7 +246,7 @@ func followStepsPrintedByCreateCommand(t *testing.T, initOutput io.Reader, cmake
 	f, err := os.OpenFile(cmakeLists, os.O_APPEND|os.O_WRONLY, 0700)
 	require.NoError(t, err)
 	defer f.Close()
-	_, err = f.Write(toAdd)
+	_, err = f.Write(cMakeListsSuffix)
 	require.NoError(t, err)
 }
 
