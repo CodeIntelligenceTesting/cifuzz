@@ -117,7 +117,7 @@ func New(config *config.Config) *cobra.Command {
 func (c *runCmd) run() error {
 	var err error
 
-	err = c.buildFuzzTest()
+	fuzzTestExecutable, err := c.buildFuzzTest()
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (c *runCmd) run() error {
 		return err
 	}
 
-	err = c.runFuzzTest()
+	err = c.runFuzzTest(fuzzTestExecutable)
 	if err != nil {
 		return err
 	}
@@ -143,10 +143,10 @@ func (c *runCmd) run() error {
 	return nil
 }
 
-func (c *runCmd) buildFuzzTest() error {
+func (c *runCmd) buildFuzzTest() (string, error) {
 	conf, err := config.ReadProjectConfig(c.config.ProjectDir)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if conf.BuildSystem == config.BuildSystemCMake {
@@ -154,11 +154,11 @@ func (c *runCmd) buildFuzzTest() error {
 	} else if conf.BuildSystem == config.BuildSystemUnknown {
 		return c.buildWithUnknownBuildSystem()
 	} else {
-		return errors.Errorf("Unsupported build system \"%s\"", conf.BuildSystem)
+		return "", errors.Errorf("Unsupported build system \"%s\"", conf.BuildSystem)
 	}
 }
 
-func (c *runCmd) buildWithCMake() error {
+func (c *runCmd) buildWithCMake() (string, error) {
 	// TODO: Make these configurable
 	engine := "libfuzzer"
 	sanitizers := []string{"address"}
@@ -178,40 +178,40 @@ func (c *runCmd) buildWithCMake() error {
 		Stderr:     c.ErrOrStderr(),
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 	c.buildDir = builder.BuildDir
 
 	err = builder.Configure()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = builder.Build(c.opts.fuzzTest)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
 }
 
-func (c *runCmd) buildWithUnknownBuildSystem() error {
+func (c *runCmd) buildWithUnknownBuildSystem() (string, error) {
 	// Prepare the environment
 	env, err := build.CommonBuildEnv()
 	if err != nil {
-		return err
+		return "", err
 	}
 	// Set CFLAGS, CXXFLAGS, LDFLAGS, and FUZZ_TEST_LDFLAGS which must
 	// be passed to the build commands by the build system.
 	env, err = setBuildFlagsEnvVars(env)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// To build with an unknown build system, a build command must be
 	// provided
 	if c.opts.buildCommand == "" {
-		return cmdutils.WrapIncorrectUsageError(errors.Errorf("Flag \"build-command\" must be set to build" +
+		return "", cmdutils.WrapIncorrectUsageError(errors.Errorf("Flag \"build-command\" must be set to build" +
 			" with an unknown build system"))
 	}
 
@@ -225,17 +225,13 @@ func (c *runCmd) buildWithUnknownBuildSystem() error {
 	log.Debugf("Command: %s", cmd.String())
 	err = cmd.Run()
 	if err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
-	return nil
+	return c.findFuzzTestExecutable(c.opts.fuzzTest)
 }
 
-func (c *runCmd) runFuzzTest() error {
+func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
-	fuzzTestExecutable, err := c.findFuzzTestExecutable(c.opts.fuzzTest)
-	if err != nil {
-		return err
-	}
 	log.Debugf("Executable: %s", fuzzTestExecutable)
 
 	if len(c.opts.seedsDirs) == 0 {
@@ -293,7 +289,7 @@ func (c *runCmd) runFuzzTest() error {
 		return runner.Run(routinesCtx)
 	})
 
-	err = routines.Wait()
+	err := routines.Wait()
 	// We use a separate variable to pass signal errors, because when
 	// a signal was received, the first goroutine terminates the second
 	// one, resulting in a race of which returns an error first. In that

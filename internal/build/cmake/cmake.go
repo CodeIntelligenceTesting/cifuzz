@@ -3,6 +3,7 @@ package cmake
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 // The CMake configuration (also called "build type") to use for fuzzing runs.
@@ -129,4 +131,31 @@ func (b *Builder) Build(fuzzTest string) error {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+// FindFuzzTestExecutable uses the info files emitted by the CMake integration
+// in the configure step to look up the absolute path of a fuzz test's
+// executable.
+func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
+	// The path to the info file for single-configuration CMake generators (e.g.
+	// Makefiles).
+	infoFileCandidate := filepath.Join(b.BuildDir, ".cifuzz", "fuzz_tests", fuzzTest)
+	exists, err := fileutil.Exists(infoFileCandidate)
+	if err != nil || !exists {
+		// The path to the info file for multi-configuration CMake generators
+		// (e.g. MSBuild).
+		infoFileCandidate = filepath.Join(b.BuildDir, cmakeBuildConfiguration, ".cifuzz", "fuzz_tests", fuzzTest)
+		exists, err = fileutil.Exists(infoFileCandidate)
+	}
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	if !exists {
+		return "", errors.Errorf("failed to find executable for fuzz test %q", fuzzTest)
+	}
+	fuzzTestExecutable, err := ioutil.ReadFile(infoFileCandidate)
+	if err != nil {
+		return "", err
+	}
+	return string(fuzzTestExecutable), nil
 }
