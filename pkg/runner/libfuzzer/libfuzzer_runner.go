@@ -265,6 +265,12 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 			}
 
 			if !IsExpectedExitError(err) {
+				// Print the stderr output of the fuzzer up to the point where
+				// it has been successfully initialized to provide users with
+				// the context of this abnormal exit even without verbose mode.
+				if !r.Verbose {
+					_, _ = log.NewPTermWriter().Write(reporter.StartupOutput())
+				}
 				return errors.WithMessagef(err, "Unexpected exit code %d", exitErr.ExitCode())
 			}
 
