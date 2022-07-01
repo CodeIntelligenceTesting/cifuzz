@@ -92,7 +92,7 @@ func PrettifyPath(path string) string {
 	if err != nil {
 		return path
 	}
-	if strings.HasPrefix(rel, "..") {
+	if strings.HasPrefix(rel, filepath.FromSlash("../")) {
 		return path
 	}
 	return rel
