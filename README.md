@@ -25,7 +25,7 @@ look at our [Glossary](docs/Glossary.md).
 * [git](https://git-scm.com/)
 * [make](https://www.gnu.org/software/make/)
 * [cmake](https://cmake.org/)
-* [clang / llvm](https://clang.llvm.org/get_started.html)
+* [LLVM >= 11](https://clang.llvm.org/get_started.html)
 * [go >= 1.18](https://go.dev/doc/install)
 * [libcap](https://man7.org/linux/man-pages/man3/libcap.3.html)
 
