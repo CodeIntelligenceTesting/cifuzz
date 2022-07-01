@@ -308,8 +308,20 @@ func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
 	}
 	var executable string
 	err := filepath.Walk(c.buildDir, func(path string, info os.FileInfo, err error) error {
-		if info.Name() == fuzzTest {
-			executable = path
+		if info.IsDir() {
+			return nil
+		}
+		if runtime.GOOS == "windows" {
+			if info.Name() == fuzzTest+".exe" {
+				executable = path
+			}
+		} else {
+			// As a heuristic, verify that the executable candidate has some
+			// executable bit set - it may not be sufficient to actually execute
+			// it as the current user.
+			if info.Name() == fuzzTest && (info.Mode()&0111 != 0) {
+				executable = path
+			}
 		}
 		return nil
 	})
