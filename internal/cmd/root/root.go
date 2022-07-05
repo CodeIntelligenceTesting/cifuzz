@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	bundleCmd "code-intelligence.com/cifuzz/internal/cmd/bundle"
 	createCmd "code-intelligence.com/cifuzz/internal/cmd/create"
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
 	reloadCmd "code-intelligence.com/cifuzz/internal/cmd/reload"
@@ -76,6 +77,7 @@ func New() *cobra.Command {
 	rootCmd.AddCommand(createCmd.New(cmdConfig))
 	rootCmd.AddCommand(runCmd.New(cmdConfig))
 	rootCmd.AddCommand(reloadCmd.New())
+	rootCmd.AddCommand(bundleCmd.New(cmdConfig))
 
 	return rootCmd
 }

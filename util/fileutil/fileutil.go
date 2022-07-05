@@ -81,3 +81,12 @@ func PrettifyPath(path string) string {
 	}
 	return rel
 }
+
+// IsUnder returns true if and only if path lies under or is root.
+func IsUnder(path string, root string) (bool, error) {
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+	return rel != ".." && !strings.HasPrefix(rel, filepath.FromSlash("../")), nil
+}

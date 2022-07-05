@@ -1,6 +1,9 @@
 package cmake
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -205,4 +208,76 @@ func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
 		return "", errors.WithStack(err)
 	}
 	return string(fuzzTestExecutable), nil
+}
+
+func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
+	cmd := exec.Command(
+		"cmake",
+		"--install",
+		b.BuildDir,
+		"--component", "cifuzz_internal_deps_"+fuzzTest,
+	)
+	stdout, err := cmd.Output()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	var resolvedDeps []string
+	var unresolvedDeps []string
+	var conflictingDeps []string
+	scanner := bufio.NewScanner(bytes.NewReader(stdout))
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Typical lines in the output of the install command look like this:
+		//
+		// <arbitrary CMake output>
+		// -- CIFUZZ RESOLVED /usr/lib/system.so
+		// -- CIFUZZ RESOLVED /home/user/git/project/build/lib/bar.so
+		// -- CIFUZZ UNRESOLVED not_found.so
+
+		// Skip over CMake output.
+		if !strings.HasPrefix(line, "-- CIFUZZ ") {
+			continue
+		}
+		statusAndDep := strings.TrimPrefix(line, "-- CIFUZZ ")
+		endOfStatus := strings.Index(statusAndDep, " ")
+		if endOfStatus == -1 {
+			return nil, errors.Errorf("invalid runtime dep line: %s", line)
+		}
+		status := statusAndDep[:endOfStatus]
+		dep := statusAndDep[endOfStatus+1:]
+
+		switch status {
+		case "UNRESOLVED":
+			unresolvedDeps = append(unresolvedDeps, dep)
+		case "CONFLICTING":
+			conflictingDeps = append(conflictingDeps, dep)
+		case "RESOLVED":
+			resolvedDeps = append(resolvedDeps, dep)
+		default:
+			return nil, errors.Errorf("invalid status '%s' in runtime dep line: %s", status, line)
+		}
+	}
+
+	if len(unresolvedDeps) > 0 || len(conflictingDeps) > 0 {
+		var warning strings.Builder
+		if len(unresolvedDeps) > 0 {
+			warning.WriteString(
+				fmt.Sprintf("The following shared library dependencies of %s could not be resolved:\n", fuzzTest))
+			for _, unresolvedDep := range unresolvedDeps {
+				warning.WriteString(fmt.Sprintf("  %s\n", unresolvedDep))
+			}
+		}
+		if len(conflictingDeps) > 0 {
+			warning.WriteString(
+				fmt.Sprintf("The following shared library dependencies of %s could not be resolved unambiguously:\n", fuzzTest))
+			for _, conflictingDep := range conflictingDeps {
+				warning.WriteString(fmt.Sprintf("  %s\n", conflictingDep))
+			}
+		}
+		warning.WriteString("The archive may be incomplete.\n")
+		log.Warn(warning.String())
+	}
+
+	return resolvedDeps, nil
 }

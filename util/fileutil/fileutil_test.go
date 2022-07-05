@@ -28,3 +28,21 @@ func TestPrettifyPath(t *testing.T) {
 	assert.Equal(t, filepath.Dir(cwd), fileutil.PrettifyPath(filepath.Dir(cwd)))
 	assert.Equal(t, filepath.Join("..some", "dir"), fileutil.PrettifyPath(filepath.Join(cwd, "..some", "dir")))
 }
+
+func TestIsUnder(t *testing.T) {
+	isUnder, err := fileutil.IsUnder(filepath.Join("dir1", "dir2", "file"), filepath.Join("dir1", "dir2"))
+	assert.NoError(t, err)
+	assert.True(t, isUnder)
+
+	isUnder, err = fileutil.IsUnder(filepath.Join("dir1", "dir2"), filepath.Join("dir1", "dir2"))
+	assert.NoError(t, err)
+	assert.True(t, isUnder)
+
+	isUnder, err = fileutil.IsUnder(filepath.Join("dir1"), filepath.Join("dir1", "dir2"))
+	assert.NoError(t, err)
+	assert.False(t, isUnder)
+
+	isUnder, err = fileutil.IsUnder(filepath.Join("."), filepath.Join("dir1", "dir2"))
+	assert.NoError(t, err)
+	assert.False(t, isUnder)
+}
