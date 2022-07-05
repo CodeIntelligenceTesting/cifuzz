@@ -35,7 +35,7 @@ func TestIntegration_CrashingCorpusEntry(t *testing.T) {
 }
 
 func makeTemporarySeedCorpusDir(t *testing.T) string {
-	testDataDir := GetTestDataDir(t)
+	testDataDir := TestDataDir(t)
 	crashingInput := filepath.Join(testDataDir, "corpus", "crashing_input")
 
 	tmpCorpusDir, err := os.MkdirTemp(baseTempDir, "custom_seed_corpus-")

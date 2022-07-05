@@ -53,8 +53,8 @@ type RunnerTest struct {
 
 func NewLibfuzzerTest(t *testing.T, fuzzTarget string, disableMinijail bool) *RunnerTest {
 	return &RunnerTest{
-		ExecutionDir: GetFuzzTargetBuildDir(t),
-		FuzzTarget:   GetFuzzTargetPath(t, fuzzTarget),
+		ExecutionDir: BuildDir(t),
+		FuzzTarget:   FuzzTestExecutablePath(t, testDataDir, fuzzTarget),
 		Engine:       config.LIBFUZZER,
 		// Use a deterministic random seed
 		EngineArgs: []string{
@@ -66,7 +66,6 @@ func NewLibfuzzerTest(t *testing.T, fuzzTarget string, disableMinijail bool) *Ru
 		RunsLimit: 3000,
 		LogOutput: bytes.NewBuffer([]byte{}),
 	}
-
 }
 
 // Start selects the needed runner and execute it with the given options

@@ -2,6 +2,7 @@ package integration_tests
 
 import (
 	"runtime"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +10,10 @@ import (
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/tools/install"
 )
+
+var installer *install.Installer
+var installOnce sync.Once
+var installMutex sync.Mutex
 
 func TestWithAndWithoutMinijail(t *testing.T, f func(t *testing.T, disableMinijail bool)) {
 	t.Run("WithoutMinijail", func(t *testing.T) {
@@ -20,18 +25,17 @@ func TestWithAndWithoutMinijail(t *testing.T, f func(t *testing.T, disableMinija
 			t.Skip()
 		}
 
-		installer, err := install.NewInstaller(nil)
-		require.NoError(t, err)
-
-		err = installer.InstallMinijail()
-		require.NoError(t, err)
-		err = installer.InstallProcessWrapper()
-		require.NoError(t, err)
+		installMutex.Lock()
+		installOnce.Do(func() {
+			err := installer.InstallMinijail()
+			require.NoError(t, err)
+			err = installer.InstallProcessWrapper()
+			require.NoError(t, err)
+		})
+		installMutex.Unlock()
 
 		runfiles.Finder = runfiles.RunfilesFinderImpl{InstallDir: installer.InstallDir}
 
 		f(t, false)
-
-		installer.Cleanup()
 	})
 }

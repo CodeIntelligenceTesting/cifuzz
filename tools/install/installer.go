@@ -16,7 +16,7 @@ import (
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
-type installer struct {
+type Installer struct {
 	InstallDir string
 
 	projectDir string
@@ -26,7 +26,7 @@ type Options struct {
 	InstallDir string
 }
 
-func NewInstaller(opts *Options) (*installer, error) {
+func NewInstaller(opts *Options) (*Installer, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -65,7 +65,7 @@ func NewInstaller(opts *Options) (*installer, error) {
 	}
 	log.Printf("Installing cifuzz to %v", opts.InstallDir)
 
-	i := &installer{
+	i := &Installer{
 		projectDir: projectDir,
 		InstallDir: opts.InstallDir,
 	}
@@ -90,19 +90,19 @@ func NewInstaller(opts *Options) (*installer, error) {
 	return i, nil
 }
 
-func (i *installer) binDir() string {
+func (i *Installer) binDir() string {
 	return filepath.Join(i.InstallDir, "bin")
 }
 
-func (i *installer) libDir() string {
+func (i *Installer) libDir() string {
 	return filepath.Join(i.InstallDir, "lib")
 }
 
-func (i *installer) shareDir() string {
+func (i *Installer) shareDir() string {
 	return filepath.Join(i.InstallDir, "share", "cifuzz")
 }
 
-func (i *installer) CIFuzzExecutablePath() string {
+func (i *Installer) CIFuzzExecutablePath() string {
 	path := filepath.Join(i.binDir(), "cifuzz")
 	if runtime.GOOS == "windows" {
 		path += ".exe"
@@ -110,11 +110,11 @@ func (i *installer) CIFuzzExecutablePath() string {
 	return path
 }
 
-func (i *installer) Cleanup() {
+func (i *Installer) Cleanup() {
 	fileutil.Cleanup(i.InstallDir)
 }
 
-func (i *installer) InstallCIFuzzAndDeps() error {
+func (i *Installer) InstallCIFuzzAndDeps() error {
 	var err error
 	if runtime.GOOS == "linux" {
 		err = i.InstallMinijail()
@@ -141,7 +141,7 @@ func (i *installer) InstallCIFuzzAndDeps() error {
 	return nil
 }
 
-func (i *installer) InstallMinijail() error {
+func (i *Installer) InstallMinijail() error {
 	var err error
 
 	// Build minijail
@@ -178,7 +178,7 @@ func (i *installer) InstallMinijail() error {
 	return nil
 }
 
-func (i *installer) InstallProcessWrapper() error {
+func (i *Installer) InstallProcessWrapper() error {
 	compiler := os.Getenv("CC")
 	if compiler == "" {
 		compiler = "clang"
@@ -196,7 +196,7 @@ func (i *installer) InstallProcessWrapper() error {
 	return nil
 }
 
-func (i *installer) InstallCIFuzz() error {
+func (i *Installer) InstallCIFuzz() error {
 	// Build and install cifuzz
 	cmd := exec.Command("go", "build", "-o", i.CIFuzzExecutablePath(), "cmd/cifuzz/main.go")
 	cmd.Dir = i.projectDir
@@ -210,7 +210,7 @@ func (i *installer) InstallCIFuzz() error {
 	return nil
 }
 
-func (i *installer) InstallCMakeIntegration() error {
+func (i *Installer) InstallCMakeIntegration() error {
 	if runtime.GOOS != "windows" && os.Getuid() == 0 {
 		// On non-Windows systems, CMake doesn't have the concept of a system
 		// package registry. Instead, install the package into the well-known
@@ -231,7 +231,7 @@ func (i *installer) InstallCMakeIntegration() error {
 	return registerCMakePackage(dirForRegistry)
 }
 
-func (i *installer) PrintPathInstructions() {
+func (i *Installer) PrintPathInstructions() {
 	if runtime.GOOS == "windows" {
 		// TODO: On Windows, users generally don't expect having to fiddle with their PATH. We should update it for
 		//       them, but that requires asking for admin access.
@@ -274,7 +274,7 @@ func findProjectDir() (string, error) {
 // path that should be registered with the CMake package registry, if needed on
 // the platform.
 // Directories are created as needed.
-func (i *installer) copyCMakeIntegration(destDir string) (string, error) {
+func (i *Installer) copyCMakeIntegration(destDir string) (string, error) {
 	cmakeSrc := filepath.Join(i.projectDir, "tools", "cmake", "cifuzz")
 	opts := copy.Options{
 		// Skip copying the replayer, which is a symlink on UNIX but a file

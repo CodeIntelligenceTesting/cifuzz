@@ -1,32 +1,41 @@
 package integration_tests
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 
+	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 )
 
-func GetTestDataDir(t *testing.T) string {
-	_, filename, _, ok := runtime.Caller(0)
-	require.True(t, ok, "unable to get filename from runtime")
-	return filepath.Join(filepath.Dir(filename), "testdata")
+var baseTempDir string
+var testDataDir string
+var createTestDataDirOnce sync.Once
+
+func TestDataDir(t *testing.T) string {
+	createTestDataDirOnce.Do(func() {
+		var err error
+		_, filename, _, ok := runtime.Caller(0)
+		require.True(t, ok, "unable to get filename from runtime")
+		srcDir := filepath.Join(filepath.Dir(filename), "testdata")
+		testDataDir, err = os.MkdirTemp(baseTempDir, "testdata-")
+		require.NoError(t, err)
+		err = copy.Copy(srcDir, testDataDir)
+		require.NoError(t, err)
+	})
+	return testDataDir
 }
 
-func GetFuzzTargetBuildDir(t *testing.T) string {
-	testDataDir := GetTestDataDir(t)
-	fuzzTargetBuildPath := filepath.Join(testDataDir, "build")
-	require.DirExists(t, fuzzTargetBuildPath)
-	return fuzzTargetBuildPath
+func BuildDir(t *testing.T) string {
+	return filepath.Join(TestDataDir(t), "build")
 }
 
-func GetFuzzTargetPath(t *testing.T, fuzzTarget string) string {
+func FuzzTestExecutablePath(t *testing.T, testDataDir, fuzzTest string) string {
 	if runtime.GOOS == "windows" {
-		fuzzTarget += ".exe"
+		fuzzTest += ".exe"
 	}
-	fuzzTargetPath := filepath.Join(GetFuzzTargetBuildDir(t), fuzzTarget)
-	require.FileExists(t, fuzzTargetPath)
-
-	return fuzzTargetPath
+	return filepath.Join(BuildDir(t), fuzzTest)
 }
