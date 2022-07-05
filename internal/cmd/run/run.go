@@ -151,17 +151,12 @@ func (c *runCmd) run() error {
 }
 
 func (c *runCmd) buildFuzzTest() (string, error) {
-	conf, err := config.ReadProjectConfig(c.config.ProjectDir)
-	if err != nil {
-		return "", err
-	}
-
-	if conf.BuildSystem == config.BuildSystemCMake {
+	if c.config.BuildSystem == config.BuildSystemCMake {
 		return c.buildWithCMake()
-	} else if conf.BuildSystem == config.BuildSystemUnknown {
+	} else if c.config.BuildSystem == config.BuildSystemUnknown {
 		return c.buildWithUnknownBuildSystem()
 	} else {
-		return "", errors.Errorf("Unsupported build system \"%s\"", conf.BuildSystem)
+		return "", errors.Errorf("Unsupported build system \"%s\"", c.config.BuildSystem)
 	}
 }
 
