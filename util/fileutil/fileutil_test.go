@@ -24,6 +24,7 @@ func TestPrettifyPath(t *testing.T) {
 
 	assert.Equal(t, filesystemRoot+filepath.Join("not", "cwd"), fileutil.PrettifyPath(filesystemRoot+filepath.Join("not", "cwd")))
 	assert.Equal(t, filepath.Join("some", "dir"), fileutil.PrettifyPath(filepath.Join(cwd, "some", "dir")))
-	assert.Equal(t, ".", fileutil.PrettifyPath(cwd))
+	assert.Equal(t, cwd, fileutil.PrettifyPath(cwd))
+	assert.Equal(t, filepath.Dir(cwd), fileutil.PrettifyPath(filepath.Dir(cwd)))
 	assert.Equal(t, filepath.Join("..some", "dir"), fileutil.PrettifyPath(filepath.Join(cwd, "..some", "dir")))
 }
