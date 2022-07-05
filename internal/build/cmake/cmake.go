@@ -148,14 +148,14 @@ func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
 		exists, err = fileutil.Exists(infoFileCandidate)
 	}
 	if err != nil {
-		return "", errors.WithStack(err)
+		return "", err
 	}
 	if !exists {
 		return "", errors.Errorf("failed to find executable for fuzz test %q", fuzzTest)
 	}
 	fuzzTestExecutable, err := ioutil.ReadFile(infoFileCandidate)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	return string(fuzzTestExecutable), nil
 }
