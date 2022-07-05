@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/internal/build"
+	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
@@ -20,6 +21,44 @@ import (
 // See enable_fuzz_testing in tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake for the rationale for using this
 // build type.
 const cmakeBuildConfiguration = "RelWithDebInfo"
+
+// BuildWithCMake builds the fuzz test fuzzTest with CMake and returns a reference to the cmake.Builder used to perform
+// the build, which can be used for follow-up actions (e.g. locating fuzz test executables).
+func BuildWithCMake(conf *config.Config, outWriter, errWriter io.Writer, fuzzTest string) (*Builder, error) {
+	// TODO: Make these configurable
+	engine := "libfuzzer"
+	sanitizers := []string{"address"}
+	// UBSan is not supported by MSVC
+	// TODO: Not needed anymore when sanitizers are configurable,
+	//       then we do want to fail if the user explicitly asked for
+	//       UBSan.
+	if runtime.GOOS != "windows" {
+		sanitizers = append(sanitizers, "undefined")
+	}
+
+	builder, err := NewBuilder(&BuilderOptions{
+		ProjectDir: conf.ProjectDir,
+		Engine:     engine,
+		Sanitizers: sanitizers,
+		Stdout:     outWriter,
+		Stderr:     errWriter,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = builder.Configure()
+	if err != nil {
+		return nil, err
+	}
+
+	err = builder.Build(fuzzTest)
+	if err != nil {
+		return nil, err
+	}
+
+	return builder, nil
+}
 
 type BuilderOptions struct {
 	ProjectDir string

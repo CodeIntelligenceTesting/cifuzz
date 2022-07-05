@@ -152,49 +152,16 @@ func (c *runCmd) run() error {
 
 func (c *runCmd) buildFuzzTest() (string, error) {
 	if c.config.BuildSystem == config.BuildSystemCMake {
-		return c.buildWithCMake()
+		builder, err := cmake.BuildWithCMake(c.config, c.OutOrStdout(), c.ErrOrStderr(), c.opts.fuzzTest)
+		if err != nil {
+			return "", err
+		}
+		return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
 	} else if c.config.BuildSystem == config.BuildSystemUnknown {
 		return c.buildWithUnknownBuildSystem()
 	} else {
 		return "", errors.Errorf("Unsupported build system \"%s\"", c.config.BuildSystem)
 	}
-}
-
-func (c *runCmd) buildWithCMake() (string, error) {
-	// TODO: Make these configurable
-	engine := "libfuzzer"
-	sanitizers := []string{"address"}
-	// UBSan is not supported by MSVC
-	// TODO: Not needed anymore when sanitizers are configurable,
-	//       then we do want to fail if the user explicitly asked for
-	//       UBSan.
-	if runtime.GOOS != "windows" {
-		sanitizers = append(sanitizers, "undefined")
-	}
-
-	builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
-		ProjectDir: c.config.ProjectDir,
-		Engine:     engine,
-		Sanitizers: sanitizers,
-		Stdout:     c.OutOrStdout(),
-		Stderr:     c.ErrOrStderr(),
-	})
-	if err != nil {
-		return "", err
-	}
-	c.buildDir = builder.BuildDir
-
-	err = builder.Configure()
-	if err != nil {
-		return "", err
-	}
-
-	err = builder.Build(c.opts.fuzzTest)
-	if err != nil {
-		return "", err
-	}
-
-	return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
 }
 
 func (c *runCmd) buildWithUnknownBuildSystem() (string, error) {
