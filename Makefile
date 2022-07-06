@@ -60,7 +60,7 @@ lint: deps/dev
 
 .PHONY: fmt
 fmt:
-	find . -type f -name "*.go" -exec goimports-reviser -project-name $(project) -file-path {} \;
+	find . -type f -name "*.go" -exec goimports-reviser -rm-unused -project-name $(project) -file-path {} \;
 
 .PHONY: fmt/check
 fmt/check:
