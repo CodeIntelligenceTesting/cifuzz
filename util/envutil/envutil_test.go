@@ -6,22 +6,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAddToColonSeparatedList(t *testing.T) {
+func TestAppendToPathList(t *testing.T) {
 	// Check values successfully added
-	require.Equal(t, "foo", AddToColonSeparatedList("", "foo"))
-	require.Equal(t, "foo:bar", AddToColonSeparatedList("foo", "bar"))
-	require.Equal(t, "foo:bar:baz", AddToColonSeparatedList("foo:bar", "baz"))
+	require.Equal(t, "foo", AppendToPathList("", "foo"))
+	require.Equal(t, "foo"+sep+"bar", AppendToPathList("foo", "bar"))
+	require.Equal(t, "foo"+sep+"bar"+sep+"baz", AppendToPathList("foo"+sep+"bar", "baz"))
 	// Check no duplicates added
-	require.Equal(t, "foo", AddToColonSeparatedList("foo", "foo"))
-	require.Equal(t, "foo:bar", AddToColonSeparatedList("foo:bar", "foo"))
-	require.Equal(t, "foo:bar", AddToColonSeparatedList("foo:bar", "bar"))
+	require.Equal(t, "foo", AppendToPathList("foo", "foo"))
+	require.Equal(t, "foo"+sep+"bar", AppendToPathList("foo"+sep+"bar", "foo"))
+	require.Equal(t, "foo"+sep+"bar", AppendToPathList("foo"+sep+"bar", "bar"))
 	// Check no empty values added
-	require.Equal(t, "foo", AddToColonSeparatedList("foo"))
-	require.Equal(t, "foo", AddToColonSeparatedList("foo", ""))
-	require.Equal(t, "foo:bar", AddToColonSeparatedList("foo:bar", ""))
+	require.Equal(t, "foo", AppendToPathList("foo"))
+	require.Equal(t, "foo", AppendToPathList("foo", ""))
+	require.Equal(t, "foo"+sep+"bar", AppendToPathList("foo"+sep+"bar", ""))
 	// Check multiple values added
-	require.Equal(t, "foo:bar", AddToColonSeparatedList("", "foo", "bar"))
-	require.Equal(t, "foo:bar:baz", AddToColonSeparatedList("foo", "bar", "baz"))
+	require.Equal(t, "foo"+sep+"bar", AppendToPathList("", "foo", "bar"))
+	require.Equal(t, "foo"+sep+"bar"+sep+"baz", AppendToPathList("foo", "bar", "baz"))
 }
 
 func TestSetenv(t *testing.T) {

@@ -1,6 +1,7 @@
 package envutil
 
 import (
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -9,16 +10,18 @@ import (
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
-// AddToColonSeparatedList appends a string to another string containing
-// a list of colon-separated strings (like the PATH and LD_LIBRARY_PATH
-// environment variables do). It doesn't add duplicates and removes any
-// empty strings from the list.
-func AddToColonSeparatedList(list string, value ...string) string {
+const sep = string(os.PathListSeparator)
+
+// AppendToPathList appends a string to another string containing a list
+// of paths, separated by os.PathListSeparator (like the PATH and
+// LD_LIBRARY_PATH environment variables). It doesn't add duplicates and
+// removes any empty strings from the list.
+func AppendToPathList(list string, value ...string) string {
 	if len(value) == 0 {
 		return list
 	}
 
-	values := strings.Split(list, ":")
+	values := strings.Split(list, sep)
 
 	for _, newVal := range value {
 		if !sliceutil.Contains(values, newVal) {
@@ -26,7 +29,7 @@ func AddToColonSeparatedList(list string, value ...string) string {
 		}
 	}
 
-	return stringutil.JoinNonEmpty(values, ":")
+	return stringutil.JoinNonEmpty(values, sep)
 }
 
 // Like os.LookupEnv but uses the specified environment instead of the

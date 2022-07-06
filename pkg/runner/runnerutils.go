@@ -189,7 +189,7 @@ func FuzzerEnvironment() ([]string, error) {
 func SetLDLibraryPath(env []string, libraryDirs []string) ([]string, error) {
 	// Add directories from the library dir flags to LD_LIBRARY_PATH
 	var libDirsList string
-	libDirsList = envutil.AddToColonSeparatedList(libDirsList, libraryDirs...)
+	libDirsList = envutil.AppendToPathList(libDirsList, libraryDirs...)
 	return envutil.Setenv(env, "LD_LIBRARY_PATH", libDirsList)
 }
 
