@@ -116,7 +116,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 	const timeout = 2 * time.Minute
 	runCtx, closeRunCtx := context.WithTimeout(context.Background(), timeout)
 	defer closeRunCtx()
-	cmd := executil.CommandContext(runCtx, cifuzz, "run", "parser_fuzz_test", "--engine-arg=-seed=1")
+	cmd := executil.CommandContext(runCtx, cifuzz, "run", "-v", "parser_fuzz_test", "--engine-arg=-seed=1")
 	cmd.Dir = dir
 	stdoutPipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
