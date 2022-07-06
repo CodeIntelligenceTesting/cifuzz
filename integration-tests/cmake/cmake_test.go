@@ -20,12 +20,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"code-intelligence.com/cifuzz/pkg/artifact"
 	"code-intelligence.com/cifuzz/tools/install"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
-func TestIntegration_InitCreateRun(t *testing.T) {
+func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -92,6 +93,42 @@ func TestIntegration_InitCreateRun(t *testing.T) {
 	modifyFuzzTestToCallFunction(t, fuzzTestPath)
 	// run the fuzz test
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer`), false)
+
+	// Bundle the fuzz into an archive.
+	archivePath := filepath.Join(dir, "parser_fuzz_test.tar.gz")
+	cmd = executil.Command(cifuzz, "bundle", "parser_fuzz_test", "-o", archivePath)
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	require.NoError(t, err)
+	require.FileExists(t, archivePath)
+
+	// Extract the archive into a temporary directory.
+	archiveDir, err := ioutil.TempDir("", "cifuzz-fuzzing-archive-*")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(archiveDir)
+	archiveFile, err := os.Open(archivePath)
+	require.NoError(t, err)
+	err = artifact.ExtractArchiveForTestsOnly(archiveFile, archiveDir)
+	require.NoError(t, err)
+
+	// Read the fuzzer path from the YAML.
+	metadataPath := filepath.Join(archiveDir, "cifuzz.yaml")
+	require.FileExists(t, metadataPath)
+	metadataYaml, err := ioutil.ReadFile(metadataPath)
+	require.NoError(t, err)
+	// We use a simple regex here instead of duplicating knowledge of our metadata YAML schema.
+	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*)`)
+	fuzzerPath := filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
+	require.FileExists(t, fuzzerPath)
+
+	// Run the fuzzer on the empty input to verify that it finds all its runtime dependencies.
+	cmd = executil.Command(fuzzerPath, "-runs=0")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	require.NoError(t, err)
 }
 
 func copyTestdataDir(t *testing.T) string {
