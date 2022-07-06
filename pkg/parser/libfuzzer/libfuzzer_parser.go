@@ -119,8 +119,8 @@ func (p *parser) Parse(ctx context.Context, input io.Reader, reportsCh chan *rep
 	return nil
 }
 
-func (p *parser) StartupOutput() []byte {
-	return p.startupOutput.Bytes()
+func (p *parser) StartupOutput() string {
+	return p.startupOutput.String()
 }
 
 func (p *parser) sendReport(ctx context.Context, report *report.Report) error {
