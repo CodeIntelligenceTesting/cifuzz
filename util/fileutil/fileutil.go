@@ -63,6 +63,22 @@ func Cleanup(path string) {
 	}
 }
 
+func Sync(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	syncErr := f.Sync()
+	closeErr := f.Close()
+	if syncErr != nil {
+		return errors.WithStack(syncErr)
+	}
+	if closeErr != nil {
+		return errors.WithStack(closeErr)
+	}
+	return nil
+}
+
 // PrettifyPath prints a possibly shortened path for display purposes.
 // If path is located under the current working directory, the relative path to
 // it is returned, otherwise or in case of an error the path is returned
