@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/report"
-	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer/integration-tests/testutils"
 )
 
 func TestIntegration_UBSANNonRecoverable(t *testing.T) {
@@ -14,14 +13,14 @@ func TestIntegration_UBSANNonRecoverable(t *testing.T) {
 		t.Skip()
 	}
 
-	testutils.BuildFuzzTarget(t, "trigger_ubsan_non_recoverable")
+	BuildFuzzTarget(t, "trigger_ubsan_non_recoverable")
 
-	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := testutils.NewLibfuzzerTest(t, "trigger_ubsan_non_recoverable", disableMinijail)
+	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
+		test := NewLibfuzzerTest(t, "trigger_ubsan_non_recoverable", disableMinijail)
 
 		_, reports := test.Run(t)
 
-		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
+		CheckReports(t, reports, &CheckReportOptions{
 			ErrorType:   report.ErrorType_RUNTIME_ERROR,
 			Details:     "undefined behaviour",
 			SourceFile:  "trigger_ubsan.cpp",

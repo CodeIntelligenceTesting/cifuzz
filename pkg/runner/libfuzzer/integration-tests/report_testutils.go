@@ -1,4 +1,4 @@
-package testutils
+package integration_tests
 
 import (
 	"strings"

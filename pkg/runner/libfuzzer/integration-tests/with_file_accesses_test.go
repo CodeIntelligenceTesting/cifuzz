@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/report"
-	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer/integration-tests/testutils"
 )
 
 func TestIntegration_WithFileAccesses(t *testing.T) {
@@ -12,17 +11,17 @@ func TestIntegration_WithFileAccesses(t *testing.T) {
 		t.Skip()
 	}
 
-	testutils.BuildFuzzTarget(t, "trigger_asan_with_file_accesses")
+	BuildFuzzTarget(t, "trigger_asan_with_file_accesses")
 
-	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
+	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 
-		test := testutils.NewLibfuzzerTest(t, "trigger_asan_with_file_accesses", disableMinijail)
+		test := NewLibfuzzerTest(t, "trigger_asan_with_file_accesses", disableMinijail)
 		// change to the build directory of the fuzz targets to make sure
 		// that the needed example.conf is found
-		test.ExecutionDir = testutils.GetFuzzTargetBuildDir(t)
+		test.ExecutionDir = GetFuzzTargetBuildDir(t)
 		_, reports := test.Run(t)
 
-		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
+		CheckReports(t, reports, &CheckReportOptions{
 			ErrorType:   report.ErrorType_CRASH,
 			SourceFile:  "trigger_asan_with_file_accesses.c",
 			Details:     "heap-buffer-overflow",

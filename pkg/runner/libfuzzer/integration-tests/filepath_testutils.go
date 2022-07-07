@@ -1,4 +1,4 @@
-package testutils
+package integration_tests
 
 import (
 	"path/filepath"
@@ -11,7 +11,7 @@ import (
 func GetTestDataDir(t *testing.T) string {
 	_, filename, _, ok := runtime.Caller(0)
 	require.True(t, ok, "unable to get filename from runtime")
-	return filepath.Join(filepath.Dir(filepath.Dir(filename)), "testdata")
+	return filepath.Join(filepath.Dir(filename), "testdata")
 }
 
 func GetFuzzTargetBuildDir(t *testing.T) string {

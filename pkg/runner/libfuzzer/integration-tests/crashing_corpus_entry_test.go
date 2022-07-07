@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/pkg/report"
-	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer/integration-tests/testutils"
 )
 
 func TestIntegration_CrashingCorpusEntry(t *testing.T) {
@@ -17,16 +16,16 @@ func TestIntegration_CrashingCorpusEntry(t *testing.T) {
 		t.Skip()
 	}
 
-	testutils.BuildFuzzTarget(t, "trigger_asan")
+	BuildFuzzTarget(t, "trigger_asan")
 
-	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := testutils.NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
+	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
+		test := NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
 		test.RunsLimit = 0
 		test.SeedCorpusDir = makeTemporarySeedCorpusDir(t)
 
 		_, reports := test.Run(t)
 
-		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
+		CheckReports(t, reports, &CheckReportOptions{
 			ErrorType:   report.ErrorType_CRASH,
 			SourceFile:  "trigger_asan.c",
 			Details:     "heap-buffer-overflow",
@@ -36,7 +35,7 @@ func TestIntegration_CrashingCorpusEntry(t *testing.T) {
 }
 
 func makeTemporarySeedCorpusDir(t *testing.T) string {
-	testDataDir := testutils.GetTestDataDir(t)
+	testDataDir := GetTestDataDir(t)
 	crashingInput := filepath.Join(testDataDir, "corpus", "crashing_input")
 
 	tmpCorpusDir, err := os.MkdirTemp(baseTempDir, "custom_seed_corpus-")

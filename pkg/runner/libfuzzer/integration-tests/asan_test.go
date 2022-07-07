@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/report"
-	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer/integration-tests/testutils"
 )
 
 func TestIntegration_ASAN(t *testing.T) {
@@ -12,14 +11,14 @@ func TestIntegration_ASAN(t *testing.T) {
 		t.Skip()
 	}
 
-	testutils.BuildFuzzTarget(t, "trigger_asan")
+	BuildFuzzTarget(t, "trigger_asan")
 
-	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := testutils.NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
+	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
+		test := NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
 
 		_, reports := test.Run(t)
 
-		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
+		CheckReports(t, reports, &CheckReportOptions{
 			ErrorType:   report.ErrorType_CRASH,
 			SourceFile:  "trigger_asan.c",
 			Details:     "heap-buffer-overflow",

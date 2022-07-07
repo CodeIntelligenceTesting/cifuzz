@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/report"
-	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer/integration-tests/testutils"
 )
 
 func TestIntegration_InputTimeout(t *testing.T) {
@@ -13,17 +12,17 @@ func TestIntegration_InputTimeout(t *testing.T) {
 		t.Skip()
 	}
 
-	testutils.BuildFuzzTarget(t, "trigger_timeout")
+	BuildFuzzTarget(t, "trigger_timeout")
 
-	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := testutils.NewLibfuzzerTest(t, "trigger_timeout", disableMinijail)
+	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
+		test := NewLibfuzzerTest(t, "trigger_timeout", disableMinijail)
 		// The input timeout should be reported on the first input
 		test.RunsLimit = 1
 		test.EngineArgs = append(test.EngineArgs, "-timeout=1")
 
 		_, reports := test.Run(t)
 
-		options := &testutils.CheckReportOptions{
+		options := &CheckReportOptions{
 			ErrorType:   report.ErrorType_CRASH,
 			Details:     "timeout",
 			NumFindings: 1,
@@ -32,6 +31,6 @@ func TestIntegration_InputTimeout(t *testing.T) {
 			options.SourceFile = "trigger_timeout.cpp"
 		}
 
-		testutils.CheckReports(t, reports, options)
+		CheckReports(t, reports, options)
 	})
 }

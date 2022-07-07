@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
-	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer/integration-tests/testutils"
 )
 
 func TestIntegration_WithEnvs_NoStatsPrinted(t *testing.T) {
@@ -15,10 +13,10 @@ func TestIntegration_WithEnvs_NoStatsPrinted(t *testing.T) {
 		t.Skip()
 	}
 
-	testutils.BuildFuzzTarget(t, "trigger_asan")
+	BuildFuzzTarget(t, "trigger_asan")
 
-	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := testutils.NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
+	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
+		test := NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
 		test.FuzzerEnv = []string{"ASAN_OPTIONS=print_stats=0"}
 		test.Timeout = time.Second
 
@@ -32,8 +30,8 @@ func TestIntegration_WithEnvs_StatsPrinted(t *testing.T) {
 		t.Skip()
 	}
 
-	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := testutils.NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
+	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
+		test := NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
 		test.FuzzerEnv = []string{"ASAN_OPTIONS=print_stats=1:atexit=1"}
 		test.Timeout = time.Second
 
@@ -52,7 +50,7 @@ func TestIntegration_WithEnvs_SpacesInEnvFlag(t *testing.T) {
 	// minijail to fail.
 	// We use an executable which immediately passes to not waste
 	// resources.
-	test := testutils.NewLibfuzzerTest(t, "trigger_asan", true)
+	test := NewLibfuzzerTest(t, "trigger_asan", true)
 	test.FuzzTarget = "true"
 	test.FuzzerEnv = []string{"FOO=bar foo"}
 	test.Timeout = time.Second

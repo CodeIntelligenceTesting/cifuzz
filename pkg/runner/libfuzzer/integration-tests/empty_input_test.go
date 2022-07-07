@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"code-intelligence.com/cifuzz/pkg/report"
-	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer/integration-tests/testutils"
 )
 
 // Regression test: When crashing on an empty input the runner was not reporting a finding
@@ -15,10 +14,10 @@ func TestIntegration_CrashOnEmptyInput(t *testing.T) {
 		t.Skip()
 	}
 
-	testutils.BuildFuzzTarget(t, "trigger_asan_on_empty_input")
+	BuildFuzzTarget(t, "trigger_asan_on_empty_input")
 
-	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := testutils.NewLibfuzzerTest(t, "trigger_asan_on_empty_input", disableMinijail)
+	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
+		test := NewLibfuzzerTest(t, "trigger_asan_on_empty_input", disableMinijail)
 
 		_, reports := test.Run(t)
 
@@ -27,7 +26,7 @@ func TestIntegration_CrashOnEmptyInput(t *testing.T) {
 			errMsg = "access-violation on unknown address"
 		}
 
-		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
+		CheckReports(t, reports, &CheckReportOptions{
 			ErrorType:           report.ErrorType_CRASH,
 			SourceFile:          "trigger_asan_on_empty_input.c",
 			Details:             errMsg,
