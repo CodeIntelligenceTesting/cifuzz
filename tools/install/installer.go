@@ -164,11 +164,24 @@ func (i *installer) InstallMinijail() error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	// fsync the directory to ensure that the directory entry has
+	// reached disk
+	err = fileutil.Sync(i.binDir())
+	if err != nil {
+		return err
+	}
+
 	src = filepath.Join(i.projectDir, "third-party/minijail/libminijailpreload.so")
 	dest = filepath.Join(i.libDir(), "libminijailpreload.so")
 	err = copy.Copy(src, dest, copy.Options{Sync: true})
 	if err != nil {
 		return errors.WithStack(err)
+	}
+	// fsync the directory to ensure that the directory entry has
+	// reached disk
+	err = fileutil.Sync(i.libDir())
+	if err != nil {
+		return err
 	}
 
 	return nil
