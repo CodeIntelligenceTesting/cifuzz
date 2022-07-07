@@ -1,7 +1,6 @@
 package cmake
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -86,11 +85,11 @@ func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 // we either get a helpful error message or the build step will succeed if
 // the user fixed the issue in the meantime.
 func (b *Builder) Configure() error {
-	cacheVariables := map[string]string{
-		"CMAKE_BUILD_TYPE":    cmakeBuildConfiguration,
-		"CIFUZZ_ENGINE":       b.Engine,
-		"CIFUZZ_SANITIZERS":   strings.Join(b.Sanitizers, ";"),
-		"CIFUZZ_TESTING:BOOL": "ON",
+	cacheArgs := []string{
+		"-DCMAKE_BUILD_TYPE=" + cmakeBuildConfiguration,
+		"-DCIFUZZ_ENGINE=" + b.Engine,
+		"-DCIFUZZ_SANITIZERS=" + strings.Join(b.Sanitizers, ";"),
+		"-DCIFUZZ_TESTING:BOOL=ON",
 	}
 	if runtime.GOOS != "windows" {
 		// Use relative paths in RPATH/RUNPATH so that binaries from the
@@ -102,11 +101,7 @@ func (b *Builder) Configure() error {
 		//    CMake 3.21 to copy all DLLs into the directory of the executable
 		//    in a post-build action.
 		// 2. Add all library directories to PATH.
-		cacheVariables["CMAKE_BUILD_RPATH_USE_ORIGIN:BOOL"] = "ON"
-	}
-	var cacheArgs []string
-	for key, value := range cacheVariables {
-		cacheArgs = append(cacheArgs, "-D", fmt.Sprintf("%s=%s", key, value))
+		cacheArgs = append(cacheArgs, "-DCMAKE_BUILD_RPATH_USE_ORIGIN:BOOL=ON")
 	}
 
 	cmd := exec.Command("cmake", append(cacheArgs, b.ProjectDir)...)
