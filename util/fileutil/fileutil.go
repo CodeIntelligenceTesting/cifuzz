@@ -1,8 +1,6 @@
 package fileutil
 
 import (
-	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,20 +61,6 @@ func Cleanup(path string) {
 	if err != nil {
 		log.Warnf("%+v", errors.WithStack(err))
 	}
-}
-
-// CopyFile creates a copy of src at dest in a simple and not very
-// efficient way.
-func CopyFile(src, dest string, perm fs.FileMode) error {
-	bytes, err := ioutil.ReadFile(src)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	err = ioutil.WriteFile(dest, bytes, perm)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
 }
 
 // PrettifyPath prints a possibly shortened path for display purposes.

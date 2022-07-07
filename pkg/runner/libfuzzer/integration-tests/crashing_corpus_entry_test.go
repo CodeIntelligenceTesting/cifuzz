@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer/integration-tests/testutils"
-	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 func TestIntegration_CrashingCorpusEntry(t *testing.T) {
@@ -44,7 +44,7 @@ func makeTemporarySeedCorpusDir(t *testing.T) string {
 	require.NoError(t, err)
 
 	require.NoError(t, err)
-	err = fileutil.CopyFile(crashingInput, filepath.Join(tmpCorpusDir, "crashing_input"), 0644)
+	err = copy.Copy(crashingInput, filepath.Join(tmpCorpusDir, "crashing_input"), copy.Options{Sync: true})
 	require.NoError(t, err)
 
 	entries, err := os.ReadDir(tmpCorpusDir)

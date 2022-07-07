@@ -160,15 +160,15 @@ func (i *installer) InstallMinijail() error {
 	// Install minijail binaries
 	src := filepath.Join(i.projectDir, "third-party/minijail/minijail0")
 	dest := filepath.Join(i.binDir(), "minijail0")
-	err = fileutil.CopyFile(src, dest, 0700)
+	err = copy.Copy(src, dest, copy.Options{Sync: true})
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	src = filepath.Join(i.projectDir, "third-party/minijail/libminijailpreload.so")
 	dest = filepath.Join(i.libDir(), "libminijailpreload.so")
-	err = fileutil.CopyFile(src, dest, 0600)
+	err = copy.Copy(src, dest, copy.Options{Sync: true})
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
