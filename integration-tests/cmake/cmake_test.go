@@ -278,6 +278,8 @@ func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
 	require.NoError(t, err)
 	_, err = f.Write([]byte(strings.Join(lines, "\n")))
 	require.NoError(t, err)
+	err = f.Close()
+	require.NoError(t, err)
 
 	// Add dependency on parser lib to CMakeLists.txt
 	cmakeLists := filepath.Join(filepath.Dir(fuzzTestPath), "CMakeLists.txt")
@@ -285,5 +287,7 @@ func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
 	require.NoError(t, err)
 	defer f.Close()
 	_, err = f.Write([]byte("target_link_libraries(parser_fuzz_test PRIVATE parser)\n"))
+	require.NoError(t, err)
+	err = f.Close()
 	require.NoError(t, err)
 }
