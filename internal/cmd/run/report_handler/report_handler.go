@@ -195,7 +195,7 @@ func (h *ReportHandler) PrintFinalMetrics(numSeeds uint) error {
 			metrics.DescString(" (total: %s)", metrics.NumberString("%d", totalSeeds)),
 	}
 
-	w := tabwriter.NewWriter(log.NewPTermWriter(), 0, 0, 1, ' ', 0)
+	w := tabwriter.NewWriter(log.NewPTermWriter(os.Stderr), 0, 0, 1, ' ', 0)
 	for _, line := range lines {
 		_, err := fmt.Fprintln(w, line)
 		if err != nil {

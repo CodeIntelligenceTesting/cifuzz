@@ -24,7 +24,7 @@ func TestIntegration_Timeout(t *testing.T) {
 		// reached.
 		test.RunsLimit = -1
 
-		_, stderr, _ := test.Run(t)
-		require.Contains(t, stderr, "DONE")
+		output, _ := test.Run(t)
+		require.Contains(t, output, "DONE")
 	})
 }

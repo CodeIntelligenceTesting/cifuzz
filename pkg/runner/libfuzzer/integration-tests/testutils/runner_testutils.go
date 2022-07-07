@@ -49,6 +49,7 @@ type RunnerTest struct {
 	FuzzerEnv       []string
 	DisableMinijail bool
 	RunsLimit       int
+	LogOutput       *bytes.Buffer
 }
 
 func NewLibfuzzerTest(t *testing.T, fuzzTarget string, disableMinijail bool) *RunnerTest {
@@ -64,6 +65,7 @@ func NewLibfuzzerTest(t *testing.T, fuzzTarget string, disableMinijail bool) *Ru
 		// For those tests which don't set a custom runs limit, the
 		// expected errors are found within 3000 runs.
 		RunsLimit: 3000,
+		LogOutput: bytes.NewBuffer([]byte{}),
 	}
 
 }
@@ -95,7 +97,10 @@ func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error 
 		EnvVars:             test.FuzzerEnv,
 		UseMinijail:         !test.DisableMinijail,
 		ReportHandler:       &ChannelPassthrough{ch: reportCh},
-		Verbose:             true,
+		// To ease debugging, we write the output to stderr in addition
+		// to the test.LogOutput buffer
+		LogOutput: io.MultiWriter(test.LogOutput, os.Stderr),
+		Verbose:   true,
 	}
 	defer close(reportCh)
 
@@ -108,36 +113,11 @@ func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error 
 }
 
 // Run makes sure that all the test output gets captured
-func (test *RunnerTest) Run(t *testing.T) (string, string, []*report.Report) {
+func (test *RunnerTest) Run(t *testing.T) (string, []*report.Report) {
 
 	// change working directory to keep a clean state
 	err := os.Chdir(test.ExecutionDir)
 	require.NoError(t, err)
-
-	rStdout, wStdout, err := os.Pipe()
-	require.NoError(t, err)
-	rStderr, wStderr, err := os.Pipe()
-	require.NoError(t, err)
-
-	origStdout := os.Stdout
-	origStderr := os.Stderr
-	os.Stdout = wStdout
-	os.Stderr = wStderr
-
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
-	stdoutClosed := make(chan struct{})
-	stderrClosed := make(chan struct{})
-
-	go func() {
-		_, _ = io.Copy(io.MultiWriter(origStdout, stdout), rStdout)
-		stdoutClosed <- struct{}{}
-	}()
-
-	go func() {
-		_, _ = io.Copy(io.MultiWriter(origStderr, stderr), rStderr)
-		stderrClosed <- struct{}{}
-	}()
 
 	// create buffered channel for receiving the reports
 	reportCh := make(chan *report.Report, 1024)
@@ -151,18 +131,7 @@ func (test *RunnerTest) Run(t *testing.T) (string, string, []*report.Report) {
 		reports = append(reports, report)
 	}
 
-	os.Stdout = origStdout
-	os.Stderr = origStderr
-	wStdout.Close()
-	wStderr.Close()
-
-	rStdout.Close()
-	rStderr.Close()
-
-	<-stdoutClosed
-	<-stderrClosed
-
-	return stdout.String(), stderr.String(), reports
+	return test.LogOutput.String(), reports
 }
 
 func (test *RunnerTest) RequireSeedCorpusNotEmpty(t *testing.T) {

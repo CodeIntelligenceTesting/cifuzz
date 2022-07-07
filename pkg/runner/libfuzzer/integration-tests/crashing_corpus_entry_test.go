@@ -25,7 +25,7 @@ func TestIntegration_CrashingCorpusEntry(t *testing.T) {
 		test.RunsLimit = 0
 		test.SeedCorpusDir = makeTemporarySeedCorpusDir(t)
 
-		_, _, reports := test.Run(t)
+		_, reports := test.Run(t)
 
 		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
 			ErrorType:   report.ErrorType_CRASH,

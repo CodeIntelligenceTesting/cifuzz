@@ -18,7 +18,7 @@ func TestIntegration_OOM(t *testing.T) {
 		test := testutils.NewLibfuzzerTest(t, "trigger_oom", disableMinijail)
 		test.EngineArgs = append(test.EngineArgs, "-malloc_limit_mb=1")
 
-		_, _, reports := test.Run(t)
+		_, reports := test.Run(t)
 
 		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
 			ErrorType:   report.ErrorType_CRASH,

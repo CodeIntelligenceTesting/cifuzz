@@ -16,7 +16,7 @@ func TestIntegration_CasesWrittenToCorpus(t *testing.T) {
 	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := testutils.NewLibfuzzerTest(t, "new_paths_fuzzer", disableMinijail)
 
-		_, _, reports := test.Run(t)
+		_, reports := test.Run(t)
 
 		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
 			NumFindings: 0,

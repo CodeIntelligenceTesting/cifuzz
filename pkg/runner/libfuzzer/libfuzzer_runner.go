@@ -49,6 +49,7 @@ type RunnerOptions struct {
 	UseMinijail         bool
 	Verbose             bool
 	KeepColor           bool
+	LogOutput           io.Writer
 }
 
 func (options *RunnerOptions) ValidateOptions() error {
@@ -68,6 +69,10 @@ func (options *RunnerOptions) ValidateOptions() error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
+	}
+
+	if options.LogOutput == nil {
+		options.LogOutput = os.Stderr
 	}
 
 	return nil
@@ -201,7 +206,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 		// Note that this causes the command's stdout to be printed to
 		// stderr, which is what we want, because we only want reports
 		// printed to stdout.
-		ptermWriter := log.NewPTermWriter()
+		ptermWriter := log.NewPTermWriter(r.LogOutput)
 		r.cmd.Stdout = ptermWriter
 
 		// Write the command's stderr to both a pipe and the pterm

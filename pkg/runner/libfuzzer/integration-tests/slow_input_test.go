@@ -20,7 +20,7 @@ func TestIntegration_SlowInput(t *testing.T) {
 		test.RunsLimit = 1
 		test.EngineArgs = append(test.EngineArgs, "-report_slow_units=1")
 
-		_, _, reports := test.Run(t)
+		_, reports := test.Run(t)
 
 		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
 			ErrorType:   report.ErrorType_WARNING,

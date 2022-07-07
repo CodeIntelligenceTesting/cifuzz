@@ -20,7 +20,7 @@ func TestIntegration_WithFileAccesses(t *testing.T) {
 		// change to the build directory of the fuzz targets to make sure
 		// that the needed example.conf is found
 		test.ExecutionDir = testutils.GetFuzzTargetBuildDir(t)
-		_, _, reports := test.Run(t)
+		_, reports := test.Run(t)
 
 		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
 			ErrorType:   report.ErrorType_CRASH,

@@ -19,7 +19,7 @@ func TestIntegration_UBSANRecoverable(t *testing.T) {
 	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := testutils.NewLibfuzzerTest(t, "trigger_ubsan", disableMinijail)
 
-		_, _, reports := test.Run(t)
+		_, reports := test.Run(t)
 
 		testutils.CheckReports(t, reports, &testutils.CheckReportOptions{
 			ErrorType:           report.ErrorType_RUNTIME_ERROR,

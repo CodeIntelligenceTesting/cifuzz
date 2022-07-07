@@ -21,7 +21,7 @@ func TestIntegration_InputTimeout(t *testing.T) {
 		test.RunsLimit = 1
 		test.EngineArgs = append(test.EngineArgs, "-timeout=1")
 
-		_, _, reports := test.Run(t)
+		_, reports := test.Run(t)
 
 		options := &testutils.CheckReportOptions{
 			ErrorType:   report.ErrorType_CRASH,

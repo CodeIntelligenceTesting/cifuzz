@@ -22,8 +22,8 @@ func TestIntegration_WithEnvs_NoStatsPrinted(t *testing.T) {
 		test.FuzzerEnv = []string{"ASAN_OPTIONS=print_stats=0"}
 		test.Timeout = time.Second
 
-		_, stderr, _ := test.Run(t)
-		require.NotContains(t, stderr, "Stats:")
+		output, _ := test.Run(t)
+		require.NotContains(t, output, "Stats:")
 	})
 }
 
@@ -37,8 +37,8 @@ func TestIntegration_WithEnvs_StatsPrinted(t *testing.T) {
 		test.FuzzerEnv = []string{"ASAN_OPTIONS=print_stats=1:atexit=1"}
 		test.Timeout = time.Second
 
-		_, stderr, _ := test.Run(t)
-		require.Contains(t, stderr, "Stats:")
+		output, _ := test.Run(t)
+		require.Contains(t, output, "Stats:")
 	})
 }
 

@@ -2,7 +2,7 @@ package log
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -18,12 +18,13 @@ var writeLock sync.Mutex
 
 type ptermWriter struct {
 	buf []byte
+	out io.Writer
 }
 
 // NewPTermWriter returns a writer which ensures that the output written
 // by it doesn't mess with the output of an active pterm.SpinnerPrinter.
-func NewPTermWriter() *ptermWriter {
-	return &ptermWriter{}
+func NewPTermWriter(out io.Writer) *ptermWriter {
+	return &ptermWriter{out: out}
 }
 
 func (w *ptermWriter) Write(p []byte) (n int, err error) {
@@ -50,8 +51,8 @@ func (w *ptermWriter) Write(p []byte) (n int, err error) {
 		ActiveUpdatingPrinter.Clear()
 	}
 
-	// Write the buffer to stderr
-	n, err = fmt.Fprint(os.Stderr, string(w.buf))
+	// Write the buffer
+	n, err = fmt.Fprint(w.out, string(w.buf))
 
 	// Clear the buffer now that it was written
 	w.buf = []byte{}

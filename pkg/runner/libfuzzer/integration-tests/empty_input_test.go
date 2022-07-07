@@ -20,7 +20,7 @@ func TestIntegration_CrashOnEmptyInput(t *testing.T) {
 	testutils.TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := testutils.NewLibfuzzerTest(t, "trigger_asan_on_empty_input", disableMinijail)
 
-		_, _, reports := test.Run(t)
+		_, reports := test.Run(t)
 
 		errMsg := "SEGV on unknown address"
 		if runtime.GOOS == "windows" {
