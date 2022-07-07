@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"golang.org/x/exp/maps"
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
@@ -61,8 +63,8 @@ func readline(reader io.Reader, defaultValue string) (string, error) {
 }
 
 var shellCompletionArgs = map[string][]string{
-	"bash": {"-c", "read -e && echo \"${REPLY}\""},
-	"zsh":  {"-i", "-c", "vared -c REPLY"},
+	"bash": {"-c", "read -e && echo \"${REPLY}\" >&3"},
+	"zsh":  {"-i", "-c", "vared -c REPLY && echo \"${REPLY}\" >&3"},
 }
 
 func readFilenameWithShellCompletion(reader io.Reader, defaultValue string) (string, error) {
@@ -81,10 +83,22 @@ func readFilenameWithShellCompletion(reader io.Reader, defaultValue string) (str
 		return readline(reader, defaultValue)
 	}
 
+	// The shell which we start in a subprocess might write output to
+	// stdout (for example when it executes the .bashrc or .zshrc), so
+	// we can't use stdout to pass the user input. Instead, we create a
+	// pipe which we pass as fd 3 which the subprocess then uses to
+	// pass the user input.
+	r, w, err := os.Pipe()
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
 	cmd := exec.Command(shellAbsPath, completionArgs...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = reader
-	out, err := cmd.Output()
+	// Pass the pipe as fd 3
+	cmd.ExtraFiles = []*os.File{w}
+	err = cmd.Run()
 	if _, ok := err.(*exec.ExitError); ok {
 		// Fail silently in this case, which includes the user hitting Ctrl + C.
 		return "", cmdutils.WrapSilentError(errors.WithStack(err))
@@ -92,7 +106,19 @@ func readFilenameWithShellCompletion(reader io.Reader, defaultValue string) (str
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	input := strings.TrimSpace(string(out))
+
+	// Close the write end of the pipe
+	err = w.Close()
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	// Read the user input written to the pipe
+	out, err := ioutil.ReadAll(r)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	input := strings.TrimSpace(pterm.RemoveColorFromString(string(out)))
 
 	if input == "" {
 		return defaultValue, nil
