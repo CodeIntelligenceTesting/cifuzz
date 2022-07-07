@@ -4,16 +4,16 @@ following definitions:
 
 ## Fuzzer aka Fuzzing Engine
 Is a piece of software that generates input to feed into the system 
-under test (SUT) via the fuzz targets. A coverage guided fuzzer will 
+under test (SUT) via the fuzz tests. A coverage guided fuzzer will 
 also collect information about the covered code during the execution 
 and will try to improve coverage by adjusting the inputs accordingly.
 
-## Fuzz Target
+## Fuzz Test 
 Usually a function that takes an array of bytes from the fuzzer and 
 calls functions from the system under test.
 
 ## Fuzzing 
-Fuzzing describes the act of running the fuzzer against a fuzz target.
+Fuzzing describes the act of running the fuzzer against a fuzz test.
 
 ## Corpus
 A set of useful test inputs
@@ -27,7 +27,7 @@ The generated corpus contains interesting inputs found by the fuzzer
 while running the fuzz test.
 
 ## Replayer
-A replayer runs inputs from the seed corpus against the fuzz target 
+A replayer runs inputs from the seed corpus against the fuzz test 
 without generating new input. It can be used for debugging and/or 
 regression testing.
 
