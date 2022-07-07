@@ -43,9 +43,16 @@ type runOptions struct {
 }
 
 func (opts *runOptions) validate() error {
-	// Check if the seed dirs exist and can be accessed
-	for _, d := range opts.seedsDirs {
+	// Check if the seed dirs exist and can be accessed and ensure that
+	// the paths are absolute
+	for i, d := range opts.seedsDirs {
 		_, err := os.Stat(d)
+		if err != nil {
+			err = errors.WithStack(err)
+			log.Error(err, err.Error())
+			return cmdutils.ErrSilent
+		}
+		opts.seedsDirs[i], err = filepath.Abs(d)
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
