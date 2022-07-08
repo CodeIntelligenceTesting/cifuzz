@@ -140,9 +140,9 @@ function(add_fuzz_test name)
   # have to run. IDEs may even refresh the metadata automatically for us.
   # Note: Removed and renamed targets leave behind their entry in this mapping. Since these files are cheap to
   #       regenerate, cifuzz can just delete the entire .cifuzz directory before each build (see enable_fuzz_testing).
-  set(_info_file "${CMAKE_BINARY_DIR}/$<CONFIG>/.cifuzz/fuzz_tests/${name}")
+  set(_executable_info_file "${CMAKE_BINARY_DIR}/$<CONFIG>/.cifuzz/fuzz_tests/${name}/executable")
   file(GENERATE
-       OUTPUT "$<SHELL_PATH:${_info_file}>"
+       OUTPUT "$<SHELL_PATH:${_executable_info_file}>"
        CONTENT $<TARGET_FILE:${name}>)
 
   add_test(NAME "${name}_regression_test" COMMAND "${name}")

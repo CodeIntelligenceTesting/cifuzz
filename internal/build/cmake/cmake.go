@@ -181,27 +181,7 @@ func (b *Builder) Build(fuzzTest string) error {
 // in the configure step to look up the absolute path of a fuzz test's
 // executable.
 func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
-	// The path to the info file for single-configuration CMake generators (e.g.
-	// Makefiles).
-	infoFileCandidate := filepath.Join(b.BuildDir, ".cifuzz", "fuzz_tests", fuzzTest)
-	exists, err := fileutil.Exists(infoFileCandidate)
-	if err != nil || !exists {
-		// The path to the info file for multi-configuration CMake generators
-		// (e.g. MSBuild).
-		infoFileCandidate = filepath.Join(b.BuildDir, cmakeBuildConfiguration, ".cifuzz", "fuzz_tests", fuzzTest)
-		exists, err = fileutil.Exists(infoFileCandidate)
-	}
-	if err != nil {
-		return "", err
-	}
-	if !exists {
-		return "", errors.Errorf("failed to find executable for fuzz test %q", fuzzTest)
-	}
-	fuzzTestExecutable, err := os.ReadFile(infoFileCandidate)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	return string(fuzzTestExecutable), nil
+	return b.readInfoFile(fuzzTest, "executable")
 }
 
 func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
@@ -274,4 +254,29 @@ func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
 	}
 
 	return resolvedDeps, nil
+}
+
+// readInfoFile returns the contents of the CMake-generated info file of type kind for the given fuzz test.
+func (b *Builder) readInfoFile(fuzzTest string, kind string) (string, error) {
+	// The path to the info file for single-configuration CMake generators (e.g.
+	// Makefiles).
+	infoFileCandidate := filepath.Join(b.BuildDir, ".cifuzz", "fuzz_tests", fuzzTest, kind)
+	exists, err := fileutil.Exists(infoFileCandidate)
+	if err != nil || !exists {
+		// The path to the info file for multi-configuration CMake generators
+		// (e.g. MSBuild).
+		infoFileCandidate = filepath.Join(b.BuildDir, cmakeBuildConfiguration, ".cifuzz", "fuzz_tests", fuzzTest, kind)
+		exists, err = fileutil.Exists(infoFileCandidate)
+	}
+	if err != nil {
+		return "", err
+	}
+	if !exists {
+		return "", os.ErrNotExist
+	}
+	content, err := os.ReadFile(infoFileCandidate)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	return string(content), nil
 }

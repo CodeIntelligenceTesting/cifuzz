@@ -172,7 +172,7 @@ func TestIntegration_CifuzzInfoIsCreated(t *testing.T) {
 	}
 
 	// The CMake integration should create a file containing the binary path for every target at a fixed location.
-	parserFuzzTestInfo := filepath.Join(buildDir, configDir, ".cifuzz", "fuzz_tests", "parser_fuzz_test")
+	parserFuzzTestInfo := filepath.Join(buildDir, configDir, ".cifuzz", "fuzz_tests", "parser_fuzz_test", "executable")
 	content, err := os.ReadFile(parserFuzzTestInfo)
 	require.NoError(t, err)
 	// Canonicalize the paths before comparing since they may use different symlinks (e.g., on macOS /private/var and
