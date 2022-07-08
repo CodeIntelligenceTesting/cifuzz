@@ -193,6 +193,15 @@ func TestIntegration_CifuzzInfoIsCreated(t *testing.T) {
 	actualFuzzTestPath, err = filepath.EvalSymlinks(actualFuzzTestPath)
 	require.NoError(t, err)
 	assert.Equal(t, expectedFuzzTestPath, actualFuzzTestPath)
+
+	// The integration should also create a file containing the path of the seed corpus.
+	seedCorpusInfo := filepath.Join(buildDir, configDir, ".cifuzz", "fuzz_tests", "parser_fuzz_test", "seed_corpus")
+	content, err = os.ReadFile(seedCorpusInfo)
+	require.NoError(t, err)
+	seedCorpusPath := string(content)
+	require.DirExists(t, seedCorpusPath)
+	require.FileExists(t, filepath.Join(seedCorpusPath, "asan_crash"))
+	require.FileExists(t, filepath.Join(seedCorpusPath, "ubsan_crash"))
 }
 
 func TestIntegration_RuntimeDepsInfo(t *testing.T) {

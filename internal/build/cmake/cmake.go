@@ -184,6 +184,13 @@ func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
 	return b.readInfoFile(fuzzTest, "executable")
 }
 
+// FindFuzzTestSeedCorpus uses the info files emitted by the CMake integration
+// in the configure step to look up the absolute path of a fuzz test's
+// seed corpus directory.
+func (b *Builder) FindFuzzTestSeedCorpus(fuzzTest string) (string, error) {
+	return b.readInfoFile(fuzzTest, "seed_corpus")
+}
+
 func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
 	cmd := exec.Command(
 		"cmake",

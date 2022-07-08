@@ -134,7 +134,8 @@ function(add_fuzz_test name)
   # them and are not easy to deal with using just POSIX functions).
   target_compile_definitions("${name}" PRIVATE CIFUZZ_SEED_CORPUS="${_source_seed_corpus}")
 
-  # Collect a mapping from CMake target names to binary paths for cifuzz.
+  # Collect a mapping from CMake target names to information required by cifuzz. Currently, this includes the path of
+  # the fuzz test executable as well as of its seed corpus.
   # We don't use add_custom_command here as we want the mapping to exist already after the configure step, not only
   # after the build step - this way, it is comparatively cheap to update the mapping since the actual build tool doesn't
   # have to run. IDEs may even refresh the metadata automatically for us.
@@ -144,6 +145,10 @@ function(add_fuzz_test name)
   file(GENERATE
        OUTPUT "$<SHELL_PATH:${_executable_info_file}>"
        CONTENT $<TARGET_FILE:${name}>)
+  set(_seed_corpus_info_file "${CMAKE_BINARY_DIR}/$<CONFIG>/.cifuzz/fuzz_tests/${name}/seed_corpus")
+  file(GENERATE
+       OUTPUT "$<SHELL_PATH:${_seed_corpus_info_file}>"
+       CONTENT "${_source_seed_corpus}")
 
   add_test(NAME "${name}_regression_test" COMMAND "${name}")
 
