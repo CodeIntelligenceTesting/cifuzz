@@ -51,6 +51,11 @@ func NewInstaller(opts *Options) (*installer, error) {
 			return nil, errors.WithStack(err)
 		}
 	} else {
+		opts.InstallDir, err = filepath.Abs(opts.InstallDir)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
 		exists, err := fileutil.Exists(opts.InstallDir)
 		if err != nil {
 			return nil, errors.WithStack(err)
