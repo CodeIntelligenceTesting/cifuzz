@@ -43,7 +43,7 @@ func makeTemporarySeedCorpusDir(t *testing.T) string {
 	require.NoError(t, err)
 
 	require.NoError(t, err)
-	err = copy.Copy(crashingInput, filepath.Join(tmpCorpusDir, "crashing_input"), copy.Options{Sync: true})
+	err = copy.Copy(crashingInput, filepath.Join(tmpCorpusDir, "crashing_input"))
 	require.NoError(t, err)
 
 	entries, err := os.ReadDir(tmpCorpusDir)
