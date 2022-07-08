@@ -3,8 +3,22 @@ linters:
   enable:
     - staticcheck
     - govet
+    - gocritic
+    - errcheck
 
 linters-settings:
   staticcheck:
     checks:
       - '-SA3000'
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+    enabled-checks:
+      - ioutilDeprecated
+    disabled-checks:
+      - appendCombine
+      - appendAssign
+      - commentFormatting
+      - ifElseChain
+      - singleCaseSwitch
