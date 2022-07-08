@@ -343,4 +343,10 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	require.NoError(t, err)
+
+	// Verify that the seed corpus has been packaged with the fuzzer.
+	seedCorpusPattern := regexp.MustCompile(`\W*seeds: (.*)`)
+	seedCorpusPath := filepath.Join(archiveDir, string(seedCorpusPattern.FindSubmatch(metadataYaml)[1]))
+	require.DirExists(t, seedCorpusPath)
+	require.FileExists(t, filepath.Join(seedCorpusPath, "some_seed"))
 }

@@ -94,7 +94,7 @@ func (c *bundleCmd) run() (err error) {
 	if err != nil {
 		return errors.Wrapf(err, "failed to build %q", c.opts.fuzzTest)
 	}
-	fuzzers, archiveManifest, systemDeps, err := assembleArtifacts(c.opts.fuzzTest, builder)
+	fuzzers, archiveManifest, systemDeps, err := c.assembleArtifacts(c.opts.fuzzTest, builder)
 	if err != nil {
 		return err
 	}
@@ -105,6 +105,7 @@ func (c *bundleCmd) run() (err error) {
 	}
 	defer fileutil.Cleanup(tempDir)
 
+	// Create and add the top-level metadata file.
 	metadata := &artifact.Metadata{
 		Fuzzers: fuzzers,
 		RunEnvironment: &artifact.RunEnvironment{
@@ -124,7 +125,7 @@ func (c *bundleCmd) run() (err error) {
 	}
 	archiveManifest[artifact.MetadataFileName] = metadataYamlPath
 
-	// The fuzzing artifact archive spec requires this directory
+	// The fuzzing artifact archive spec requires this directory even if it is empty.
 	workDirPath := filepath.Join(tempDir, fuzzerWorkDirPath)
 	err = os.Mkdir(workDirPath, 0755)
 	if err != nil {
@@ -151,7 +152,7 @@ func (c *bundleCmd) run() (err error) {
 	return nil
 }
 
-func assembleArtifacts(fuzzTest string, builder *cmake.Builder) (
+func (c *bundleCmd) assembleArtifacts(fuzzTest string, builder *cmake.Builder) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,
@@ -164,17 +165,24 @@ func assembleArtifacts(fuzzTest string, builder *cmake.Builder) (
 	}
 
 	archiveManifest = make(map[string]string)
-	archivePathPrefix := filepath.Join(builder.Engine, strings.Join(builder.Sanitizers, "+"), fuzzTest)
+	// Add all build artifacts under a subdirectory of the fuzz test base path so that these files don't clash with
+	// seeds and dictionaries.
+	buildArtifactsPrefix := filepath.Join(fuzzTestPrefix(fuzzTest, builder), "bin")
 
+	// Add the fuzz test executable.
 	fuzzTestExecutableRelPath, err := filepath.Rel(builder.BuildDir, fuzzTestExecutableAbsPath)
 	if err != nil {
 		err = errors.WithStack(err)
 		return
 	}
-	fuzzTestArchivePath := filepath.Join(archivePathPrefix, fuzzTestExecutableRelPath)
+	fuzzTestArchivePath := filepath.Join(buildArtifactsPrefix, fuzzTestExecutableRelPath)
 	archiveManifest[fuzzTestArchivePath] = fuzzTestExecutableAbsPath
 
+	// Add the runtime dependencies of the fuzz test executable.
 	runtimeDeps, err := builder.GetRuntimeDeps(fuzzTest)
+	if err != nil {
+		return
+	}
 depsLoop:
 	for _, dep := range runtimeDeps {
 		var isUnderBuildDir bool
@@ -189,7 +197,7 @@ depsLoop:
 				err = errors.WithStack(err)
 				return
 			}
-			archiveManifest[filepath.Join(archivePathPrefix, buildDirRelPath)] = dep
+			archiveManifest[filepath.Join(buildArtifactsPrefix, buildDirRelPath)] = dep
 		} else {
 			for _, wellKnownSystemLibrary := range wellKnownSystemLibraries {
 				if wellKnownSystemLibrary.MatchString(dep) {
@@ -198,6 +206,22 @@ depsLoop:
 			}
 			systemDeps = append(systemDeps, dep)
 		}
+	}
+
+	// Add the default seed corpus directory if it exists.
+	seedCorpus, err := builder.FindFuzzTestSeedCorpus(fuzzTest)
+	if err != nil {
+		return
+	}
+	var exists bool
+	exists, err = fileutil.Exists(seedCorpus)
+	if err != nil {
+		return
+	}
+	archiveSeedsDir := ""
+	if exists {
+		archiveSeedsDir = filepath.Join(fuzzTestPrefix(fuzzTest, builder), "seeds")
+		err = artifact.AddDirToManifest(archiveManifest, archiveSeedsDir, seedCorpus)
 	}
 
 	for _, sanitizer := range builder.Sanitizers {
@@ -211,10 +235,17 @@ depsLoop:
 			Engine:    "LIBFUZZER",
 			Sanitizer: strings.ToUpper(sanitizer),
 			BuildDir:  builder.BuildDir,
+			Seeds:     archiveSeedsDir,
 		})
 	}
 
 	return
+}
+
+// fuzzTestPrefix returns the path in the resulting artifact archive under which fuzz test specific files should be
+// added.
+func fuzzTestPrefix(fuzzTest string, builder *cmake.Builder) string {
+	return filepath.Join(builder.Engine, strings.Join(builder.Sanitizers, "+"), fuzzTest)
 }
 
 func getCodeRevision() (codeRevision *artifact.CodeRevision) {

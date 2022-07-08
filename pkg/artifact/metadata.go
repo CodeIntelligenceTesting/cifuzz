@@ -22,6 +22,7 @@ type Fuzzer struct {
 	Engine    string `yaml:"engine"`
 	Sanitizer string `yaml:"sanitizer"`
 	BuildDir  string `yaml:"build_dir"`
+	Seeds     string `yaml:"seeds,omitempty"`
 }
 
 // RunEnvironment specifies the environment in which the fuzzers are to be run.
