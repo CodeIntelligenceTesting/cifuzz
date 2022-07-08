@@ -97,41 +97,10 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	// Run the fuzz test
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer`), false)
 
-	// Bundle the fuzz into an archive.
-	archivePath := filepath.Join(dir, "parser_fuzz_test.tar.gz")
-	cmd = executil.Command(cifuzz, "bundle", "parser_fuzz_test", "-o", archivePath)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	require.NoError(t, err)
-	require.FileExists(t, archivePath)
-
-	// Extract the archive into a temporary directory.
-	archiveDir, err := os.MkdirTemp("", "cifuzz-fuzzing-archive-*")
-	require.NoError(t, err)
+	// Run cifuzz bundle and verify the contents of the archive.
+	archiveDir := createAndExtractArtifactArchive(t, dir, cifuzz)
 	defer fileutil.Cleanup(archiveDir)
-	archiveFile, err := os.Open(archivePath)
-	require.NoError(t, err)
-	err = artifact.ExtractArchiveForTestsOnly(archiveFile, archiveDir)
-	require.NoError(t, err)
-
-	// Read the fuzzer path from the YAML.
-	metadataPath := filepath.Join(archiveDir, "cifuzz.yaml")
-	require.FileExists(t, metadataPath)
-	metadataYaml, err := os.ReadFile(metadataPath)
-	require.NoError(t, err)
-	// We use a simple regex here instead of duplicating knowledge of our metadata YAML schema.
-	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*)`)
-	fuzzerPath := filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
-	require.FileExists(t, fuzzerPath)
-
-	// Run the fuzzer on the empty input to verify that it finds all its runtime dependencies.
-	cmd = executil.Command(fuzzerPath, "-runs=0")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	require.NoError(t, err)
+	runArchivedFuzzer(t, archiveDir)
 }
 
 func copyTestdataDir(t *testing.T) string {
@@ -329,5 +298,49 @@ func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
 	require.NoError(t, err)
 	defer f.Close()
 	_, err = f.WriteString("target_link_libraries(parser_fuzz_test PRIVATE parser)\n")
+	require.NoError(t, err)
+}
+
+func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) string {
+	tempDir, err := os.MkdirTemp("", "cifuzz-archive-*")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(tempDir)
+	archivePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
+
+	// Bundle the fuzz into an archive.
+	cmd := executil.Command(cifuzz, "bundle", "parser_fuzz_test", "-o", archivePath)
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	require.NoError(t, err)
+	require.FileExists(t, archivePath)
+
+	// Extract the archive into a new temporary directory.
+	archiveDir, err := os.MkdirTemp("", "cifuzz-extracted-archive-*")
+	require.NoError(t, err)
+	archiveFile, err := os.Open(archivePath)
+	require.NoError(t, err)
+	err = artifact.ExtractArchiveForTestsOnly(archiveFile, archiveDir)
+	require.NoError(t, err)
+	return archiveDir
+}
+
+func runArchivedFuzzer(t *testing.T, archiveDir string) {
+	// Read the fuzzer path from the YAML.
+	metadataPath := filepath.Join(archiveDir, "cifuzz.yaml")
+	require.FileExists(t, metadataPath)
+	metadataYaml, err := os.ReadFile(metadataPath)
+	require.NoError(t, err)
+	// We use a simple regex here instead of duplicating knowledge of our metadata YAML schema.
+	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*)`)
+	fuzzerPath := filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
+	require.FileExists(t, fuzzerPath)
+
+	// Run the fuzzer on the empty input to verify that it finds all its runtime dependencies.
+	cmd := executil.Command(fuzzerPath, "-runs=0")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
 	require.NoError(t, err)
 }
