@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -18,30 +19,22 @@ import (
 )
 
 func TestWriteArchive(t *testing.T) {
-	dir := filepath.Join("testdata", "archive_test")
-	require.DirExists(t, dir)
+	testdataDir := filepath.Join("testdata", "archive_test")
+	require.DirExists(t, testdataDir)
+	dir, err := os.MkdirTemp("", "write-archive-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+	err = copy.Copy(testdataDir, dir)
+	require.NoError(t, err)
+
+	// Create an empty directory to test that WriteArchive handles it - it can't be kept in testdata since Git doesn't
+	// allow checking in empty directories.
+	err = os.MkdirAll(filepath.Join(dir, "empty_dir"), 0755)
+	require.NoError(t, err)
 
 	// Walk the testdata dir and add all contents to a manifest for WriteArchive.
 	manifest := make(map[string]string)
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		// Skip over .gitkeep, which is only used to track the empty_dir in Git.
-		if d.Name() == ".gitkeep" {
-			return nil
-		}
-		relPath, err := filepath.Rel(dir, path)
-		if err != nil {
-			return err
-		}
-		absPath, err := filepath.Abs(path)
-		if err != nil {
-			return err
-		}
-		manifest[relPath] = absPath
-		return nil
-	})
+	err = artifact.AddDirToManifest(manifest, "", dir)
 	require.NoError(t, err)
 
 	archive, err := os.CreateTemp("", "artifact-*.tar.gz")

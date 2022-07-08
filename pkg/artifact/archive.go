@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,9 +13,11 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// WriteArchive writes a GZip-compressed TAR to out containing the files and empty directories given in manifest.
+// WriteArchive writes a GZip-compressed TAR to out containing the files and directories given in manifest.
 // The keys in manifest correspond to the path within the archive, the corresponding value is expected to be the
 // absolute path of the file or directory on disk.
+// Note: WriteArchive *does not* (recursively) traverse directories to add their contents to the archive. If this is
+//       desired, use AddDirToManifest to explicitly add the contents to the manifest before calling WriteArchive.
 func WriteArchive(out io.Writer, manifest map[string]string) error {
 	gw := gzip.NewWriter(out)
 	defer gw.Close()
@@ -33,6 +36,25 @@ func WriteArchive(out io.Writer, manifest map[string]string) error {
 	}
 
 	return nil
+}
+
+// AddDirToManifest traverses the directory dir recursively and adds its contents to the manifest under the base path
+// archiveBasePath.
+func AddDirToManifest(manifest map[string]string, archiveBasePath string, dir string) error {
+	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(dir, path)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		archivePath := filepath.Join(archiveBasePath, relPath)
+		// There is no harm in creating tar entries for non-empty directories, even though they are not necessary.
+		manifest[archivePath] = path
+		return nil
+	})
 }
 
 // ExtractArchiveForTestsOnly extracts the GZip-compressed TAR read by in into dir.
@@ -93,7 +115,7 @@ func ExtractArchiveForTestsOnly(in io.Reader, dir string) error {
 func addToArchive(tw *tar.Writer, archivePath, absPath string) error {
 	fileOrDir, err := os.Open(absPath)
 	if err != nil {
-		return errors.WithStack(err)
+		return errors.Wrapf(err, "failed to add %q at %q", absPath, archivePath)
 	}
 	defer fileOrDir.Close()
 	info, err := fileOrDir.Stat()
