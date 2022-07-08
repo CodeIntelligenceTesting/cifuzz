@@ -6,8 +6,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/pkg/errors"
+	"golang.org/x/exp/maps"
 )
 
 // WriteArchive writes a GZip-compressed TAR to out containing the files and empty directories given in manifest.
@@ -19,7 +21,11 @@ func WriteArchive(out io.Writer, manifest map[string]string) error {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	for archivePath, absPath := range manifest {
+	// Sort the archive paths first so that the generated archive is deterministic - map traversals aren't.
+	archivePaths := maps.Keys(manifest)
+	sort.Strings(archivePaths)
+	for _, archivePath := range archivePaths {
+		absPath := manifest[archivePath]
 		err := addToArchive(tw, archivePath, absPath)
 		if err != nil {
 			return err
