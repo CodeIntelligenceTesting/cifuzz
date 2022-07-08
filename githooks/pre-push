@@ -29,11 +29,9 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
-echo >&2 "pre-push: Running \`staticcheck\`"
-staticcheck ./...
+echo >&2 "pre-push: Running \`make lint\`"
+make -C "${GIT_ROOT}" --quiet lint
 
-echo >&2 "pre-push: Running \`go vet\`"
-go vet ./...
 
 # Check if the string "DO-NOT-PUSH" is present anywhere in this
 # repository (except for this file itself)

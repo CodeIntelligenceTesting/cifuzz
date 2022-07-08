@@ -28,8 +28,8 @@ deps:
 
 .PHONY: deps/dev
 deps/dev: deps
-	go install honnef.co/go/tools/cmd/staticcheck@latest
 	go install github.com/incu6us/goimports-reviser/v2@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.46.2
 
 .PHONY: install
 install:
@@ -55,8 +55,7 @@ build/darwin: deps
 
 .PHONY: lint
 lint: deps/dev
-	staticcheck ./...
-	go vet ./...
+	golangci-lint run
 
 .PHONY: fmt
 fmt:
