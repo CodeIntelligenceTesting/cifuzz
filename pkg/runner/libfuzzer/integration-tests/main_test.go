@@ -1,8 +1,8 @@
 package integration_tests
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 	// Print debug output for easier debugging
 	viper.Set("verbose", true)
 
-	baseTempDir, err = ioutil.TempDir("", "libfuzzer-runner-integration-test-")
+	baseTempDir, err = os.MkdirTemp("", "libfuzzer-runner-integration-test-")
 	if err != nil {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}

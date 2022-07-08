@@ -4,7 +4,6 @@ package process_wrapper
 
 import (
 	"bytes"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -37,7 +36,7 @@ func TestMain(m *testing.M) {
 func TestProcessWrapper_ChangesDirectory(t *testing.T) {
 	processWrapperPath, err := runfiles.Finder.ProcessWrapperPath()
 	require.NoError(t, err)
-	tempDir, err := ioutil.TempDir("", "process_wrapper")
+	tempDir, err := os.MkdirTemp("", "process_wrapper")
 	require.NoError(t, err)
 
 	var errbuf bytes.Buffer
@@ -54,7 +53,7 @@ func TestProcessWrapper_ChangesDirectory(t *testing.T) {
 func TestProcessWrapper_SetsArgvAndEnvp(t *testing.T) {
 	processWrapperPath, err := runfiles.Finder.ProcessWrapperPath()
 	require.NoError(t, err)
-	tempDir, err := ioutil.TempDir("", "process_wrapper")
+	tempDir, err := os.MkdirTemp("", "process_wrapper")
 	require.NoError(t, err)
 
 	var errbuf bytes.Buffer

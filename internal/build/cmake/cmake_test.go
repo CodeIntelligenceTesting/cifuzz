@@ -1,7 +1,6 @@
 package cmake
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"testing"
@@ -15,7 +14,7 @@ var baseTempDir string
 
 func TestMain(m *testing.M) {
 	var err error
-	baseTempDir, err = ioutil.TempDir("", "cmake-test-")
+	baseTempDir, err = os.MkdirTemp("", "cmake-test-")
 	if err != nil {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}
@@ -25,7 +24,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNewBuilder(t *testing.T) {
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-dir-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-dir-")
 	require.NoError(t, err)
 
 	// Create a builder with engine "engine1"

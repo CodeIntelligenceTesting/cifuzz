@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -30,24 +29,27 @@ var baseTempDir string
 func TestMain(m *testing.M) {
 	var err error
 	// Intentionally include a space here to test that we don't break on it.
-	baseTempDir, err = ioutil.TempDir("", "cifuzz cmake")
+	baseTempDir, err = os.MkdirTemp("", "cifuzz cmake")
 	if err != nil {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}
-	defer fileutil.Cleanup(baseTempDir)
 
 	// The CMake integration is installed globally once and used by all tests.
 	installer, err := install.NewInstaller(
 		&install.Options{InstallDir: filepath.Join(baseTempDir, "cmake-integration")})
 	if err != nil {
+		fileutil.Cleanup(baseTempDir)
 		log.Fatalf("Failed to install CMake integration: %+v", err)
 	}
 	err = installer.InstallCMakeIntegration()
 	if err != nil {
+		fileutil.Cleanup(baseTempDir)
 		log.Fatalf("Failed to install CMake integration: %+v", err)
 	}
 
 	m.Run()
+
+	fileutil.Cleanup(baseTempDir)
 }
 
 func TestIntegration_Ctest_DefaultSettings(t *testing.T) {
@@ -150,7 +152,7 @@ func TestIntegration_CifuzzInfoIsCreated(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("testdata", "cifuzz")
 
-	buildDir, err := ioutil.TempDir(baseTempDir, "build")
+	buildDir, err := os.MkdirTemp(baseTempDir, "build")
 	require.NoError(t, err)
 
 	// Only configure, don't build.
@@ -223,7 +225,7 @@ func TestIntegration_RuntimeDepsInfo(t *testing.T) {
 }
 
 func build(t *testing.T, buildType string, cacheVariables map[string]string) string {
-	buildDir, err := ioutil.TempDir(baseTempDir, "build")
+	buildDir, err := os.MkdirTemp(baseTempDir, "build")
 	require.NoError(t, err)
 
 	var cacheArgs []string
@@ -276,7 +278,7 @@ func runAndAssertTests(t *testing.T, buildDir string, buildType string, expected
 		junitReportFile,
 	)
 	require.FileExists(t, junitReportFile)
-	junitReportXml, err := ioutil.ReadFile(junitReportFile)
+	junitReportXml, err := os.ReadFile(junitReportFile)
 	require.NoError(t, err)
 	var junitReport junitTestSuite
 	err = xml.Unmarshal(junitReportXml, &junitReport)

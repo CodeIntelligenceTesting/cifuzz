@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -68,7 +67,7 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	require.NoError(t, err)
 
 	// execute create command
-	outputPath := filepath.Join("src/parser/parser_fuzz_test.cpp")
+	outputPath := filepath.Join("src", "parser", "parser_fuzz_test.cpp")
 	cmd = executil.Command(cifuzz, "create", "-C", dir, "cpp", "--output", outputPath)
 	cmd.Dir = dir
 	stderrPipe, err = cmd.StderrTeePipe(os.Stderr)
@@ -105,7 +104,7 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	require.FileExists(t, archivePath)
 
 	// Extract the archive into a temporary directory.
-	archiveDir, err := ioutil.TempDir("", "cifuzz-fuzzing-archive-*")
+	archiveDir, err := os.MkdirTemp("", "cifuzz-fuzzing-archive-*")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(archiveDir)
 	archiveFile, err := os.Open(archivePath)
@@ -116,7 +115,7 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	// Read the fuzzer path from the YAML.
 	metadataPath := filepath.Join(archiveDir, "cifuzz.yaml")
 	require.FileExists(t, metadataPath)
-	metadataYaml, err := ioutil.ReadFile(metadataPath)
+	metadataYaml, err := os.ReadFile(metadataPath)
 	require.NoError(t, err)
 	// We use a simple regex here instead of duplicating knowledge of our metadata YAML schema.
 	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*)`)
@@ -132,7 +131,7 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 }
 
 func copyTestdataDir(t *testing.T) string {
-	dir, err := ioutil.TempDir("", "cifuzz-cmake-testdata-")
+	dir, err := os.MkdirTemp("", "cifuzz-cmake-testdata-")
 	require.NoError(t, err)
 
 	// Get the path to the testdata dir
@@ -255,7 +254,7 @@ func followStepsPrintedByInitCommand(t *testing.T, initOutput io.Reader, cmakeLi
 	// Write the new content of CMakeLists.txt back to file
 	_, err = f.Seek(0, io.SeekStart)
 	require.NoError(t, err)
-	_, err = f.Write([]byte(strings.Join(lines, "\n")))
+	_, err = f.WriteString(strings.Join(lines, "\n"))
 	require.NoError(t, err)
 }
 
@@ -313,7 +312,7 @@ func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
 	// Write the new content of the fuzz test back to file
 	_, err = f.Seek(0, io.SeekStart)
 	require.NoError(t, err)
-	_, err = f.Write([]byte(strings.Join(lines, "\n")))
+	_, err = f.WriteString(strings.Join(lines, "\n"))
 	require.NoError(t, err)
 	err = f.Close()
 	require.NoError(t, err)
@@ -323,7 +322,7 @@ func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
 	f, err = os.OpenFile(cmakeLists, os.O_APPEND|os.O_WRONLY, 0700)
 	require.NoError(t, err)
 	defer f.Close()
-	_, err = f.Write([]byte("target_link_libraries(parser_fuzz_test PRIVATE parser)\n"))
+	_, err = f.WriteString("target_link_libraries(parser_fuzz_test PRIVATE parser)\n")
 	require.NoError(t, err)
 	err = f.Close()
 	require.NoError(t, err)

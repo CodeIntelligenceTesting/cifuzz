@@ -3,7 +3,6 @@ package log
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -26,7 +25,7 @@ func TestMain(m *testing.M) {
 
 func TestDebug_NoVerbose(t *testing.T) {
 	Debugf("Test")
-	out, err := ioutil.ReadAll(testOut)
+	out, err := io.ReadAll(testOut)
 	require.NoError(t, err)
 	assert.Empty(t, out)
 }
@@ -67,7 +66,7 @@ func TestWarn(t *testing.T) {
 }
 
 func checkOutput(t *testing.T, a ...string) string {
-	out, err := ioutil.ReadAll(testOut)
+	out, err := io.ReadAll(testOut)
 	require.NoError(t, err)
 	for _, s := range a {
 		require.Contains(t, string(out), s)

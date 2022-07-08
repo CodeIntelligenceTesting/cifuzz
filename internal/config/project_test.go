@@ -1,7 +1,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,7 +17,7 @@ var baseTempDir string
 
 func TestMain(m *testing.M) {
 	var err error
-	baseTempDir, err = ioutil.TempDir("", "project-config-test-")
+	baseTempDir, err = os.MkdirTemp("", "project-config-test-")
 	if err != nil {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}
@@ -28,7 +27,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreateProjectConfig(t *testing.T) {
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 
 	path, err := CreateProjectConfig(projectDir)
@@ -42,7 +41,7 @@ func TestCreateProjectConfig(t *testing.T) {
 	assert.True(t, exists)
 
 	// check for content
-	content, err := ioutil.ReadFile(expectedPath)
+	content, err := os.ReadFile(expectedPath)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, content)
 	assert.Contains(t, string(content), "Configuration for")
@@ -52,7 +51,7 @@ func TestCreateProjectConfig(t *testing.T) {
 // Should return error if not allowed to write to directory
 func TestCreateProjectConfig_NoPerm(t *testing.T) {
 	// create read only project dir
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 	err = acl.Chmod(projectDir, 0555)
 	require.NoError(t, err)
@@ -70,11 +69,11 @@ func TestCreateProjectConfig_NoPerm(t *testing.T) {
 
 // Should return error if file already exists
 func TestCreateProjectConfig_Exists(t *testing.T) {
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 
 	existingPath := filepath.Join(projectDir, "cifuzz.yaml")
-	err = ioutil.WriteFile(existingPath, []byte{}, 0644)
+	err = os.WriteFile(existingPath, []byte{}, 0644)
 	require.NoError(t, err)
 
 	path, err := CreateProjectConfig(filepath.Dir(existingPath))
@@ -90,11 +89,11 @@ func TestCreateProjectConfig_Exists(t *testing.T) {
 }
 
 func TestReadProjectConfig(t *testing.T) {
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 
 	configFile := filepath.Join(projectDir, "cifuzz.yaml")
-	err = ioutil.WriteFile(configFile, []byte("build_system: "+BuildSystemAuto), 0644)
+	err = os.WriteFile(configFile, []byte("build_system: "+BuildSystemAuto), 0644)
 	require.NoError(t, err)
 
 	config, err := ReadProjectConfig(projectDir)
@@ -104,16 +103,16 @@ func TestReadProjectConfig(t *testing.T) {
 }
 
 func TestReadProjectConfigCMake(t *testing.T) {
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 
 	configFile := filepath.Join(projectDir, "cifuzz.yaml")
-	err = ioutil.WriteFile(configFile, []byte("build_system: "+BuildSystemAuto), 0644)
+	err = os.WriteFile(configFile, []byte("build_system: "+BuildSystemAuto), 0644)
 	require.NoError(t, err)
 
 	// Create a CMakeLists.txt in the project dir, which should cause
 	// the build system to be detected as CMake
-	err = ioutil.WriteFile(filepath.Join(projectDir, "CMakeLists.txt"), []byte{}, 0644)
+	err = os.WriteFile(filepath.Join(projectDir, "CMakeLists.txt"), []byte{}, 0644)
 	require.NoError(t, err)
 
 	config, err := ReadProjectConfig(projectDir)

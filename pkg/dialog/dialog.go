@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,7 +53,7 @@ func readline(reader io.Reader, defaultValue string) (string, error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	input = strings.Replace(input, "\n", "", -1)
+	input = strings.ReplaceAll(input, "\n", "")
 
 	if input == "" {
 		return defaultValue, nil
@@ -114,7 +113,7 @@ func readFilenameWithShellCompletion(reader io.Reader, defaultValue string) (str
 	}
 
 	// Read the user input written to the pipe
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

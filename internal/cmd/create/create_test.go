@@ -1,7 +1,6 @@
 package create
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -19,7 +18,7 @@ var baseTempDir string
 
 func TestMain(m *testing.M) {
 	var err error
-	baseTempDir, err = ioutil.TempDir("", "create-cmd-test-")
+	baseTempDir, err = os.MkdirTemp("", "create-cmd-test-")
 	if err != nil {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}

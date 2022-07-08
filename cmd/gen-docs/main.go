@@ -20,7 +20,11 @@ func main() {
 		log.Fatalf("unable to parse flags %v", err)
 	}
 
-	cmd := rootCmd.New()
+	cmd, err := rootCmd.New()
+	if err != nil {
+		log.Fatalf("error while creating root command: %v", err)
+	}
+
 	cmd.DisableAutoGenTag = true
 	if err := doc.GenMarkdownTreeCustom(cmd, *dir, filePrepender, linkHandler); err != nil {
 		log.Fatalf("error while generating markdown: %v", err)

@@ -21,7 +21,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/log"
 )
 
-func New() *cobra.Command {
+func New() (*cobra.Command, error) {
 	cmdConfig := config.NewConfig()
 
 	rootCmd := &cobra.Command{
@@ -67,11 +67,15 @@ func New() *cobra.Command {
 
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false,
 		"Show more verbose output, can be helpful for debugging problems")
-	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	if err := viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose")); err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	rootCmd.PersistentFlags().StringP("directory", "C", "",
 		"Change the directory before performing any operations")
-	viper.BindPFlag("directory", rootCmd.PersistentFlags().Lookup("directory"))
+	if err := viper.BindPFlag("directory", rootCmd.PersistentFlags().Lookup("directory")); err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	rootCmd.AddCommand(initCmd.New())
 	rootCmd.AddCommand(createCmd.New(cmdConfig))
@@ -79,13 +83,18 @@ func New() *cobra.Command {
 	rootCmd.AddCommand(reloadCmd.New())
 	rootCmd.AddCommand(bundleCmd.New(cmdConfig))
 
-	return rootCmd
+	return rootCmd, nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	rootCmd := New()
+	rootCmd, err := New()
+	if err != nil {
+		fmt.Printf("error while creating root command: %+v", err)
+		os.Exit(1)
+	}
+
 	if cmd, err := rootCmd.ExecuteC(); err != nil {
 
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace

@@ -1,7 +1,6 @@
 package root
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,12 +13,14 @@ import (
 )
 
 func TestRootCmd(t *testing.T) {
-	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin)
+	cmd, err := New()
+	require.NoError(t, err)
+	_, err = cmdutils.ExecuteCommand(t, cmd, os.Stdin)
 	assert.NoError(t, err)
 }
 
 func TestChangingToNonExistingDirectory(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "test-")
+	testDir, err := os.MkdirTemp("", "test-")
 	require.NoError(t, err)
 	err = os.Chdir(testDir)
 	require.NoError(t, err)
@@ -36,7 +37,9 @@ func TestChangingToNonExistingDirectory(t *testing.T) {
 		// subcommand.
 		"init",
 	}
-	_, err = cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
+	cmd, err := New()
+	require.NoError(t, err)
+	_, err = cmdutils.ExecuteCommand(t, cmd, os.Stdin, args...)
 	require.Error(t, err)
 
 	// Check that the working directory did not change
@@ -46,7 +49,7 @@ func TestChangingToNonExistingDirectory(t *testing.T) {
 }
 
 func TestChangingToExistingDirectory(t *testing.T) {
-	testDir, err := ioutil.TempDir("", "test-")
+	testDir, err := os.MkdirTemp("", "test-")
 	require.NoError(t, err)
 	err = os.Chdir(testDir)
 	require.NoError(t, err)
@@ -66,7 +69,9 @@ func TestChangingToExistingDirectory(t *testing.T) {
 		// subcommand.
 		"init",
 	}
-	_, err = cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
+	cmd, err := New()
+	require.NoError(t, err)
+	_, err = cmdutils.ExecuteCommand(t, cmd, os.Stdin, args...)
 	require.NoError(t, err)
 
 	// Check that the working directory actually changed

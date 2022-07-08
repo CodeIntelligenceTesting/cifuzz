@@ -38,11 +38,11 @@ func TestIsUnder(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, isUnder)
 
-	isUnder, err = fileutil.IsUnder(filepath.Join("dir1"), filepath.Join("dir1", "dir2"))
+	isUnder, err = fileutil.IsUnder("dir1", filepath.Join("dir1", "dir2"))
 	assert.NoError(t, err)
 	assert.False(t, isUnder)
 
-	isUnder, err = fileutil.IsUnder(filepath.Join("."), filepath.Join("dir1", "dir2"))
+	isUnder, err = fileutil.IsUnder(".", filepath.Join("dir1", "dir2"))
 	assert.NoError(t, err)
 	assert.False(t, isUnder)
 }

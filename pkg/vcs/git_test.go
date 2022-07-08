@@ -1,7 +1,6 @@
 package vcs_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -59,7 +58,7 @@ func TestGitIsDirty(t *testing.T) {
 	require.False(t, vcs.GitIsDirty())
 
 	// Verify that modified files trigger a "dirty" state.
-	err = ioutil.WriteFile("empty_file", []byte("changed"), 0644)
+	err = os.WriteFile("empty_file", []byte("changed"), 0644)
 	require.NoError(t, err)
 	require.True(t, vcs.GitIsDirty())
 
@@ -76,7 +75,7 @@ func TestGitIsDirty(t *testing.T) {
 func createGitRepoWithCommits(t *testing.T) string {
 	t.Helper()
 
-	repo, err := ioutil.TempDir("", "git-test-*")
+	repo, err := os.MkdirTemp("", "git-test-*")
 	require.NoError(t, err)
 
 	runGit(t, repo, "init")

@@ -3,7 +3,6 @@
 package install
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -25,7 +24,7 @@ func registerCMakePackage(packageDir string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(cmakePackagesDir, "cifuzz"), []byte(packageDir), 0644)
+	err = os.WriteFile(filepath.Join(cmakePackagesDir, "cifuzz"), []byte(packageDir), 0644)
 	if err != nil {
 		return errors.WithStack(err)
 	}

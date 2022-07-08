@@ -2,7 +2,6 @@ package minijail
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -220,7 +219,7 @@ func NewMinijail(opts *Options) (*minijail, error) {
 	// --- Create directories ---
 	// --------------------------
 	// Create chroot directory
-	chrootDir, err := ioutil.TempDir("", "minijail-chroot-")
+	chrootDir, err := os.MkdirTemp("", "minijail-chroot-")
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +241,7 @@ func NewMinijail(opts *Options) (*minijail, error) {
 	}
 
 	// Create /dev/shm which is required to allow using shared memory
-	err = os.MkdirAll(filepath.Join(chrootDir, "/dev/shm"), 0o755)
+	err = os.MkdirAll(filepath.Join(chrootDir, "dev", "shm"), 0o755)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

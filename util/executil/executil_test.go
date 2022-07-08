@@ -2,7 +2,7 @@ package executil
 
 import (
 	"bufio"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -14,7 +14,7 @@ import (
 
 func TestCmd_StdoutTeePipe_ReadAsync(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := ioutil.TempFile("", "outFile")
+	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
@@ -28,7 +28,7 @@ func TestCmd_StdoutTeePipe_ReadAsync(t *testing.T) {
 
 	doneCh := make(chan struct{})
 	go func() {
-		outFromPipe, err := ioutil.ReadAll(pipe)
+		outFromPipe, err := io.ReadAll(pipe)
 		require.NoError(t, err)
 		require.Equal(t, "foo", strings.TrimSpace(string(outFromPipe)))
 		doneCh <- struct{}{}
@@ -40,7 +40,7 @@ func TestCmd_StdoutTeePipe_ReadAsync(t *testing.T) {
 	err = outFile.Close()
 	require.NoError(t, err)
 
-	outFromFile, err := ioutil.ReadFile(outFile.Name())
+	outFromFile, err := os.ReadFile(outFile.Name())
 	require.NoError(t, err)
 	require.Equal(t, "foo", strings.TrimSpace(string(outFromFile)))
 
@@ -81,7 +81,7 @@ func TestCmd_StdoutTeePipe_ReadAsyncMultiline(t *testing.T) {
 
 func TestCmd_StdoutTeePipe_ReadSync(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := ioutil.TempFile("", "outFile")
+	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
@@ -96,7 +96,7 @@ func TestCmd_StdoutTeePipe_ReadSync(t *testing.T) {
 	err = cmd.Wait()
 	require.NoError(t, err)
 
-	outFromPipe, err := ioutil.ReadAll(pipe)
+	outFromPipe, err := io.ReadAll(pipe)
 	require.NoError(t, err)
 	require.Equal(t, "foo", strings.TrimSpace(string(outFromPipe)))
 
@@ -106,14 +106,14 @@ func TestCmd_StdoutTeePipe_ReadSync(t *testing.T) {
 	err = outFile.Close()
 	require.NoError(t, err)
 
-	outFromFile, err := ioutil.ReadFile(outFile.Name())
+	outFromFile, err := os.ReadFile(outFile.Name())
 	require.NoError(t, err)
 	require.Equal(t, "foo", strings.TrimSpace(string(outFromFile)))
 }
 
 func TestCmd_StdoutTeePipe_ReadSyncWithRun(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := ioutil.TempFile("", "outFile")
+	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
@@ -125,7 +125,7 @@ func TestCmd_StdoutTeePipe_ReadSyncWithRun(t *testing.T) {
 	err = cmd.Run()
 	require.NoError(t, err)
 
-	outFromPipe, err := ioutil.ReadAll(pipe)
+	outFromPipe, err := io.ReadAll(pipe)
 	require.NoError(t, err)
 	require.Equal(t, "foo", strings.TrimSpace(string(outFromPipe)))
 
@@ -135,14 +135,14 @@ func TestCmd_StdoutTeePipe_ReadSyncWithRun(t *testing.T) {
 	err = outFile.Close()
 	require.NoError(t, err)
 
-	outFromFile, err := ioutil.ReadFile(outFile.Name())
+	outFromFile, err := os.ReadFile(outFile.Name())
 	require.NoError(t, err)
 	require.Equal(t, "foo", strings.TrimSpace(string(outFromFile)))
 }
 
 func TestCmd_StdoutTeePipe_NoRead(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := ioutil.TempFile("", "outFile")
+	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
@@ -160,7 +160,7 @@ func TestCmd_StdoutTeePipe_NoRead(t *testing.T) {
 	err = outFile.Close()
 	require.NoError(t, err)
 
-	outFromFile, err := ioutil.ReadFile(outFile.Name())
+	outFromFile, err := os.ReadFile(outFile.Name())
 	require.NoError(t, err)
 	require.Equal(t, "foo", strings.TrimSpace(string(outFromFile)))
 
@@ -170,7 +170,7 @@ func TestCmd_StdoutTeePipe_NoRead(t *testing.T) {
 
 func TestCmd_StdoutTeePipe_NoReadWithRun(t *testing.T) {
 	// Redirect stdout to a file
-	outFile, err := ioutil.TempFile("", "outFile")
+	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
@@ -185,7 +185,7 @@ func TestCmd_StdoutTeePipe_NoReadWithRun(t *testing.T) {
 	err = outFile.Close()
 	require.NoError(t, err)
 
-	outFromFile, err := ioutil.ReadFile(outFile.Name())
+	outFromFile, err := os.ReadFile(outFile.Name())
 	require.NoError(t, err)
 	require.Equal(t, "foo", strings.TrimSpace(string(outFromFile)))
 

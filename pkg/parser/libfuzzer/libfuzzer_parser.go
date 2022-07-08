@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -237,7 +237,7 @@ func (p *parser) parseLine(ctx context.Context, line string) error {
 	// we expect when we have a pending finding)
 	testInputFilePath, ok := parseAsTestInputFilePath(line)
 	if ok {
-		testInput, err := ioutil.ReadFile(testInputFilePath)
+		testInput, err := os.ReadFile(testInputFilePath)
 		if err != nil {
 			return errors.WithStack(err)
 		}

@@ -2,7 +2,6 @@ package install
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -46,7 +45,7 @@ func NewInstaller(opts *Options) (*installer, error) {
 	}
 
 	if opts.InstallDir == "" {
-		opts.InstallDir, err = ioutil.TempDir("", "cifuzz-install-dir-")
+		opts.InstallDir, err = os.MkdirTemp("", "cifuzz-install-dir-")
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -160,10 +159,10 @@ func (i *installer) InstallMinijail() error {
 
 	// Build minijail
 	cmd := exec.Command("make", "CC_BINARY(minijail0)", "CC_LIBRARY(libminijailpreload.so)")
-	cmd.Dir = filepath.Join(i.projectDir, "third-party/minijail")
+	cmd.Dir = filepath.Join(i.projectDir, "third-party", "minijail")
 	// The minijail Makefile changes the directory to $PWD, so we have
 	// to set that.
-	cmd.Env, err = envutil.Setenv(os.Environ(), "PWD", filepath.Join(i.projectDir, "third-party/minijail"))
+	cmd.Env, err = envutil.Setenv(os.Environ(), "PWD", filepath.Join(i.projectDir, "third-party", "minijail"))
 	if err != nil {
 		return err
 	}
@@ -182,13 +181,13 @@ func (i *installer) InstallMinijail() error {
 	}
 
 	// Install minijail binaries
-	src := filepath.Join(i.projectDir, "third-party/minijail/minijail0")
+	src := filepath.Join(i.projectDir, "third-party", "minijail", "minijail0")
 	dest := filepath.Join(i.binDir(), "minijail0")
 	err = copy.Copy(src, dest, copy.Options{Sync: true})
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	src = filepath.Join(i.projectDir, "third-party/minijail/libminijailpreload.so")
+	src = filepath.Join(i.projectDir, "third-party", "minijail", "libminijailpreload.so")
 	dest = filepath.Join(i.libDir(), "libminijailpreload.so")
 	err = copy.Copy(src, dest, copy.Options{Sync: true})
 	if err != nil {
@@ -205,7 +204,7 @@ func (i *installer) InstallProcessWrapper() error {
 	}
 	dest := filepath.Join(i.libDir(), "process_wrapper")
 	cmd := exec.Command(compiler, "-o", dest, "process_wrapper.c")
-	cmd.Dir = filepath.Join(i.projectDir, "pkg/minijail/process_wrapper/src")
+	cmd.Dir = filepath.Join(i.projectDir, "pkg", "minijail", "process_wrapper", "src")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	log.Printf("Command: %s", cmd.String())

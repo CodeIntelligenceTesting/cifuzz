@@ -2,7 +2,6 @@ package bundle
 
 import (
 	"bufio"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -100,7 +99,7 @@ func (c *bundleCmd) run() (err error) {
 		return err
 	}
 
-	tempDir, err := ioutil.TempDir("", "cifuzz-bundle-*")
+	tempDir, err := os.MkdirTemp("", "cifuzz-bundle-*")
 	if err != nil {
 		return err
 	}
@@ -119,7 +118,7 @@ func (c *bundleCmd) run() (err error) {
 		return err
 	}
 	metadataYamlPath := filepath.Join(tempDir, artifact.MetadataFileName)
-	err = ioutil.WriteFile(metadataYamlPath, metadataYamlContent, 0644)
+	err = os.WriteFile(metadataYamlPath, metadataYamlContent, 0644)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write %s", artifact.MetadataFileName)
 	}

@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -30,7 +29,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestLibFuzzerAdapter_ReportsParsing(t *testing.T) {
-	testInputFile, err := ioutil.TempFile("", "testSlowInput-")
+	testInputFile, err := os.CreateTemp("", "testSlowInput-")
 	require.NoError(t, err, "failed to create temp slow input file")
 	testInput := []byte{'t', 'e', 's', 't'}
 	_, err = testInputFile.Write(testInput)
@@ -696,7 +695,7 @@ func TestBufferOverflowCrashLogs(t *testing.T) {
 	// caused that the resulting report doesn't include the
 	// "artifact_prefix='./'; Test unit written to" line, causing
 	// assertCorrectCrashesParsing to fail.
-	expectedCrashFile, err := ioutil.TempFile("", "crash-")
+	expectedCrashFile, err := os.CreateTemp("", "crash-")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(expectedCrashFile.Name())
 	testInput := []byte("test")
@@ -717,7 +716,7 @@ func TestBufferOverflowCrashLogs(t *testing.T) {
 func TestOOMCrashLogs(t *testing.T) {
 	// This also causes an error message to be printed in the tests,
 	// like TestBufferOverflowCrashLogs does.
-	expectedCrashFile, err := ioutil.TempFile("", "oom-")
+	expectedCrashFile, err := os.CreateTemp("", "oom-")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(expectedCrashFile.Name())
 	testInput := []byte("test")

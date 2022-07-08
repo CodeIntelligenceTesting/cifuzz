@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -75,11 +74,11 @@ func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error 
 	var err error
 
 	if test.SeedCorpusDir == "" {
-		test.SeedCorpusDir, err = ioutil.TempDir("", "seeds")
+		test.SeedCorpusDir, err = os.MkdirTemp("", "seeds")
 		require.NoError(t, err)
 	}
 
-	additionalSeedDir, err := ioutil.TempDir("", "additional_seeds")
+	additionalSeedDir, err := os.MkdirTemp("", "additional_seeds")
 	require.NoError(t, err)
 
 	if test.RunsLimit != -1 {

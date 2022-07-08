@@ -1,7 +1,6 @@
 package integration_tests
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,7 +39,7 @@ func makeTemporarySeedCorpusDir(t *testing.T) string {
 	testDataDir := testutils.GetTestDataDir(t)
 	crashingInput := filepath.Join(testDataDir, "corpus", "crashing_input")
 
-	tmpCorpusDir, err := ioutil.TempDir(baseTempDir, "custom_seed_corpus-")
+	tmpCorpusDir, err := os.MkdirTemp(baseTempDir, "custom_seed_corpus-")
 	require.NoError(t, err)
 
 	require.NoError(t, err)

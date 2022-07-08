@@ -4,7 +4,6 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -205,7 +204,7 @@ var baseTempDir string
 func TestMain(m *testing.M) {
 	var err error
 	// Intentionally include a space here to test that we don't break on it.
-	baseTempDir, err = ioutil.TempDir("", "cifuzz replayer")
+	baseTempDir, err = os.MkdirTemp("", "cifuzz replayer")
 	if err != nil {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}
@@ -294,7 +293,7 @@ func TestIntegration_Replayer_WithNoAsserts(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("src", "testdata")
 
-	tempDir, err := ioutil.TempDir(baseTempDir, "")
+	tempDir, err := os.MkdirTemp(baseTempDir, "")
 	require.NoError(t, err)
 
 	if runtime.GOOS == "windows" {
@@ -311,7 +310,7 @@ func TestIntegration_Replayer_WithoutArgsRunsSeedCorpus(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("src", "testdata")
 
-	tempDir, err := ioutil.TempDir(baseTempDir, "")
+	tempDir, err := os.MkdirTemp(baseTempDir, "")
 	require.NoError(t, err)
 
 	var replayerPath string
@@ -341,7 +340,7 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 	t.Run("_WithFuzzerInitialize", func(t *testing.T) {
 		t.Parallel()
 
-		tempDir, err := ioutil.TempDir(baseTempDir, "")
+		tempDir, err := os.MkdirTemp(baseTempDir, "")
 		require.NoError(t, err)
 
 		replayer := compileReplayer(t, tempDir, cc.compiler, cc.outputFlag, cc.flags...)
@@ -411,7 +410,7 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) 
 	t.Run("_WithoutFuzzerInitialize", func(t *testing.T) {
 		t.Parallel()
 
-		tempDir, err := ioutil.TempDir(baseTempDir, "")
+		tempDir, err := os.MkdirTemp(baseTempDir, "")
 		require.NoError(t, err)
 
 		replayer := compileReplayer(t, tempDir, cc.compiler, cc.outputFlag, append(
@@ -434,14 +433,14 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) 
 // compileReplayer expects the last flag to be the compiler's equivalent of '-o' (if necessary) and returns the path to
 // the resulting executable.
 func compileReplayer(t *testing.T, tempDir string, compiler string, outputFlag string, flags ...string) string {
-	tempDir, err := ioutil.TempDir(tempDir, "")
+	tempDir, err := os.MkdirTemp(tempDir, "")
 	require.NoError(t, err)
 
 	reproducerSrcFile := filepath.Join(tempDir, "replayer.c")
-	err = ioutil.WriteFile(reproducerSrcFile, replayerSrc, 0700)
+	err = os.WriteFile(reproducerSrcFile, replayerSrc, 0700)
 	require.NoError(t, err)
 	fuzzTargetSrcFile := filepath.Join(tempDir, "fuzz_target.c")
-	err = ioutil.WriteFile(fuzzTargetSrcFile, fuzzTargetSrc, 0700)
+	err = os.WriteFile(fuzzTargetSrcFile, fuzzTargetSrc, 0700)
 	require.NoError(t, err)
 
 	outBasename := "replayer"
@@ -468,7 +467,7 @@ func runReplayer(t *testing.T, baseTempDir string, replayerPath string, inputs .
 		if fileContent, ok := input.(string); ok {
 			inputPaths = append(inputPaths, createInputFile(t, baseTempDir, fileContent))
 		} else if fileContents, ok := input.([]string); ok {
-			tempDir, err := ioutil.TempDir(baseTempDir, "input-dir")
+			tempDir, err := os.MkdirTemp(baseTempDir, "input-dir")
 			require.NoError(t, err)
 			for _, fileContent := range fileContents {
 				createInputFile(t, tempDir, fileContent)
@@ -502,7 +501,7 @@ func outputWithStderr(cmd *exec.Cmd) (stdout []byte, stderr []byte, err error) {
 }
 
 func createInputFile(t *testing.T, dir, content string) string {
-	tempFile, err := ioutil.TempFile(dir, "input")
+	tempFile, err := os.CreateTemp(dir, "input")
 	require.NoError(t, err)
 	_, err = tempFile.WriteString(content)
 	require.NoError(t, err)

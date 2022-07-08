@@ -3,7 +3,6 @@ package report_handler
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"testing"
 	"time"
 
@@ -116,7 +115,7 @@ func TestReportHandler_PrintJSON(t *testing.T) {
 }
 
 func checkOutput(t *testing.T, r io.Reader, s ...string) {
-	output, err := ioutil.ReadAll(r)
+	output, err := io.ReadAll(r)
 	require.NoError(t, err)
 	for _, str := range s {
 		require.Contains(t, string(output), str)

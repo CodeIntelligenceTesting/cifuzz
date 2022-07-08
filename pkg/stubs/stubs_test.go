@@ -1,7 +1,6 @@
 package stubs
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -19,7 +18,7 @@ var baseTempDir string
 
 func TestMain(m *testing.M) {
 	var err error
-	baseTempDir, err = ioutil.TempDir("", "stubs-test-")
+	baseTempDir, err = os.MkdirTemp("", "stubs-test-")
 	if err != nil {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}
@@ -28,7 +27,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestCreate(t *testing.T) {
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 
 	stubFile := filepath.Join(projectDir, "fuzz_test.cpp")
@@ -41,11 +40,11 @@ func TestCreate(t *testing.T) {
 }
 
 func TestCreate_Exists(t *testing.T) {
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 
 	stubFile := filepath.Join(projectDir, "fuzz_test.cpp")
-	err = ioutil.WriteFile(stubFile, []byte("TEST"), 0644)
+	err = os.WriteFile(stubFile, []byte("TEST"), 0644)
 	assert.NoError(t, err)
 
 	err = Create(stubFile, config.CPP)
@@ -55,7 +54,7 @@ func TestCreate_Exists(t *testing.T) {
 
 func TestCreate_NoPerm(t *testing.T) {
 	// create read only project dir
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 	err = acl.Chmod(projectDir, 0555)
 	require.NoError(t, err)
@@ -67,7 +66,7 @@ func TestCreate_NoPerm(t *testing.T) {
 }
 
 func TestSuggestFilename(t *testing.T) {
-	projectDir, err := ioutil.TempDir(baseTempDir, "project-")
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 	err = os.Chdir(projectDir)
 	require.NoError(t, err)
@@ -76,7 +75,7 @@ func TestSuggestFilename(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, filepath.Join(".", "my_fuzz_test_1.cpp"), filename1)
 
-	err = ioutil.WriteFile(filename1, []byte("TEST"), 0644)
+	err = os.WriteFile(filename1, []byte("TEST"), 0644)
 	require.NoError(t, err)
 
 	filename2, err := SuggestFilename(config.CPP)

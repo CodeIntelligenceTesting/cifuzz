@@ -3,7 +3,6 @@ package config
 import (
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
@@ -67,7 +66,7 @@ func CreateProjectConfig(projectDir string) (configpath string, err error) {
 func ReadProjectConfig(projectDir string) (*ProjectConfig, error) {
 	configpath := filepath.Join(projectDir, projectConfigFile)
 
-	bytes, err := ioutil.ReadFile(configpath)
+	bytes, err := os.ReadFile(configpath)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

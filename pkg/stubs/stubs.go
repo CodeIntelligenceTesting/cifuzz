@@ -3,7 +3,6 @@ package stubs
 import (
 	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -35,7 +34,7 @@ func Create(path string, testType config.FuzzTestType) error {
 
 	// write stub
 	if content != nil && path != "" {
-		if err := ioutil.WriteFile(path, content, 0644); err != nil {
+		if err := os.WriteFile(path, content, 0644); err != nil {
 			return errors.WithStack(err)
 		}
 	}

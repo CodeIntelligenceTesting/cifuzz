@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -203,7 +202,7 @@ func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
 	if !exists {
 		return "", errors.Errorf("failed to find executable for fuzz test %q", fuzzTest)
 	}
-	fuzzTestExecutable, err := ioutil.ReadFile(infoFileCandidate)
+	fuzzTestExecutable, err := os.ReadFile(infoFileCandidate)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

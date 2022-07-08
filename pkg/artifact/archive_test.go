@@ -3,7 +3,6 @@ package artifact_test
 import (
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,7 +44,7 @@ func TestWriteArchive(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	archive, err := ioutil.TempFile("", "artifact-*.tar.gz")
+	archive, err := os.CreateTemp("", "artifact-*.tar.gz")
 	require.NoError(t, err)
 	defer archive.Close()
 	err = artifact.WriteArchive(archive, manifest)
@@ -54,7 +53,7 @@ func TestWriteArchive(t *testing.T) {
 	require.NoError(t, err)
 
 	// Unpack archive contents with tar.
-	out, err := ioutil.TempDir("", "archive-test-*")
+	out, err := os.MkdirTemp("", "archive-test-*")
 	require.NoError(t, err)
 	cmd := exec.Command("tar", "-xvf", archive.Name(), "-C", out)
 	cmd.Stdout = os.Stdout
@@ -73,7 +72,7 @@ func TestWriteArchive(t *testing.T) {
 		{filepath.Join("dir1", "dir2"), "", false},
 		{filepath.Join("dir1", "dir2", "test.sh"), "#!/usr/bin/env bash", true},
 		{filepath.Join("dir1", "dir2", "test.txt"), "foobar", false},
-		{filepath.Join("empty_dir"), "", false},
+		{"empty_dir", "", false},
 	}
 	// Verify that the archive contains exactly the expected files and directories.
 	// Do not assert group and other permissions which may be affected by masks.
