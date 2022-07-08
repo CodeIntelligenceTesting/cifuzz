@@ -297,6 +297,7 @@ func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
 	// At the top of the file we add the required headers
 	lines := []string{`#include "parser.h"`}
 	var seenBeginningOfFuzzTestFunc bool
+	var addedFunctionCall bool
 	for scanner.Scan() {
 		if strings.HasPrefix(scanner.Text(), "FUZZ_TEST(") {
 			seenBeginningOfFuzzTestFunc = true
@@ -305,9 +306,12 @@ func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
 		// function, right above the "}".
 		if seenBeginningOfFuzzTestFunc && strings.HasPrefix(scanner.Text(), "}") {
 			lines = append(lines, "  parse(std::string(reinterpret_cast<const char *>(data), size));")
+			addedFunctionCall = true
 		}
 		lines = append(lines, scanner.Text())
 	}
+	require.NoError(t, scanner.Err())
+	require.True(t, addedFunctionCall)
 
 	// Write the new content of the fuzz test back to file
 	_, err = f.Seek(0, io.SeekStart)
