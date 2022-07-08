@@ -8,6 +8,6 @@ main [README](../../README.md).
 
 You can start the fuzzing with
 ```bash
-cifuzz run my_fuzz_target
+cifuzz run my_fuzz_test
 ```
 

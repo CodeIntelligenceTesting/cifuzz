@@ -6,8 +6,8 @@ enable_testing()
 
 find_package(cifuzz)
 enable_fuzz_testing()
-add_fuzz_test(my_fuzz_target my_fuzz_target.cpp)
-target_link_libraries (my_fuzz_target LINK_PUBLIC exploreMe)
+add_fuzz_test(my_fuzz_test my_fuzz_test.cpp)
+target_link_libraries (my_fuzz_test LINK_PUBLIC exploreMe)
 
 add_subdirectory(src)
 
