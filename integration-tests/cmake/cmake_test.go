@@ -45,7 +45,7 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing cmake integration test in %s", dir)
 
-	//execute root command
+	// Execute the root command
 	cifuzz := installer.CIFuzzExecutablePath()
 	cmd := executil.Command(cifuzz)
 	cmd.Dir = dir
@@ -54,7 +54,7 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	err = cmd.Run()
 	require.NoError(t, err)
 
-	// execute init command
+	// Execute the init command
 	cmd = executil.Command(cifuzz, "init", "-C", dir)
 	cmd.Dir = dir
 	stderrPipe, err := cmd.StderrTeePipe(os.Stderr)
@@ -66,7 +66,7 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	err = stderrPipe.Close()
 	require.NoError(t, err)
 
-	// execute create command
+	// Execute the create command
 	outputPath := filepath.Join("src", "parser", "parser_fuzz_test.cpp")
 	cmd = executil.Command(cifuzz, "create", "-C", dir, "cpp", "--output", outputPath)
 	cmd.Dir = dir
@@ -78,19 +78,23 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	err = cmd.Run()
 	require.NoError(t, err)
 
-	// check that the fuzz test was created in the correct directory
+	// Check that the fuzz test was created in the correct directory
 	fuzzTestPath := filepath.Join(dir, outputPath)
 	require.FileExists(t, fuzzTestPath)
 	followStepsPrintedByCreateCommand(t, stderrPipe, filepath.Join(filepath.Dir(fuzzTestPath), "CMakeLists.txt"))
 	err = stderrPipe.Close()
 	require.NoError(t, err)
 
-	// run the (empty) fuzz test
+	// Run the (empty) fuzz test
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^paths: \d+`), true)
 
-	// make the fuzz test call a function
+	// Make the fuzz test call a function. Before we do that, we sleep
+	// for one second, to avoid make implementations which only look at
+	// the full seconds of the timestamp to not rebuild the target, see
+	// https://www.gnu.org/software/autoconf/manual/autoconf-2.63/html_node/Timestamps-and-Make.html
+	time.Sleep(time.Second)
 	modifyFuzzTestToCallFunction(t, fuzzTestPath)
-	// run the fuzz test
+	// Run the fuzz test
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer`), false)
 
 	// Bundle the fuzz into an archive.
