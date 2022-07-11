@@ -94,7 +94,7 @@ func (c *bundleCmd) run() (err error) {
 	if err != nil {
 		return errors.Wrapf(err, "failed to build %q", c.opts.fuzzTest)
 	}
-	fuzzers, archiveManifest, systemDeps, err := c.assembleArtifacts(c.opts.fuzzTest, builder)
+	fuzzers, archiveManifest, systemDeps, err := assembleArtifacts(c.opts.fuzzTest, builder)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (c *bundleCmd) run() (err error) {
 	return nil
 }
 
-func (c *bundleCmd) assembleArtifacts(fuzzTest string, builder *cmake.Builder) (
+func assembleArtifacts(fuzzTest string, builder build.Builder) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,
