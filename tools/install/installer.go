@@ -114,19 +114,6 @@ func (i *installer) Cleanup() {
 	fileutil.Cleanup(i.InstallDir)
 }
 
-// Sync executes sync(1) to flush the disk cache
-func (i *installer) Sync() error {
-	// Windows doesn't come with a command like sync(1)
-	if runtime.GOOS == "windows" {
-		return nil
-	}
-	cmd := exec.Command("sync")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	return errors.WithStack(err)
-}
-
 func (i *installer) InstallCIFuzzAndDeps() error {
 	var err error
 	if runtime.GOOS == "linux" {
@@ -174,12 +161,6 @@ func (i *installer) InstallMinijail() error {
 		return errors.WithStack(err)
 	}
 
-	// Flush disk cache before copying the created files
-	err = i.Sync()
-	if err != nil {
-		return err
-	}
-
 	// Install minijail binaries
 	src := filepath.Join(i.projectDir, "third-party", "minijail", "minijail0")
 	dest := filepath.Join(i.binDir(), "minijail0")
@@ -194,7 +175,7 @@ func (i *installer) InstallMinijail() error {
 		return errors.WithStack(err)
 	}
 
-	return i.Sync()
+	return nil
 }
 
 func (i *installer) InstallProcessWrapper() error {
@@ -212,8 +193,7 @@ func (i *installer) InstallProcessWrapper() error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	return i.Sync()
+	return nil
 }
 
 func (i *installer) InstallCIFuzz() error {
@@ -227,8 +207,7 @@ func (i *installer) InstallCIFuzz() error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	return i.Sync()
+	return nil
 }
 
 func (i *installer) InstallCMakeIntegration() error {
@@ -249,13 +228,7 @@ func (i *installer) InstallCMakeIntegration() error {
 	if err != nil {
 		return err
 	}
-
-	err = registerCMakePackage(dirForRegistry)
-	if err != nil {
-		return err
-	}
-
-	return i.Sync()
+	return registerCMakePackage(dirForRegistry)
 }
 
 func (i *installer) PrintPathInstructions() {
