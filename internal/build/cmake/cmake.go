@@ -191,6 +191,9 @@ func (b *Builder) FindFuzzTestSeedCorpus(fuzzTest string) (string, error) {
 	return b.readInfoFile(fuzzTest, "seed_corpus")
 }
 
+// GetRuntimeDeps returns the absolute paths of all (transitive) runtime
+// dependencies of the given fuzz test. It prints a warning if any dependency
+// couldn't be resolved or resolves to more than one file.
 func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
 	cmd := exec.Command(
 		"cmake",

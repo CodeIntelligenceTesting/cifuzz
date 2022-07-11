@@ -23,7 +23,15 @@ import (
 // The (possibly empty) directory inside the fuzzing artifact archive that will be the fuzzers working directory.
 const fuzzerWorkDirPath = "work_dir"
 
-// System library dependencies that are so common that we shouldn't emit a warning for them.
+// Runtime dependencies of fuzz tests that live under these paths will not be included in the artifact archive and have
+// to be provided by the Docker image instead.
+var systemLibraryPaths = []string{
+	"/lib",
+	"/usr/lib",
+}
+
+// System library dependencies that are so common that we shouldn't emit a warning for them - they will be contained in
+// any reasonable Docker image.
 var wellKnownSystemLibraries = []*regexp.Regexp{
 	versionedLibraryRegexp("ld-linux-x86-64.so"),
 	versionedLibraryRegexp("libc.so"),
@@ -183,6 +191,7 @@ func assembleArtifacts(fuzzTest string, builder build.Builder) (
 	if err != nil {
 		return
 	}
+	externalLibrariesPrefix := ""
 depsLoop:
 	for _, dep := range runtimeDeps {
 		var isUnderBuildDir bool
@@ -198,14 +207,55 @@ depsLoop:
 				return
 			}
 			archiveManifest[filepath.Join(buildArtifactsPrefix, buildDirRelPath)] = dep
-		} else {
-			for _, wellKnownSystemLibrary := range wellKnownSystemLibraries {
-				if wellKnownSystemLibrary.MatchString(dep) {
-					continue depsLoop
-				}
-			}
-			systemDeps = append(systemDeps, dep)
+			continue
 		}
+
+		// The runtime dependency is not built as part of the current project. It will be of one of the following types:
+		// 1. A standard system library that is available in all reasonable Docker images.
+		// 2. A more uncommon system library that may require additional packages to be installed (e.g. X11), but still
+		//    lives in a standard system library directory (e.g. /usr/lib). Such dependencies are expected to be
+		//    provided by the Docker image used as the run environment.
+		// 3. Any other external dependency (e.g. a CMake target imported from another CMake project with a separate
+		//    build directory). These are not expected to be part of the Docker image and thus added to the archive
+		//    in a special directory that is added to the library search path at runtime.
+
+		// 1. is handled by ignoring these runtime dependencies.
+		for _, wellKnownSystemLibrary := range wellKnownSystemLibraries {
+			if wellKnownSystemLibrary.MatchString(dep) {
+				continue depsLoop
+			}
+		}
+
+		// 2. is handled by returning a list of these libraries that is shown to the user as a warning about the
+		// required contents of the Docker image specified as the run environment.
+		for _, systemLibraryPath := range systemLibraryPaths {
+			var isUnder bool
+			isUnder, err = fileutil.IsUnder(dep, systemLibraryPath)
+			if err != nil {
+				return
+			}
+			if isUnder {
+				systemDeps = append(systemDeps, dep)
+				continue depsLoop
+			}
+		}
+
+		// 3. is handled by staging the dependency in a special external library directory in the archive that is added
+		// to the library search path in the run environment.
+		// Note: Since all libraries are placed in a single directory, we have to ensure that basenames of external
+		// libraries are unique. If they aren't, we report a conflict.
+		externalLibrariesPrefix = filepath.Join(fuzzTestPrefix(fuzzTest, builder), "external_libs")
+		archivePath := filepath.Join(externalLibrariesPrefix, filepath.Base(dep))
+		if conflictingDep, hasConflict := archiveManifest[archivePath]; hasConflict {
+			err = errors.Errorf(
+				"fuzz test %q has conflicting runtime dependencies: %s and %s",
+				fuzzTest,
+				dep,
+				conflictingDep,
+			)
+			return
+		}
+		archiveManifest[archivePath] = dep
 	}
 
 	// Add the default seed corpus directory if it exists.
@@ -230,12 +280,13 @@ depsLoop:
 			continue
 		}
 		fuzzers = append(fuzzers, &artifact.Fuzzer{
-			Target:    fuzzTest,
-			Path:      fuzzTestArchivePath,
-			Engine:    "LIBFUZZER",
-			Sanitizer: strings.ToUpper(sanitizer),
-			BuildDir:  builder.BuildDir,
-			Seeds:     archiveSeedsDir,
+			Target:       fuzzTest,
+			Path:         fuzzTestArchivePath,
+			Engine:       "LIBFUZZER",
+			Sanitizer:    strings.ToUpper(sanitizer),
+			BuildDir:     builder.BuildDir,
+			Seeds:        archiveSeedsDir,
+			LibraryPaths: externalLibrariesPrefix,
 		})
 	}
 

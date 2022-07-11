@@ -17,12 +17,13 @@ type Metadata struct {
 
 // Fuzzer specifies the type and locations of fuzzers contained in the archive.
 type Fuzzer struct {
-	Target    string `yaml:"target"`
-	Path      string `yaml:"path"`
-	Engine    string `yaml:"engine"`
-	Sanitizer string `yaml:"sanitizer"`
-	BuildDir  string `yaml:"build_dir"`
-	Seeds     string `yaml:"seeds,omitempty"`
+	Target       string `yaml:"target"`
+	Path         string `yaml:"path"`
+	Engine       string `yaml:"engine"`
+	Sanitizer    string `yaml:"sanitizer"`
+	BuildDir     string `yaml:"build_dir"`
+	Seeds        string `yaml:"seeds,omitempty"`
+	LibraryPaths string `yaml:"library_paths,omitempty"`
 }
 
 // RunEnvironment specifies the environment in which the fuzzers are to be run.
