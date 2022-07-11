@@ -29,20 +29,20 @@ func TestPrettifyPath(t *testing.T) {
 	assert.Equal(t, filepath.Join("..some", "dir"), fileutil.PrettifyPath(filepath.Join(cwd, "..some", "dir")))
 }
 
-func TestIsUnder(t *testing.T) {
-	isUnder, err := fileutil.IsUnder(filepath.Join("dir1", "dir2", "file"), filepath.Join("dir1", "dir2"))
+func TestIsBelow(t *testing.T) {
+	isBelow, err := fileutil.IsBelow(filepath.Join("dir1", "dir2", "file"), filepath.Join("dir1", "dir2"))
 	assert.NoError(t, err)
-	assert.True(t, isUnder)
+	assert.True(t, isBelow)
 
-	isUnder, err = fileutil.IsUnder(filepath.Join("dir1", "dir2"), filepath.Join("dir1", "dir2"))
+	isBelow, err = fileutil.IsBelow(filepath.Join("dir1", "dir2"), filepath.Join("dir1", "dir2"))
 	assert.NoError(t, err)
-	assert.True(t, isUnder)
+	assert.True(t, isBelow)
 
-	isUnder, err = fileutil.IsUnder("dir1", filepath.Join("dir1", "dir2"))
+	isBelow, err = fileutil.IsBelow("dir1", filepath.Join("dir1", "dir2"))
 	assert.NoError(t, err)
-	assert.False(t, isUnder)
+	assert.False(t, isBelow)
 
-	isUnder, err = fileutil.IsUnder(".", filepath.Join("dir1", "dir2"))
+	isBelow, err = fileutil.IsBelow(".", filepath.Join("dir1", "dir2"))
 	assert.NoError(t, err)
-	assert.False(t, isUnder)
+	assert.False(t, isBelow)
 }

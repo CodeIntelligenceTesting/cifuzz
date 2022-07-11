@@ -82,11 +82,21 @@ func PrettifyPath(path string) string {
 	return rel
 }
 
-// IsUnder returns true if and only if path lies under or is root.
-func IsUnder(path string, root string) (bool, error) {
+// IsBelow returns true if and only if path lies below or is the path root.
+// path and root must be either both absolute or both relative.
+func IsBelow(path string, root string) (bool, error) {
+	if filepath.IsAbs(path) != filepath.IsAbs(root) {
+		return false, errors.Errorf("arguments to IsBelow must either both be relative or both be absolute, got: %q and %q", path, root)
+	}
 	rel, err := filepath.Rel(root, path)
 	if err != nil {
-		return false, errors.WithStack(err)
+		// Windows paths on separate drives can't be made relative to another.
+		// Thus, instead of returning an error, IsBelow should just return
+		// False if it fails to make the paths relative.
+		// Note: filepath.Rel may also return an error if it would need to know
+		// the current working directory, but that is not possible here since we
+		// already enforce consistent path styles.
+		return false, nil
 	}
 	return rel != ".." && !strings.HasPrefix(rel, filepath.FromSlash("../")), nil
 }

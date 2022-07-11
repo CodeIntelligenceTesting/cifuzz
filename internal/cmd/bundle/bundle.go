@@ -195,12 +195,12 @@ func assembleArtifacts(fuzzTest string, builder build.Builder) (
 	externalLibrariesPrefix := ""
 depsLoop:
 	for _, dep := range runtimeDeps {
-		var isUnderBuildDir bool
-		isUnderBuildDir, err = fileutil.IsUnder(dep, builder.BuildDir())
+		var isBelowBuildDir bool
+		isBelowBuildDir, err = fileutil.IsBelow(dep, builder.BuildDir())
 		if err != nil {
 			return
 		}
-		if isUnderBuildDir {
+		if isBelowBuildDir {
 			var buildDirRelPath string
 			buildDirRelPath, err = filepath.Rel(builder.BuildDir(), dep)
 			if err != nil {
@@ -230,12 +230,12 @@ depsLoop:
 		// 2. is handled by returning a list of these libraries that is shown to the user as a warning about the
 		// required contents of the Docker image specified as the run environment.
 		for _, systemLibraryPath := range systemLibraryPaths {
-			var isUnder bool
-			isUnder, err = fileutil.IsUnder(dep, systemLibraryPath)
+			var isBelowLibPath bool
+			isBelowLibPath, err = fileutil.IsBelow(dep, systemLibraryPath)
 			if err != nil {
 				return
 			}
-			if isUnder {
+			if isBelowLibPath {
 				systemDeps = append(systemDeps, dep)
 				continue depsLoop
 			}
