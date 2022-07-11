@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
@@ -72,7 +73,7 @@ func (c *reloadCmd) reloadCMake() error {
 	engine := "libfuzzer"
 	sanitizers := []string{"address", "undefined"}
 
-	builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
+	builder, err := cmake.NewBuilder(&build.BuilderOptions{
 		ProjectDir: c.projectDir,
 		Engine:     engine,
 		Sanitizers: sanitizers,

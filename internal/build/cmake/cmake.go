@@ -39,7 +39,7 @@ func BuildWithCMake(conf *config.Config, outWriter, errWriter io.Writer, fuzzTes
 		sanitizers = append(sanitizers, "undefined")
 	}
 
-	builder, err := NewBuilder(&BuilderOptions{
+	builder, err := NewBuilder(&build.BuilderOptions{
 		ProjectDir: conf.ProjectDir,
 		Engine:     engine,
 		Sanitizers: sanitizers,
@@ -63,35 +63,13 @@ func BuildWithCMake(conf *config.Config, outWriter, errWriter io.Writer, fuzzTes
 	return builder, nil
 }
 
-type BuilderOptions struct {
-	ProjectDir string
-	Engine     string
-	Sanitizers []string
-	Stdout     io.Writer
-	Stderr     io.Writer
-}
-
-func (opts *BuilderOptions) validate() error {
-	// Check that the project dir is set
-	if opts.ProjectDir == "" {
-		return errors.New("ProjectDir is not set")
-	}
-	// Check that the project dir exists and can be accessed
-	_, err := os.Stat(opts.ProjectDir)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
-}
-
 type Builder struct {
-	*BuilderOptions
-	BuildDir string
-	env      []string
+	*build.BuilderOptions
+	env []string
 }
 
-func NewBuilder(opts *BuilderOptions) (*Builder, error) {
-	err := opts.validate()
+func NewBuilder(opts *build.BuilderOptions) (*Builder, error) {
+	err := opts.Validate()
 	if err != nil {
 		return nil, err
 	}
@@ -99,12 +77,7 @@ func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 	b := &Builder{BuilderOptions: opts}
 
 	// Ensure that the build directory exists.
-	// Note: Invoking CMake on the same build directory with different cache
-	// variables is a no-op. For this reason, we have to encode all choices made
-	// for the cache variables below in the path to the build directory.
-	// Currently, this includes the fuzzing engine and the choice of sanitizers.
-	b.BuildDir = filepath.Join(opts.ProjectDir, ".cifuzz-build", opts.Engine, strings.Join(opts.Sanitizers, "+"))
-	err = os.MkdirAll(b.BuildDir, 0755)
+	err = os.MkdirAll(b.BuildDir(), 0755)
 	if err != nil {
 		return nil, err
 	}
@@ -115,6 +88,23 @@ func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 	}
 
 	return b, nil
+}
+
+func (b *Builder) Opts() *build.BuilderOptions {
+	return b.BuilderOptions
+}
+
+func (b *Builder) BuildDir() string {
+	// Note: Invoking CMake on the same build directory with different cache
+	// variables is a no-op. For this reason, we have to encode all choices made
+	// for the cache variables below in the path to the build directory.
+	// Currently, this includes the fuzzing engine and the choice of sanitizers.
+	return filepath.Join(
+		b.ProjectDir,
+		".cifuzz-build",
+		b.Engine,
+		strings.Join(b.Sanitizers, "+"),
+	)
 }
 
 // Configure calls cmake to "Generate a project buildsystem" (that's the
@@ -152,7 +142,7 @@ func (b *Builder) Configure() error {
 	cmd.Stdout = b.Stderr
 	cmd.Stderr = b.Stderr
 	cmd.Env = b.env
-	cmd.Dir = b.BuildDir
+	cmd.Dir = b.BuildDir()
 	log.Debugf("Working directory: %s", cmd.Dir)
 	log.Debugf("Command: %s", cmd.String())
 	err := cmd.Run()
@@ -163,7 +153,7 @@ func (b *Builder) Configure() error {
 func (b *Builder) Build(fuzzTest string) error {
 	cmd := exec.Command(
 		"cmake",
-		"--build", b.BuildDir,
+		"--build", b.BuildDir(),
 		"--config", cmakeBuildConfiguration,
 		"--target", fuzzTest,
 	)
@@ -198,7 +188,7 @@ func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
 	cmd := exec.Command(
 		"cmake",
 		"--install",
-		b.BuildDir,
+		b.BuildDir(),
 		"--component", "cifuzz_internal_deps_"+fuzzTest,
 	)
 	stdout, err := cmd.Output()
@@ -270,12 +260,12 @@ func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
 func (b *Builder) readInfoFile(fuzzTest string, kind string) (string, error) {
 	// The path to the info file for single-configuration CMake generators (e.g.
 	// Makefiles).
-	infoFileCandidate := filepath.Join(b.BuildDir, ".cifuzz", "fuzz_tests", fuzzTest, kind)
+	infoFileCandidate := filepath.Join(b.BuildDir(), ".cifuzz", "fuzz_tests", fuzzTest, kind)
 	exists, err := fileutil.Exists(infoFileCandidate)
 	if err != nil || !exists {
 		// The path to the info file for multi-configuration CMake generators
 		// (e.g. MSBuild).
-		infoFileCandidate = filepath.Join(b.BuildDir, cmakeBuildConfiguration, ".cifuzz", "fuzz_tests", fuzzTest, kind)
+		infoFileCandidate = filepath.Join(b.BuildDir(), cmakeBuildConfiguration, ".cifuzz", "fuzz_tests", fuzzTest, kind)
 		exists, err = fileutil.Exists(infoFileCandidate)
 	}
 	if err != nil {

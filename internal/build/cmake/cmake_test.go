@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
@@ -28,7 +29,7 @@ func TestNewBuilder(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a builder with engine "engine1"
-	builder1, err := NewBuilder(&BuilderOptions{
+	builder1, err := NewBuilder(&build.BuilderOptions{
 		ProjectDir: projectDir,
 		Engine:     "engine1",
 		Sanitizers: []string{"sanitizer1", "sanitizer2"},
@@ -36,10 +37,10 @@ func TestNewBuilder(t *testing.T) {
 		Stderr:     os.Stderr,
 	})
 	require.NoError(t, err)
-	require.DirExists(t, builder1.BuildDir)
+	require.DirExists(t, builder1.BuildDir())
 
 	// Create a builder with engine "engine2"
-	builder2, err := NewBuilder(&BuilderOptions{
+	builder2, err := NewBuilder(&build.BuilderOptions{
 		ProjectDir: projectDir,
 		Engine:     "engine2",
 		Sanitizers: []string{"sanitizer1", "sanitizer2"},
@@ -47,14 +48,14 @@ func TestNewBuilder(t *testing.T) {
 		Stderr:     os.Stderr,
 	})
 	require.NoError(t, err)
-	require.DirExists(t, builder2.BuildDir)
+	require.DirExists(t, builder2.BuildDir())
 
 	// Check that the two builders have different build directories
 	// (because they use different engines)
-	require.NotEqual(t, builder1.BuildDir, builder2.BuildDir)
+	require.NotEqual(t, builder1.BuildDir(), builder2.BuildDir())
 
 	// Create another builder with "engine1"
-	builder3, err := NewBuilder(&BuilderOptions{
+	builder3, err := NewBuilder(&build.BuilderOptions{
 		ProjectDir: projectDir,
 		Engine:     "engine1",
 		Sanitizers: []string{"sanitizer1", "sanitizer2"},
@@ -62,9 +63,9 @@ func TestNewBuilder(t *testing.T) {
 		Stderr:     os.Stderr,
 	})
 	require.NoError(t, err)
-	require.DirExists(t, builder3.BuildDir)
+	require.DirExists(t, builder3.BuildDir())
 
 	// Check that builder1 and builder3 have the same build directory
 	// (because they use the same engine and sanitizers)
-	require.Equal(t, builder1.BuildDir, builder3.BuildDir)
+	require.Equal(t, builder1.BuildDir(), builder3.BuildDir())
 }

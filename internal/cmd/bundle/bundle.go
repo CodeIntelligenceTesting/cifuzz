@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
@@ -178,7 +179,7 @@ func assembleArtifacts(fuzzTest string, builder build.Builder) (
 	buildArtifactsPrefix := filepath.Join(fuzzTestPrefix(fuzzTest, builder), "bin")
 
 	// Add the fuzz test executable.
-	fuzzTestExecutableRelPath, err := filepath.Rel(builder.BuildDir, fuzzTestExecutableAbsPath)
+	fuzzTestExecutableRelPath, err := filepath.Rel(builder.BuildDir(), fuzzTestExecutableAbsPath)
 	if err != nil {
 		err = errors.WithStack(err)
 		return
@@ -195,13 +196,13 @@ func assembleArtifacts(fuzzTest string, builder build.Builder) (
 depsLoop:
 	for _, dep := range runtimeDeps {
 		var isUnderBuildDir bool
-		isUnderBuildDir, err = fileutil.IsUnder(dep, builder.BuildDir)
+		isUnderBuildDir, err = fileutil.IsUnder(dep, builder.BuildDir())
 		if err != nil {
 			return
 		}
 		if isUnderBuildDir {
 			var buildDirRelPath string
-			buildDirRelPath, err = filepath.Rel(builder.BuildDir, dep)
+			buildDirRelPath, err = filepath.Rel(builder.BuildDir(), dep)
 			if err != nil {
 				err = errors.WithStack(err)
 				return
@@ -274,7 +275,7 @@ depsLoop:
 		err = artifact.AddDirToManifest(archiveManifest, archiveSeedsDir, seedCorpus)
 	}
 
-	for _, sanitizer := range builder.Sanitizers {
+	for _, sanitizer := range builder.Opts().Sanitizers {
 		if sanitizer == "undefined" {
 			// The artifact archive spec does not support UBSan as a standalone sanitizer.
 			continue
@@ -284,7 +285,7 @@ depsLoop:
 			Path:         fuzzTestArchivePath,
 			Engine:       "LIBFUZZER",
 			Sanitizer:    strings.ToUpper(sanitizer),
-			BuildDir:     builder.BuildDir,
+			BuildDir:     builder.BuildDir(),
 			Seeds:        archiveSeedsDir,
 			LibraryPaths: externalLibrariesPrefix,
 		})
@@ -295,8 +296,8 @@ depsLoop:
 
 // fuzzTestPrefix returns the path in the resulting artifact archive under which fuzz test specific files should be
 // added.
-func fuzzTestPrefix(fuzzTest string, builder *cmake.Builder) string {
-	return filepath.Join(builder.Engine, strings.Join(builder.Sanitizers, "+"), fuzzTest)
+func fuzzTestPrefix(fuzzTest string, builder build.Builder) string {
+	return filepath.Join(builder.Opts().Engine, strings.Join(builder.Opts().Sanitizers, "+"), fuzzTest)
 }
 
 func getCodeRevision() (codeRevision *artifact.CodeRevision) {
