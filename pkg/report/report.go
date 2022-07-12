@@ -52,25 +52,6 @@ type FuzzingMetric struct {
 	SecondsSinceLastEdge    uint64    `json:"seconds_since_last_edge,omitempty"`
 }
 
-type Finding struct {
-	Type               ErrorType     `json:"type,omitempty"`
-	InputData          []byte        `json:"input_data,omitempty"`
-	Logs               []string      `json:"logs,omitempty"`
-	Details            string        `json:"details,omitempty"`
-	HumanReadableInput string        `json:"human_readable_input,omitempty"`
-	MoreDetails        *ErrorDetails `json:"more_details,omitempty"`
-	Tag                uint64        `json:"tag,omitempty"`
-	ShortDescription   string        `json:"short_description,omitempty"`
-	InputFile          string
-}
-
-func (x *Finding) GetDetails() string {
-	if x != nil {
-		return x.Details
-	}
-	return ""
-}
-
 type ErrorType string
 
 // These constants must have this exact value (in uppercase) to be able

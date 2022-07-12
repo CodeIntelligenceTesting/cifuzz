@@ -1,3 +1,4 @@
 build/
 .cifuzz-build/
 .cifuzz-corpus/
+.cifuzz-findings/

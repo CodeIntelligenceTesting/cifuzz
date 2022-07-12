@@ -1,6 +1,7 @@
 package report_handler
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/term"
 
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/metrics"
+	"code-intelligence.com/cifuzz/internal/names"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/util/stringutil"
@@ -77,6 +79,17 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 	if r.Finding != nil {
 		// Count the number of findings for the final metrics
 		h.numFindings += 1
+
+		if r.Finding.Name == "" {
+			// create a name based on a hash of the crashing input
+			h := sha1.New()
+			h.Write(r.Finding.InputData)
+			r.Finding.Name = names.GetDeterministicName(h.Sum(nil))
+		}
+
+		if err := r.Finding.Save(); err != nil {
+			return err
+		}
 	}
 
 	// Print report as JSON if the --json flag was specified

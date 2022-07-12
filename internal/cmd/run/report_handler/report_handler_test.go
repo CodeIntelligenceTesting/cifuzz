@@ -120,6 +120,39 @@ func TestReportHandler_PrintJSON(t *testing.T) {
 	checkOutput(t, jsonOut, findingLogs...)
 }
 
+func TestReportHandler_GenerateName(t *testing.T) {
+	h, err := NewReportHandler(true, false)
+	require.NoError(t, err)
+
+	findingLogs := []string{"Oops", "The program crashed"}
+	findingReport := &report.Report{
+		Status: report.RunStatus_RUNNING,
+		Finding: &report.Finding{
+			Logs:      findingLogs,
+			InputData: []byte("123"),
+		},
+	}
+	err = h.Handle(findingReport)
+	require.NoError(t, err)
+	assert.Equal(t, "angry_ptolemy", findingReport.Finding.Name)
+}
+
+func TestReportHandler_NotOverrideName(t *testing.T) {
+	h, err := NewReportHandler(true, false)
+	require.NoError(t, err)
+
+	findingLogs := []string{"Oops", "The program crashed"}
+	findingReport := &report.Report{
+		Status: report.RunStatus_RUNNING,
+		Finding: &report.Finding{
+			Logs: findingLogs,
+			Name: "MyName",
+		},
+	}
+	err = h.Handle(findingReport)
+	require.NoError(t, err)
+	assert.Equal(t, "MyName", findingReport.Finding.Name)
+}
 func checkOutput(t *testing.T, r io.Reader, s ...string) {
 	output, err := io.ReadAll(r)
 	require.NoError(t, err)
