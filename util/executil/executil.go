@@ -2,9 +2,11 @@ package executil
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,6 +22,20 @@ const (
 	// Cmd.
 	processGroupTerminationGracePeriod = 3 * time.Second
 )
+
+// HandleExecError wraps an error returned by a function on exec.Cmd, adding
+// stderr to the message if the error is an exec.ExitError.
+func HandleExecError(cmd *exec.Cmd, err error) error {
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		stderr := string(exitErr.Stderr)
+		if stderr != "" && !strings.HasSuffix(stderr, "\n") {
+			stderr += "\n"
+		}
+		err = fmt.Errorf("%s%s: %w", stderr, cmd.Args[0], err)
+		return errors.WithStack(err)
+	}
+	return errors.WithStack(err)
+}
 
 // Cmd provides the same functionality as exec.Cmd plus some utility
 // methods.

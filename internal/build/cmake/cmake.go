@@ -16,6 +16,7 @@ import (
 	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
@@ -155,10 +156,7 @@ func (b *Builder) Configure() error {
 	log.Debugf("Working directory: %s", cmd.Dir)
 	log.Debugf("Command: %s", cmd.String())
 	err := cmd.Run()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
+	return executil.HandleExecError(cmd, err)
 }
 
 // Build builds the specified fuzz test with CMake
@@ -176,10 +174,7 @@ func (b *Builder) Build(fuzzTest string) error {
 	cmd.Env = b.env
 	log.Debugf("Command: %s", cmd.String())
 	err := cmd.Run()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
+	return executil.HandleExecError(cmd, err)
 }
 
 // FindFuzzTestExecutable uses the info files emitted by the CMake integration
@@ -218,7 +213,7 @@ func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
 	)
 	stdout, err := cmd.Output()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, executil.HandleExecError(cmd, err)
 	}
 
 	var resolvedDeps []string
