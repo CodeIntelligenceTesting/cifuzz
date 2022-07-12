@@ -40,9 +40,9 @@ function(enable_fuzz_testing)
 
   if(CIFUZZ_ENGINE STREQUAL libfuzzer)
     if(MSVC)
-      add_compile_options(/fsanitize=fuzzer-no-link)
+      add_compile_options(/fsanitize=fuzzer)
     else()
-      add_compile_options(-fsanitize=fuzzer-no-link)
+      add_compile_options(-fsanitize=fuzzer)
     endif()
   endif()
 
