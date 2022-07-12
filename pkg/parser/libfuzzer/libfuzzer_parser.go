@@ -247,6 +247,8 @@ func (p *parser) parseLine(ctx context.Context, line string) error {
 			return errors.Errorf("Unexpected test input line: %s", line)
 		}
 		p.pendingFinding.InputData = testInput
+		p.pendingFinding.InputFile = testInputFilePath
+
 		return nil
 	}
 

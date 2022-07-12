@@ -61,6 +61,7 @@ type Finding struct {
 	MoreDetails        *ErrorDetails `json:"more_details,omitempty"`
 	Tag                uint64        `json:"tag,omitempty"`
 	ShortDescription   string        `json:"short_description,omitempty"`
+	InputFile          string
 }
 
 func (x *Finding) GetDetails() string {
