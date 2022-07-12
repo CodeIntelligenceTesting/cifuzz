@@ -95,7 +95,7 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	time.Sleep(time.Second)
 	modifyFuzzTestToCallFunction(t, fuzzTestPath)
 	// Run the fuzz test
-	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer`), false)
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`), false)
 
 	// Run cifuzz bundle and verify the contents of the archive.
 	archiveDir := createAndExtractArtifactArchive(t, dir, cifuzz)
