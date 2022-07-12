@@ -79,7 +79,6 @@ $(FUZZ_TARGET_DIR)/trigger_asan_with_file_accesses: OUT=$(BUILD_DIR)/$(notdir $@
 $(FUZZ_TARGET_DIR)/trigger_asan_with_file_accesses: ${FUZZ_TARGET_DIR}/trigger_asan_with_file_accesses.c $(BUILD_DIR)/api.obj
 	$(CC) $? $(CFLAGS) $(INCLUDE_OPTION)$(SHARED_DIR) $(OUT_OPTION)$(OUT)
 	@echo "--> done: $(OUT)"
-	cp files/example.conf $(BUILD_DIR)/
 
 $(FUZZ_TARGET_DIR)/trigger_ubsan_non_recoverable: OUT=$(BUILD_DIR)/$(notdir $@)$(EXT)
 $(FUZZ_TARGET_DIR)/trigger_ubsan_non_recoverable: $(FUZZ_TARGET_DIR)/trigger_ubsan.cpp

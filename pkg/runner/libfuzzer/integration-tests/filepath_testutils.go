@@ -25,6 +25,11 @@ func TestDataDir(t *testing.T) string {
 		require.NoError(t, err)
 		err = copy.Copy(srcDir, testDataDir)
 		require.NoError(t, err)
+
+		// chdir into the temporary test data dir to keep the current
+		// working directory clean
+		err = os.Chdir(testDataDir)
+		require.NoError(t, err)
 	})
 	return testDataDir
 }

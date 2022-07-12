@@ -39,7 +39,6 @@ func (cp *ChannelPassthrough) Handle(report *report.Report) error {
 // RunnerTest helps to execute tests for the runner package
 type RunnerTest struct {
 	FuzzTarget      string
-	ExecutionDir    string
 	Engine          config.Engine
 	SeedCorpusDir   string
 	Timeout         time.Duration
@@ -53,9 +52,8 @@ type RunnerTest struct {
 
 func NewLibfuzzerTest(t *testing.T, buildDir, fuzzTarget string, disableMinijail bool) *RunnerTest {
 	return &RunnerTest{
-		ExecutionDir: buildDir,
-		FuzzTarget:   FuzzTestExecutablePath(t, buildDir, fuzzTarget),
-		Engine:       config.LIBFUZZER,
+		FuzzTarget: FuzzTestExecutablePath(t, buildDir, fuzzTarget),
+		Engine:     config.LIBFUZZER,
 		// Use a deterministic random seed
 		EngineArgs: []string{
 			"-seed=1",
@@ -112,15 +110,10 @@ func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error 
 
 // Run makes sure that all the test output gets captured
 func (test *RunnerTest) Run(t *testing.T) (string, []*report.Report) {
-
-	// change working directory to keep a clean state
-	err := os.Chdir(test.ExecutionDir)
-	require.NoError(t, err)
-
 	// create buffered channel for receiving the reports
 	reportCh := make(chan *report.Report, 1024)
 
-	err = test.Start(t, reportCh)
+	err := test.Start(t, reportCh)
 	require.NoError(t, err)
 
 	// collecting reports
