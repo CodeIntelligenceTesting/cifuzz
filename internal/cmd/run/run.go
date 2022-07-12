@@ -411,8 +411,8 @@ func setBuildFlagsEnvVars(env []string) ([]string, error) {
 	return env, nil
 }
 
-func countSeeds(seedDirs []string) (numSeeds uint, err error) {
-	for _, dir := range seedDirs {
+func countSeeds(seedCorpusDirs []string) (numSeeds uint, err error) {
+	for _, dir := range seedCorpusDirs {
 		var seedsInDir uint
 		err = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 			if err != nil {

@@ -22,7 +22,7 @@ func TestIntegration_CrashingCorpusEntry(t *testing.T) {
 	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 		test := NewLibfuzzerTest(t, buildDir, "trigger_asan", disableMinijail)
 		test.RunsLimit = 0
-		test.SeedCorpusDir = makeTemporarySeedCorpusDir(t)
+		test.GeneratedCorpusDir = makeTemporarySeedCorpusDir(t)
 
 		_, reports := test.Run(t)
 

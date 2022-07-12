@@ -38,16 +38,16 @@ func (cp *ChannelPassthrough) Handle(report *report.Report) error {
 
 // RunnerTest helps to execute tests for the runner package
 type RunnerTest struct {
-	FuzzTarget      string
-	Engine          config.Engine
-	SeedCorpusDir   string
-	Timeout         time.Duration
-	EngineArgs      []string
-	FuzzTargetArgs  []string
-	FuzzerEnv       []string
-	DisableMinijail bool
-	RunsLimit       int
-	LogOutput       *bytes.Buffer
+	FuzzTarget         string
+	Engine             config.Engine
+	GeneratedCorpusDir string
+	Timeout            time.Duration
+	EngineArgs         []string
+	FuzzTargetArgs     []string
+	FuzzerEnv          []string
+	DisableMinijail    bool
+	RunsLimit          int
+	LogOutput          *bytes.Buffer
 }
 
 func NewLibfuzzerTest(t *testing.T, buildDir, fuzzTarget string, disableMinijail bool) *RunnerTest {
@@ -70,12 +70,12 @@ func NewLibfuzzerTest(t *testing.T, buildDir, fuzzTarget string, disableMinijail
 func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error {
 	var err error
 
-	if test.SeedCorpusDir == "" {
-		test.SeedCorpusDir, err = os.MkdirTemp("", "seeds")
+	if test.GeneratedCorpusDir == "" {
+		test.GeneratedCorpusDir, err = os.MkdirTemp("", "corpus")
 		require.NoError(t, err)
 	}
 
-	additionalSeedDir, err := os.MkdirTemp("", "additional_seeds")
+	seedCorpusDir, err := os.MkdirTemp("", "seeds")
 	require.NoError(t, err)
 
 	if test.RunsLimit != -1 {
@@ -85,8 +85,8 @@ func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error 
 
 	libfuzzerOptions := &libfuzzer.RunnerOptions{
 		FuzzTarget:         test.FuzzTarget,
-		GeneratedCorpusDir: test.SeedCorpusDir,
-		SeedCorpusDirs:     []string{additionalSeedDir},
+		GeneratedCorpusDir: test.GeneratedCorpusDir,
+		SeedCorpusDirs:     []string{seedCorpusDir},
 		Timeout:            test.Timeout,
 		EngineArgs:         test.EngineArgs,
 		FuzzTargetArgs:     test.FuzzTargetArgs,
@@ -126,7 +126,7 @@ func (test *RunnerTest) Run(t *testing.T) (string, []*report.Report) {
 }
 
 func (test *RunnerTest) RequireSeedCorpusNotEmpty(t *testing.T) {
-	seeds, err := os.ReadDir(test.SeedCorpusDir)
+	seeds, err := os.ReadDir(test.GeneratedCorpusDir)
 	require.NoError(t, err)
-	require.NotEmpty(t, seeds, "corpus directory is empty: %s", test.SeedCorpusDir)
+	require.NotEmpty(t, seeds, "corpus directory is empty: %s", test.GeneratedCorpusDir)
 }
