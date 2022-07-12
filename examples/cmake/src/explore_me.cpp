@@ -13,10 +13,10 @@ void exploreMe(int a, int b, string c) {
     if (b >= 2000000) {
       printf("branch 2\n");
 
-      if (b - a == 123) {
+      if (b - a < 100000) {
         printf("branch 3\n");
 
-        if (c == "FUZZ") {
+        if (c == "FUZZING") {
           printf("branch 4\n");
 
           // Trigger a heap buffer overflow
