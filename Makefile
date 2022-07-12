@@ -96,10 +96,6 @@ test: deps build/$(current_os)
 test/unit: deps
 	go test -v ./... -short
 
-.PHONY: test/unit/concurrent
-test/unit/concurrent: deps
-	go test -v ./... -short -count=10
-
 .PHONY: test/integration
 test/integration: deps
 	go test -v ./... -run 'TestIntegration.*'
