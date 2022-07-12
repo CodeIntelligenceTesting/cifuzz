@@ -36,20 +36,20 @@ const (
 )
 
 type RunnerOptions struct {
-	FuzzTarget          string
-	SeedsDir            string
-	AdditionalSeedsDirs []string
-	Dictionary          string
-	LibraryDirs         []string
-	EnvVars             []string
-	EngineArgs          []string
-	FuzzTargetArgs      []string
-	ReportHandler       report.Handler
-	Timeout             time.Duration
-	UseMinijail         bool
-	Verbose             bool
-	KeepColor           bool
-	LogOutput           io.Writer
+	FuzzTarget         string
+	GeneratedCorpusDir string
+	SeedCorpusDirs     []string
+	Dictionary         string
+	LibraryDirs        []string
+	EnvVars            []string
+	EngineArgs         []string
+	FuzzTargetArgs     []string
+	ReportHandler      report.Handler
+	Timeout            time.Duration
+	UseMinijail        bool
+	Verbose            bool
+	KeepColor          bool
+	LogOutput          io.Writer
 }
 
 func (options *RunnerOptions) ValidateOptions() error {
@@ -110,10 +110,10 @@ func (r *Runner) Run(ctx context.Context) error {
 	args = append(args, r.EngineArgs...)
 
 	// Tell libfuzzer which corpus directory it should use
-	args = append(args, r.SeedsDir)
+	args = append(args, r.GeneratedCorpusDir)
 
-	// Add any additional corpus directories as further positional arguments
-	args = append(args, r.AdditionalSeedsDirs...)
+	// Add any seed corpus directories as further positional arguments
+	args = append(args, r.SeedCorpusDirs...)
 
 	if len(r.FuzzTargetArgs) > 0 {
 		// separate the libfuzzer and fuzz target arguments with a "--"
@@ -142,10 +142,10 @@ func (r *Runner) Run(ctx context.Context) error {
 			{Source: r.FuzzTarget},
 			// The first corpus directory must be writable, because
 			// libfuzzer writes new test inputs to it
-			{Source: r.SeedsDir, Writable: minijail.ReadWrite},
+			{Source: r.GeneratedCorpusDir, Writable: minijail.ReadWrite},
 		}
 
-		for _, dir := range r.AdditionalSeedsDirs {
+		for _, dir := range r.SeedCorpusDirs {
 			bindings = append(bindings, &minijail.Binding{Source: dir})
 		}
 

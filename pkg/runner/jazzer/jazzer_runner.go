@@ -108,10 +108,10 @@ func (r *Runner) Run(ctx context.Context) error {
 	}
 
 	// Tell libfuzzer which corpus directory it should use
-	args = append(args, r.SeedsDir)
+	args = append(args, r.GeneratedCorpusDir)
 
 	// Add any additional corpus directories as further positional arguments
-	args = append(args, r.AdditionalSeedsDirs...)
+	args = append(args, r.SeedCorpusDirs...)
 
 	// -----------------------------
 	// --- fuzz target arguments ---
@@ -141,10 +141,10 @@ func (r *Runner) Run(ctx context.Context) error {
 			{Source: agentPath},
 			// The first corpus directory must be writable, because
 			// libfuzzer writes new test inputs to it
-			{Source: r.SeedsDir, Writable: minijail.ReadWrite},
+			{Source: r.GeneratedCorpusDir, Writable: minijail.ReadWrite},
 		}
 
-		for _, dir := range r.AdditionalSeedsDirs {
+		for _, dir := range r.SeedCorpusDirs {
 			bindings = append(bindings, &minijail.Binding{Source: dir})
 		}
 

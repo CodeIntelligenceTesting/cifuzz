@@ -228,33 +228,27 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
 	log.Debugf("Executable: %s", fuzzTestExecutable)
 
-	if len(c.opts.seedsDirs) == 0 {
-		// If no seeds directory is specified, use a single persistent corpus
-		// directory per fuzz test in a hidden subdirectory. In most cases,
-		// corpora are not checked into source control, so a hidden directory
-		// is an appropriate default that can always be overridden via the
-		// --seeds-dir flag.
-		defaultCorpusDir := filepath.Join(c.config.ProjectDir, ".cifuzz-corpus", c.opts.fuzzTest)
-		err := os.MkdirAll(defaultCorpusDir, 0755)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		log.Infof("Storing corpus in %s", fileutil.PrettifyPath(defaultCorpusDir))
-		c.opts.seedsDirs = []string{defaultCorpusDir}
+	// Store the generated corpus in a single persistent directory per
+	// fuzz test in a hidden subdirectory.
+	generatedCorpusDir := filepath.Join(c.config.ProjectDir, ".cifuzz-corpus", c.opts.fuzzTest)
+	err := os.MkdirAll(generatedCorpusDir, 0755)
+	if err != nil {
+		return errors.WithStack(err)
 	}
+	log.Infof("Storing generated corpus in %s", fileutil.PrettifyPath(generatedCorpusDir))
 
 	runnerOpts := &libfuzzer.RunnerOptions{
-		FuzzTarget:          fuzzTestExecutable,
-		SeedsDir:            c.opts.seedsDirs[0],
-		AdditionalSeedsDirs: c.opts.seedsDirs[1:],
-		Dictionary:          c.opts.dictionary,
-		EngineArgs:          c.opts.engineArgs,
-		FuzzTargetArgs:      c.opts.fuzzTargetArgs,
-		ReportHandler:       c.reportHandler,
-		Timeout:             c.opts.timeout,
-		UseMinijail:         c.opts.useSandbox,
-		Verbose:             viper.GetBool("verbose"),
-		KeepColor:           !c.opts.printJSON,
+		FuzzTarget:         fuzzTestExecutable,
+		GeneratedCorpusDir: generatedCorpusDir,
+		SeedCorpusDirs:     c.opts.seedsDirs,
+		Dictionary:         c.opts.dictionary,
+		EngineArgs:         c.opts.engineArgs,
+		FuzzTargetArgs:     c.opts.fuzzTargetArgs,
+		ReportHandler:      c.reportHandler,
+		Timeout:            c.opts.timeout,
+		UseMinijail:        c.opts.useSandbox,
+		Verbose:            viper.GetBool("verbose"),
+		KeepColor:          !c.opts.printJSON,
 	}
 	runner := libfuzzer.NewRunner(runnerOpts)
 
@@ -283,7 +277,7 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 		return runner.Run(routinesCtx)
 	})
 
-	err := routines.Wait()
+	err = routines.Wait()
 	// We use a separate variable to pass signal errors, because when
 	// a signal was received, the first goroutine terminates the second
 	// one, resulting in a race of which returns an error first. In that
