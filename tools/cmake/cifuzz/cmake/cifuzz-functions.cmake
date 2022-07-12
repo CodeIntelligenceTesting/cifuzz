@@ -109,7 +109,8 @@ function(add_fuzz_test name)
     target_link_libraries("${name}" PRIVATE cifuzz_internal_replayer)
   elseif(CIFUZZ_ENGINE STREQUAL libfuzzer)
     if(MSVC)
-      target_link_options("${name}" PRIVATE /fsanitize=fuzzer)
+      # MSVC already marks its compilation outputs as requiring a link against libFuzzer and thus link.exe doesn't
+      # offer the equivalent of `-fsanitize=fuzzer`.
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR ((NOT "CXX" IN_LIST LANGUAGES) AND (CMAKE_C_COMPILER_ID STREQUAL "Clang")))
       target_link_options("${name}" PRIVATE -fsanitize=fuzzer)
     else()
