@@ -104,6 +104,10 @@ test/unit/concurrent: deps
 test/integration: deps
 	go test -v ./... -run 'TestIntegration.*'
 
+.PHONY: test/integration/sequential
+test/integration/sequential: deps
+	go test -v -parallel=1 ./... -run 'TestIntegration.*'
+
 .PHONY: test/race
 test/race: deps build/$(current_os)
 	go test -v ./... -race

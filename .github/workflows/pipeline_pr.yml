@@ -80,5 +80,8 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
 
       - name: Run integration tests
-        run: make test/integration
+        # We run the integration tests sequentially here to avoid that
+        # tests write to stderr at the same time, which makes it hard to
+        # figure out which output belongs to which test.
+        run: make test/integration/sequential
         shell: bash
