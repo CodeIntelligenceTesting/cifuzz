@@ -13,10 +13,10 @@ func TestIntegration_InputTimeout(t *testing.T) {
 	}
 	t.Parallel()
 
-	BuildFuzzTarget(t, "trigger_timeout")
+	buildDir := BuildFuzzTarget(t, "trigger_timeout")
 
 	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := NewLibfuzzerTest(t, "trigger_timeout", disableMinijail)
+		test := NewLibfuzzerTest(t, buildDir, "trigger_timeout", disableMinijail)
 		// The input timeout should be reported on the first input
 		test.RunsLimit = 1
 		test.EngineArgs = append(test.EngineArgs, "-timeout=1")

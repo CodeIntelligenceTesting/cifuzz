@@ -12,10 +12,10 @@ func TestIntegration_ASAN(t *testing.T) {
 	}
 	t.Parallel()
 
-	BuildFuzzTarget(t, "trigger_asan")
+	buildDir := BuildFuzzTarget(t, "trigger_asan")
 
 	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := NewLibfuzzerTest(t, "trigger_asan", disableMinijail)
+		test := NewLibfuzzerTest(t, buildDir, "trigger_asan", disableMinijail)
 
 		_, reports := test.Run(t)
 

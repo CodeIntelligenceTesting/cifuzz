@@ -10,10 +10,10 @@ func TestIntegration_CasesWrittenToCorpus(t *testing.T) {
 	}
 	t.Parallel()
 
-	BuildFuzzTarget(t, "new_paths_fuzzer")
+	buildDir := BuildFuzzTarget(t, "new_paths_fuzzer")
 
 	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := NewLibfuzzerTest(t, "new_paths_fuzzer", disableMinijail)
+		test := NewLibfuzzerTest(t, buildDir, "new_paths_fuzzer", disableMinijail)
 
 		_, reports := test.Run(t)
 

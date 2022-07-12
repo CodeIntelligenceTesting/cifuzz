@@ -51,10 +51,10 @@ type RunnerTest struct {
 	LogOutput       *bytes.Buffer
 }
 
-func NewLibfuzzerTest(t *testing.T, fuzzTarget string, disableMinijail bool) *RunnerTest {
+func NewLibfuzzerTest(t *testing.T, buildDir, fuzzTarget string, disableMinijail bool) *RunnerTest {
 	return &RunnerTest{
-		ExecutionDir: BuildDir(t),
-		FuzzTarget:   FuzzTestExecutablePath(t, testDataDir, fuzzTarget),
+		ExecutionDir: buildDir,
+		FuzzTarget:   FuzzTestExecutablePath(t, buildDir, fuzzTarget),
 		Engine:       config.LIBFUZZER,
 		// Use a deterministic random seed
 		EngineArgs: []string{

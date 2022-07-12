@@ -29,13 +29,15 @@ func TestDataDir(t *testing.T) string {
 	return testDataDir
 }
 
-func BuildDir(t *testing.T) string {
-	return filepath.Join(TestDataDir(t), "build")
+func TempBuildDir(t *testing.T) string {
+	buildDir, err := os.MkdirTemp(baseTempDir, "build-")
+	require.NoError(t, err)
+	return buildDir
 }
 
-func FuzzTestExecutablePath(t *testing.T, testDataDir, fuzzTest string) string {
+func FuzzTestExecutablePath(t *testing.T, buildDir, fuzzTest string) string {
 	if runtime.GOOS == "windows" {
 		fuzzTest += ".exe"
 	}
-	return filepath.Join(BuildDir(t), fuzzTest)
+	return filepath.Join(buildDir, fuzzTest)
 }

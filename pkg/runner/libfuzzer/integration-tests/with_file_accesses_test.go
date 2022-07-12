@@ -12,11 +12,11 @@ func TestIntegration_WithFileAccesses(t *testing.T) {
 	}
 	t.Parallel()
 
-	BuildFuzzTarget(t, "trigger_asan_with_file_accesses")
+	buildDir := BuildFuzzTarget(t, "trigger_asan_with_file_accesses")
 
 	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
 
-		test := NewLibfuzzerTest(t, "trigger_asan_with_file_accesses", disableMinijail)
+		test := NewLibfuzzerTest(t, buildDir, "trigger_asan_with_file_accesses", disableMinijail)
 		_, reports := test.Run(t)
 
 		CheckReports(t, reports, &CheckReportOptions{

@@ -15,10 +15,10 @@ func TestIntegration_CrashOnEmptyInput(t *testing.T) {
 	}
 	t.Parallel()
 
-	BuildFuzzTarget(t, "trigger_asan_on_empty_input")
+	buildDir := BuildFuzzTarget(t, "trigger_asan_on_empty_input")
 
 	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := NewLibfuzzerTest(t, "trigger_asan_on_empty_input", disableMinijail)
+		test := NewLibfuzzerTest(t, buildDir, "trigger_asan_on_empty_input", disableMinijail)
 
 		_, reports := test.Run(t)
 

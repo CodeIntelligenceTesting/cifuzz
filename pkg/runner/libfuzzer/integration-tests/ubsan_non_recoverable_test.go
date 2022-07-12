@@ -14,10 +14,10 @@ func TestIntegration_UBSANNonRecoverable(t *testing.T) {
 	}
 	t.Parallel()
 
-	BuildFuzzTarget(t, "trigger_ubsan_non_recoverable")
+	buildDir := BuildFuzzTarget(t, "trigger_ubsan_non_recoverable")
 
 	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := NewLibfuzzerTest(t, "trigger_ubsan_non_recoverable", disableMinijail)
+		test := NewLibfuzzerTest(t, buildDir, "trigger_ubsan_non_recoverable", disableMinijail)
 
 		_, reports := test.Run(t)
 

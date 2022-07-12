@@ -12,10 +12,10 @@ func TestIntegration_OOM(t *testing.T) {
 	}
 	t.Parallel()
 
-	BuildFuzzTarget(t, "trigger_oom")
+	buildDir := BuildFuzzTarget(t, "trigger_oom")
 
 	TestWithAndWithoutMinijail(t, func(t *testing.T, disableMinijail bool) {
-		test := NewLibfuzzerTest(t, "trigger_oom", disableMinijail)
+		test := NewLibfuzzerTest(t, buildDir, "trigger_oom", disableMinijail)
 		test.EngineArgs = append(test.EngineArgs, "-malloc_limit_mb=1")
 
 		_, reports := test.Run(t)
