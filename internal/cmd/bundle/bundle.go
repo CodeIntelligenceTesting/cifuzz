@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -26,19 +27,27 @@ const fuzzerWorkDirPath = "work_dir"
 
 // Runtime dependencies of fuzz tests that live under these paths will not be included in the artifact archive and have
 // to be provided by the Docker image instead.
-var systemLibraryPaths = []string{
-	"/lib",
-	"/usr/lib",
+var systemLibraryPaths = map[string][]string{
+	"linux": {
+		"/lib",
+		"/usr/lib",
+	},
+	"darwin": {
+		"/lib",
+		"/usr/lib",
+	},
 }
 
 // System library dependencies that are so common that we shouldn't emit a warning for them - they will be contained in
 // any reasonable Docker image.
-var wellKnownSystemLibraries = []*regexp.Regexp{
-	versionedLibraryRegexp("ld-linux-x86-64.so"),
-	versionedLibraryRegexp("libc.so"),
-	versionedLibraryRegexp("libgcc_s.so"),
-	versionedLibraryRegexp("libm.so"),
-	versionedLibraryRegexp("libstdc++.so"),
+var wellKnownSystemLibraries = map[string][]*regexp.Regexp{
+	"linux": {
+		versionedLibraryRegexp("ld-linux-x86-64.so"),
+		versionedLibraryRegexp("libc.so"),
+		versionedLibraryRegexp("libgcc_s.so"),
+		versionedLibraryRegexp("libm.so"),
+		versionedLibraryRegexp("libstdc++.so"),
+	},
 }
 
 func versionedLibraryRegexp(unversionedBasename string) *regexp.Regexp {
@@ -221,7 +230,7 @@ depsLoop:
 		//    in a special directory that is added to the library search path at runtime.
 
 		// 1. is handled by ignoring these runtime dependencies.
-		for _, wellKnownSystemLibrary := range wellKnownSystemLibraries {
+		for _, wellKnownSystemLibrary := range wellKnownSystemLibraries[runtime.GOOS] {
 			if wellKnownSystemLibrary.MatchString(dep) {
 				continue depsLoop
 			}
@@ -229,7 +238,7 @@ depsLoop:
 
 		// 2. is handled by returning a list of these libraries that is shown to the user as a warning about the
 		// required contents of the Docker image specified as the run environment.
-		for _, systemLibraryPath := range systemLibraryPaths {
+		for _, systemLibraryPath := range systemLibraryPaths[runtime.GOOS] {
 			var isBelowLibPath bool
 			isBelowLibPath, err = fileutil.IsBelow(dep, systemLibraryPath)
 			if err != nil {
