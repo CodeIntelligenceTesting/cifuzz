@@ -28,6 +28,12 @@ function(enable_fuzz_testing)
           # kept.
           /UNDEBUG
       )
+      add_link_options(
+          # /INCREMENTAL is enabled by default with RelWithDebInfo, but is unsupported with ASan and potentially impacts
+          # performance by padding functions.
+          # https://gitlab.kitware.com/cmake/cmake/-/issues/20812
+          /INCREMENTAL:NO
+      )
     else()
       add_compile_options(
           -fno-omit-frame-pointer
