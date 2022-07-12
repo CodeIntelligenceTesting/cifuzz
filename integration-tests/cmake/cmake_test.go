@@ -29,9 +29,6 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	if runtime.GOOS == "windows" {
-		t.Skip("This test doesn't work on Windows yet")
-	}
 
 	installer, err := install.NewInstaller(nil)
 	require.NoError(t, err)
@@ -86,7 +83,14 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run the (empty) fuzz test
-	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^paths: \d+`), true)
+	//
+	// TODO: Disabled on Windows since it fails there for at least the following reasons:
+	//  1. The CI log output doesn't contain the pterm log output.
+	//  2. The command we use for process group termination sometimes exits with a non-zero exit code.
+	//  3. The exit code of the fuzzer on termination appears to be 1 rather than 128 + SIGTERM.
+	if runtime.GOOS != "windows" {
+		runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^paths: \d+`), true)
+	}
 
 	// Make the fuzz test call a function. Before we do that, we sleep
 	// for one second, to avoid make implementations which only look at
@@ -122,7 +126,7 @@ func copyTestdataDir(t *testing.T) string {
 func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.Regexp, terminate bool) {
 	t.Helper()
 
-	const timeout = 2 * time.Minute
+	const timeout = 5 * time.Minute
 	runCtx, closeRunCtx := context.WithTimeout(context.Background(), timeout)
 	defer closeRunCtx()
 	cmd := executil.CommandContext(runCtx, cifuzz, "run", "-v", "parser_fuzz_test", "--engine-arg=-seed=1")
