@@ -59,6 +59,7 @@ cifuzz run my_fuzz_test
 This should stop after a few seconds with an actual finding.
 
 ### Setup / Create your first fuzz test
+
 **cifuzz** commands will interactively guide you through the needed 
 options and show next steps. You can find a complete 
 list of the available commands with all supported options and 
@@ -82,5 +83,21 @@ writing fuzz tests you can take a look at our
 4. Start the fuzzing by executing `cifuzz run my_fuzz_test`. 
 **cifuzz** now tries to build the fuzz test and starts a fuzzing run.
 
+### Regression testing
 
+**Important:** In general there are two ways to run your fuzz test:
+
+1. An actual fuzzing run by calling: `cifuzz run my_fuzz_test`.
+The fuzzer will rapidly generate new inputs and feed them into your 
+fuzz test. Any input that covers new parts of the fuzzed project will 
+be added to the generated corpus. cifuzz will run until a crash occurs 
+and report detailed information about the finding.
+
+2. As a regression test, by invoking it through your IDE/editor or by
+directly executing the replayer binary 
+(see [here](docs/How-To-Write-A-Fuzz-Test.md#how-to-buildcompile-your-fuzz-tests)
+on how to build that binary).
+This will use the replayer to apply existing input data from the
+seed corpus. In this case the fuzz test will stop immediately after
+applying all input or earlier if a regression occurs.
 

@@ -7,7 +7,9 @@
 
 If you created a fuzz test with `cifuzz create` and followed the 
 instructions printed by the command, the fuzz test is now built as part 
-of the regular CMake build. For example you can start it by executing: 
+of the regular CMake build. 
+You can build the replayer binary (see [README](../README.md#regression-testing)
+for more information about this) for your fuzz test by:
 
 ```
 cmake -S . -B build
@@ -54,14 +56,14 @@ FUZZ_TEST(const uint8_t *data, size_t size) {
 ### Regression Test / Replayer
 
 When creating a new fuzz test we recommend to use the regression test
-mode (see [README](../README.md)) to maintain a fast and responsive
-development cycle. 
+mode (see [README](../README.md#regression-testing)) to maintain a 
+fast and responsive development cycle. 
 When you run the CMake target from your IDE, the fuzz test is 
 executed in regression test mode.
 ![fuzz test in CMake](/docs/assets/cmake_clion.gif)
 
-You can also run the regression test by building and running the CMake 
-target manually:
+You can also run the regression test through the replayer binary
+by building and running the CMake target manually:
 
 #### CMake
 ``` bash
