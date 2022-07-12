@@ -9,18 +9,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/internal/build"
+	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/pkg/artifact"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 type mockBuilder struct {
-	*build.BuilderOptions
+	*cmake.BuilderOptions
 	seedCorpus string
 }
 
-func NewMockBuilder(projectDir, seedCorpus string) build.Builder {
-	opts := &build.BuilderOptions{
+func NewMockBuilder(projectDir, seedCorpus string) Builder {
+	opts := &cmake.BuilderOptions{
 		ProjectDir: projectDir,
 		Engine:     "libfuzzer",
 		Sanitizers: []string{"address"},
@@ -33,20 +33,12 @@ func NewMockBuilder(projectDir, seedCorpus string) build.Builder {
 	}
 }
 
-func (m *mockBuilder) Opts() *build.BuilderOptions {
+func (m *mockBuilder) Opts() *cmake.BuilderOptions {
 	return m.BuilderOptions
 }
 
 func (m *mockBuilder) BuildDir() string {
 	return filepath.Join(m.Opts().ProjectDir, "build")
-}
-
-func (m *mockBuilder) Build(_ string) error {
-	return nil
-}
-
-func (m *mockBuilder) Configure() error {
-	return nil
 }
 
 func (m *mockBuilder) FindFuzzTestExecutable(fuzzTest string) (string, error) {

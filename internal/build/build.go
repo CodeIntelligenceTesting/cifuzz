@@ -1,46 +1,11 @@
 package build
 
 import (
-	"io"
 	"os"
 	"runtime"
 
-	"github.com/pkg/errors"
-
 	"code-intelligence.com/cifuzz/util/envutil"
 )
-
-type BuilderOptions struct {
-	ProjectDir string
-	Engine     string
-	Sanitizers []string
-	Stdout     io.Writer
-	Stderr     io.Writer
-}
-
-func (opts *BuilderOptions) Validate() error {
-	// Check that the project dir is set
-	if opts.ProjectDir == "" {
-		return errors.New("ProjectDir is not set")
-	}
-	// Check that the project dir exists and can be accessed
-	_, err := os.Stat(opts.ProjectDir)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
-}
-
-type Builder interface {
-	Opts() *BuilderOptions
-	BuildDir() string
-
-	Build(fuzzTest string) error
-	Configure() error
-	FindFuzzTestExecutable(fuzzTest string) (string, error)
-	FindFuzzTestSeedCorpus(fuzzTest string) (string, error)
-	GetRuntimeDeps(fuzzTest string) ([]string, error)
-}
 
 func CommonBuildEnv() ([]string, error) {
 	var err error

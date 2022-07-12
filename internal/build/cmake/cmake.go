@@ -39,7 +39,7 @@ func BuildWithCMake(conf *config.Config, outWriter, errWriter io.Writer, fuzzTes
 		sanitizers = append(sanitizers, "undefined")
 	}
 
-	builder, err := NewBuilder(&build.BuilderOptions{
+	builder, err := NewBuilder(&BuilderOptions{
 		ProjectDir: conf.ProjectDir,
 		Engine:     engine,
 		Sanitizers: sanitizers,
@@ -63,12 +63,33 @@ func BuildWithCMake(conf *config.Config, outWriter, errWriter io.Writer, fuzzTes
 	return builder, nil
 }
 
+type BuilderOptions struct {
+	ProjectDir string
+	Engine     string
+	Sanitizers []string
+	Stdout     io.Writer
+	Stderr     io.Writer
+}
+
+func (opts *BuilderOptions) Validate() error {
+	// Check that the project dir is set
+	if opts.ProjectDir == "" {
+		return errors.New("ProjectDir is not set")
+	}
+	// Check that the project dir exists and can be accessed
+	_, err := os.Stat(opts.ProjectDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
 type Builder struct {
-	*build.BuilderOptions
+	*BuilderOptions
 	env []string
 }
 
-func NewBuilder(opts *build.BuilderOptions) (*Builder, error) {
+func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 	err := opts.Validate()
 	if err != nil {
 		return nil, err
@@ -90,7 +111,7 @@ func NewBuilder(opts *build.BuilderOptions) (*Builder, error) {
 	return b, nil
 }
 
-func (b *Builder) Opts() *build.BuilderOptions {
+func (b *Builder) Opts() *BuilderOptions {
 	return b.BuilderOptions
 }
 

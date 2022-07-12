@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
@@ -29,7 +28,7 @@ func TestNewBuilder(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a builder with engine "engine1"
-	builder1, err := NewBuilder(&build.BuilderOptions{
+	builder1, err := NewBuilder(&BuilderOptions{
 		ProjectDir: projectDir,
 		Engine:     "engine1",
 		Sanitizers: []string{"sanitizer1", "sanitizer2"},
@@ -40,7 +39,7 @@ func TestNewBuilder(t *testing.T) {
 	require.DirExists(t, builder1.BuildDir())
 
 	// Create a builder with engine "engine2"
-	builder2, err := NewBuilder(&build.BuilderOptions{
+	builder2, err := NewBuilder(&BuilderOptions{
 		ProjectDir: projectDir,
 		Engine:     "engine2",
 		Sanitizers: []string{"sanitizer1", "sanitizer2"},
@@ -55,7 +54,7 @@ func TestNewBuilder(t *testing.T) {
 	require.NotEqual(t, builder1.BuildDir(), builder2.BuildDir())
 
 	// Create another builder with "engine1"
-	builder3, err := NewBuilder(&build.BuilderOptions{
+	builder3, err := NewBuilder(&BuilderOptions{
 		ProjectDir: projectDir,
 		Engine:     "engine1",
 		Sanitizers: []string{"sanitizer1", "sanitizer2"},

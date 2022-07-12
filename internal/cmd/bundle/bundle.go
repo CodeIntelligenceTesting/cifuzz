@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
@@ -170,7 +169,7 @@ func (c *bundleCmd) run() (err error) {
 	return nil
 }
 
-func assembleArtifacts(fuzzTest string, builder build.Builder) (
+func assembleArtifacts(fuzzTest string, builder Builder) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,
@@ -305,7 +304,7 @@ depsLoop:
 
 // fuzzTestPrefix returns the path in the resulting artifact archive under which fuzz test specific files should be
 // added.
-func fuzzTestPrefix(fuzzTest string, builder build.Builder) string {
+func fuzzTestPrefix(fuzzTest string, builder Builder) string {
 	return filepath.Join(builder.Opts().Engine, strings.Join(builder.Opts().Sanitizers, "+"), fuzzTest)
 }
 
@@ -333,4 +332,13 @@ func getCodeRevision() (codeRevision *artifact.CodeRevision) {
 		},
 	}
 	return
+}
+
+type Builder interface {
+	Opts() *cmake.BuilderOptions
+	BuildDir() string
+
+	FindFuzzTestExecutable(fuzzTest string) (string, error)
+	FindFuzzTestSeedCorpus(fuzzTest string) (string, error)
+	GetRuntimeDeps(fuzzTest string) ([]string, error)
 }
