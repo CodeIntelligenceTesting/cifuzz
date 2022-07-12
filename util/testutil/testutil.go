@@ -2,8 +2,11 @@ package testutil
 
 import (
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
+
+	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 // RegisterTestDeps ensures that the test calling this function is rerun (despite caching) if any of the files and
@@ -25,4 +28,22 @@ func RegisterTestDeps(path ...string) {
 			panic(err)
 		}
 	}
+}
+
+// ChdirToTempDir creates and changes the working directory to new tmp dir
+func ChdirToTempDir(prefix string) string {
+	testTempDir, err := os.MkdirTemp("", prefix)
+	if err != nil {
+		log.Printf("Failed to create temp dir for tests: %+v", err)
+		os.Exit(1)
+	}
+
+	err = os.Chdir(testTempDir)
+	if err != nil {
+		log.Printf("Failed to change working dir for tests: %+v", err)
+		fileutil.Cleanup(testTempDir)
+		os.Exit(1)
+	}
+
+	return testTempDir
 }

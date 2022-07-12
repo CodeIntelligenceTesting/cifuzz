@@ -1,7 +1,6 @@
 package init
 
 import (
-	"log"
 	"os"
 	"testing"
 
@@ -9,26 +8,14 @@ import (
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/testutil"
 )
 
-var baseTempDir string
-
 func TestMain(m *testing.M) {
-	var err error
-	baseTempDir, err = os.MkdirTemp("", "init-cmd-test-")
-	if err != nil {
-		log.Fatalf("Failed to create temp dir for tests: %+v", err)
-	}
-
-	err = os.Chdir(baseTempDir)
-	if err != nil {
-		fileutil.Cleanup(baseTempDir)
-		log.Fatalf("Failed to change the working directory to %s", baseTempDir)
-	}
+	testTempDir := testutil.ChdirToTempDir("init-cmd-test-")
+	defer fileutil.Cleanup(testTempDir)
 
 	m.Run()
-
-	fileutil.Cleanup(baseTempDir)
 }
 
 func TestInitCmd(t *testing.T) {

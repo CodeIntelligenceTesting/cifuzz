@@ -7,11 +7,14 @@ import (
 	"time"
 
 	"github.com/gookit/color"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/metrics"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 var logOutput io.ReadWriter
@@ -23,6 +26,9 @@ func TestMain(m *testing.M) {
 
 	logOutput = bytes.NewBuffer([]byte{})
 	log.Output = logOutput
+
+	testTempDir := testutil.ChdirToTempDir("report-handler-test-")
+	defer fileutil.Cleanup(testTempDir)
 
 	m.Run()
 }

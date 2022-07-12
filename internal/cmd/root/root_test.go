@@ -10,7 +10,15 @@ import (
 
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/testutil"
 )
+
+func TestMain(m *testing.M) {
+	testTempDir := testutil.ChdirToTempDir("init-cmd-test-")
+	defer fileutil.Cleanup(testTempDir)
+
+	m.Run()
+}
 
 func TestRootCmd(t *testing.T) {
 	cmd, err := New()
@@ -20,12 +28,6 @@ func TestRootCmd(t *testing.T) {
 }
 
 func TestChangingToNonExistingDirectory(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "test-")
-	require.NoError(t, err)
-	err = os.Chdir(testDir)
-	require.NoError(t, err)
-	defer fileutil.Cleanup(testDir)
-
 	origWorkDir, err := os.Getwd()
 	require.NoError(t, err)
 
@@ -49,12 +51,6 @@ func TestChangingToNonExistingDirectory(t *testing.T) {
 }
 
 func TestChangingToExistingDirectory(t *testing.T) {
-	testDir, err := os.MkdirTemp("", "test-")
-	require.NoError(t, err)
-	err = os.Chdir(testDir)
-	require.NoError(t, err)
-	defer fileutil.Cleanup(testDir)
-
 	origWorkDir, err := os.Getwd()
 	require.NoError(t, err)
 
