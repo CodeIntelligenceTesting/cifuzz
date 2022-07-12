@@ -33,7 +33,7 @@ import (
 type runOptions struct {
 	buildCommand   string
 	fuzzTest       string
-	seedsDirs      []string
+	seedCorpusDirs []string
 	dictionary     string
 	engineArgs     []string
 	fuzzTargetArgs []string
@@ -45,14 +45,14 @@ type runOptions struct {
 func (opts *runOptions) validate() error {
 	// Check if the seed dirs exist and can be accessed and ensure that
 	// the paths are absolute
-	for i, d := range opts.seedsDirs {
+	for i, d := range opts.seedCorpusDirs {
 		_, err := os.Stat(d)
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
 			return cmdutils.ErrSilent
 		}
-		opts.seedsDirs[i], err = filepath.Abs(d)
+		opts.seedCorpusDirs[i], err = filepath.Abs(d)
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
@@ -109,7 +109,7 @@ func New(config *config.Config) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&opts.buildCommand, "build-command", "", "The command to build the fuzz test. Example: \"make clean && make my-fuzz-test\"")
-	cmd.Flags().StringArrayVarP(&opts.seedsDirs, "seeds-dir", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
+	cmd.Flags().StringArrayVarP(&opts.seedCorpusDirs, "seed-corpus", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
 	cmd.Flags().StringVar(&opts.dictionary, "dict", "", "A file containing input language keywords or other interesting byte sequences.\nSee https://llvm.org/docs/LibFuzzer.html#dictionaries and\nhttps://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md.")
 	cmd.Flags().StringArrayVar(&opts.engineArgs, "engine-arg", nil, "Command-line argument to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options and\nhttps://www.mankier.com/8/afl-fuzz.")
 	cmd.Flags().StringArrayVar(&opts.fuzzTargetArgs, "fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
@@ -240,7 +240,7 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 	runnerOpts := &libfuzzer.RunnerOptions{
 		FuzzTarget:         fuzzTestExecutable,
 		GeneratedCorpusDir: generatedCorpusDir,
-		SeedCorpusDirs:     c.opts.seedsDirs,
+		SeedCorpusDirs:     c.opts.seedCorpusDirs,
 		Dictionary:         c.opts.dictionary,
 		EngineArgs:         c.opts.engineArgs,
 		FuzzTargetArgs:     c.opts.fuzzTargetArgs,
@@ -323,7 +323,7 @@ func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
 }
 
 func (c *runCmd) printFinalMetrics() error {
-	numSeeds, err := countSeeds(c.opts.seedsDirs)
+	numSeeds, err := countSeeds(c.opts.seedCorpusDirs)
 	if err != nil {
 		return err
 	}
