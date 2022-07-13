@@ -78,6 +78,8 @@ void LLVMFuzzerTestOneInputNoReturn
 #define FUZZ_TEST_SETUP                                              \
 static void LLVMFuzzerInitializeNoReturn(void);                      \
 CIFUZZ_C_LINKAGE int LLVMFuzzerInitialize(int *argc, char ***argv) { \
+  (void) argc;                                                       \
+  (void) argv;                                                       \
   LLVMFuzzerInitializeNoReturn();                                    \
   return 0;                                                          \
 }                                                                    \
