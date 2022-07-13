@@ -4,4 +4,4 @@
 ## The build system used to build this project. If set to "auto" (the
 ## default), cifuzz tries to detect the build system automatically.
 ## Valid values: "auto", "cmake", "unknown".
-#build_system: auto
+#build-system: auto

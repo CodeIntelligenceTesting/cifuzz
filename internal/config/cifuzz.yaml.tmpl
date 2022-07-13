@@ -4,4 +4,41 @@
 ## The build system used to build this project. If set to "auto" (the
 ## default), cifuzz tries to detect the build system automatically.
 ## Valid values: "auto", "cmake", "unknown".
-#build_system: auto
+#build-system: auto
+
+## If the build system type is "unknown", this command is used by
+## `cifuzz run` to build the fuzz test.
+#build-command: "make my_fuzz_test"
+
+## Directories containing sample inputs for the code under test.
+## See https://llvm.org/docs/LibFuzzer.html#corpus and
+## https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.
+#seed-corpus-dirs:
+# - path/to/seed-corpus
+
+## A file containing input language keywords or other interesting byte
+## sequences. See https://llvm.org/docs/LibFuzzer.html#dictionaries and
+## https://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md.
+#dict: path/to/dictionary.dct
+
+## Command-line arguments to pass to the fuzzing engine (libFuzzer or
+## AFL++). See https://llvm.org/docs/LibFuzzer.html#options and
+## https://www.mankier.com/8/afl-fuzz.
+#engine-args:
+# - -rss_limit_mb=4096
+
+## Command-line arguments to pass to the fuzz tests.
+#fuzz-test-args:
+# - --config-file=path/to/config
+
+## Maximum time in seconds to run the fuzz tests. The default is to run
+## indefinitely.
+#timeout: 300
+
+## By default, fuzz tests are executed in a sandbox to prevent accidental
+## damage to the system. Set to false to run fuzz tests unsandboxed.
+## Only supported on Linux.
+#use-sandbox: false
+
+## Set to true to print output of the `cifuzz run` command as JSON.
+#print-json: true

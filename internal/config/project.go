@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"text/template"
 	"time"
 
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/viper"
 
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
@@ -21,7 +22,7 @@ const (
 	BuildSystemUnknown string = "unknown"
 )
 
-var buildSystemTypes = []string{BuildSystemAuto, BuildSystemCMake, BuildSystemUnknown}
+var buildSystemTypes = []string{BuildSystemCMake, BuildSystemUnknown}
 
 type ProjectConfig struct {
 	LastUpdated string
@@ -63,43 +64,83 @@ func CreateProjectConfig(projectDir string) (configpath string, err error) {
 	return
 }
 
-func ReadProjectConfig(projectDir string) (*ProjectConfig, error) {
-	configpath := filepath.Join(projectDir, projectConfigFile)
+func ParseProjectConfig(opts interface{}) error {
+	var err error
 
-	bytes, err := os.ReadFile(configpath)
+	projectDir, err := FindProjectDir()
+	if err != nil {
+		return err
+	}
+
+	configpath := filepath.Join(projectDir, projectConfigFile)
+	viper.SetConfigFile(configpath)
+
+	err = viper.ReadInConfig()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	viper.Set("ProjectDir", projectDir)
+
+	err = viper.Unmarshal(opts)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func ReadProjectConfig(projectDir string) (*ProjectConfig, error) {
+	var err error
+
+	configpath := filepath.Join(projectDir, projectConfigFile)
+	viper.SetConfigFile(configpath)
+
+	// Set defaults
+	useSandboxDefault := runtime.GOOS == "linux"
+	viper.SetDefault("sandbox", useSandboxDefault)
+
+	err = viper.ReadInConfig()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	config := &ProjectConfig{}
-	err = yaml.Unmarshal(bytes, config)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Error parsing config file %s", configpath)
+	config := &ProjectConfig{
+		BuildSystem: viper.GetString("build-system"),
 	}
 
-	// Set defaults
-	if config.BuildSystem == "" {
-		config.BuildSystem = BuildSystemAuto
-	}
-
-	// Validate types
-	if !stringutil.Contains(buildSystemTypes, config.BuildSystem) {
-		return nil, errors.Errorf("Invalid build system \"%s\"", config.BuildSystem)
-	}
-
-	if config.BuildSystem == BuildSystemAuto {
-		isCMakeProject, err := fileutil.Exists(filepath.Join(projectDir, "CMakeLists.txt"))
+	if config.BuildSystem == "" || config.BuildSystem == BuildSystemAuto {
+		config.BuildSystem, err = DetermineBuildSystem(projectDir)
 		if err != nil {
 			return nil, err
 		}
-		if isCMakeProject {
-			config.BuildSystem = BuildSystemCMake
-		} else {
-			config.BuildSystem = BuildSystemUnknown
+	} else {
+		err = ValidateBuildSystem(config.BuildSystem)
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	return config, nil
+}
+
+func ValidateBuildSystem(buildSystem string) error {
+	if !stringutil.Contains(buildSystemTypes, buildSystem) {
+		return errors.Errorf("Invalid build system \"%s\"", buildSystem)
+	}
+	return nil
+}
+
+func DetermineBuildSystem(projectDir string) (string, error) {
+	isCMakeProject, err := fileutil.Exists(filepath.Join(projectDir, "CMakeLists.txt"))
+	if err != nil {
+		return "", err
+	}
+	if isCMakeProject {
+		return BuildSystemCMake, nil
+	} else {
+		return BuildSystemUnknown, nil
+	}
 }
 
 func FindProjectDir() (string, error) {

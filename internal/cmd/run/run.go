@@ -31,28 +31,33 @@ import (
 )
 
 type runOptions struct {
-	buildCommand   string
-	fuzzTest       string
-	seedCorpusDirs []string
-	dictionary     string
-	engineArgs     []string
-	fuzzTestArgs   []string
-	timeout        time.Duration
-	useSandbox     bool
-	printJSON      bool
+	BuildSystem    string        `mapstructure:"build-system"`
+	BuildCommand   string        `mapstructure:"build-command"`
+	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
+	Dictionary     string        `mapstructure:"dict"`
+	EngineArgs     []string      `mapstructure:"engine-args"`
+	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
+	Timeout        time.Duration `mapstructure:"timeout"`
+	UseSandbox     bool          `mapstructure:"use-sandbox"`
+	PrintJSON      bool          `mapstructure:"print-json"`
+
+	ProjectDir string
+	fuzzTest   string
 }
 
 func (opts *runOptions) validate() error {
+	var err error
+
 	// Check if the seed dirs exist and can be accessed and ensure that
 	// the paths are absolute
-	for i, d := range opts.seedCorpusDirs {
+	for i, d := range opts.SeedCorpusDirs {
 		_, err := os.Stat(d)
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
 			return cmdutils.ErrSilent
 		}
-		opts.seedCorpusDirs[i], err = filepath.Abs(d)
+		opts.SeedCorpusDirs[i], err = filepath.Abs(d)
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
@@ -60,13 +65,25 @@ func (opts *runOptions) validate() error {
 		}
 	}
 
-	if opts.dictionary != "" {
+	if opts.Dictionary != "" {
 		// Check if the dictionary exists and can be accessed
-		_, err := os.Stat(opts.dictionary)
+		_, err := os.Stat(opts.Dictionary)
 		if err != nil {
 			err = errors.WithStack(err)
 			log.Error(err, err.Error())
 			return cmdutils.ErrSilent
+		}
+	}
+
+	if opts.BuildSystem == "" || opts.BuildSystem == config.BuildSystemAuto {
+		opts.BuildSystem, err = config.DetermineBuildSystem(opts.ProjectDir)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = config.ValidateBuildSystem(opts.BuildSystem)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -77,12 +94,11 @@ type runCmd struct {
 	*cobra.Command
 	opts *runOptions
 
-	config        *config.Config
 	buildDir      string
 	reportHandler *report_handler.ReportHandler
 }
 
-func New(config *config.Config) *cobra.Command {
+func New() *cobra.Command {
 	opts := &runOptions{}
 
 	cmd := &cobra.Command{
@@ -95,28 +111,44 @@ func New(config *config.Config) *cobra.Command {
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			err := config.ParseProjectConfig(opts)
+			if err != nil {
+				return err
+			}
+
 			opts.fuzzTest = args[0]
 			return opts.validate()
 		},
 		RunE: func(c *cobra.Command, args []string) error {
-			cmd := runCmd{
-				Command: c,
-				opts:    opts,
-				config:  config,
-			}
+			cmd := runCmd{Command: c, opts: opts}
 			return cmd.run()
 		},
 	}
 
-	cmd.Flags().StringVar(&opts.buildCommand, "build-command", "", "The command to build the fuzz test. Example: \"make clean && make my-fuzz-test\"")
-	cmd.Flags().StringArrayVarP(&opts.seedCorpusDirs, "seed-corpus", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
-	cmd.Flags().StringVar(&opts.dictionary, "dict", "", "A file containing input language keywords or other interesting byte sequences.\nSee https://llvm.org/docs/LibFuzzer.html#dictionaries and\nhttps://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md.")
-	cmd.Flags().StringArrayVar(&opts.engineArgs, "engine-arg", nil, "Command-line argument to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options and\nhttps://www.mankier.com/8/afl-fuzz.")
-	cmd.Flags().StringArrayVar(&opts.fuzzTestArgs, "fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
-	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
-	useMinijailDefault := runtime.GOOS == "linux"
-	cmd.Flags().BoolVar(&opts.useSandbox, "use-sandbox", useMinijailDefault, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
-	cmd.Flags().BoolVar(&opts.printJSON, "json", false, "Print output as JSON")
+	cmd.Flags().String("build-command", "", "The command to build the fuzz test. Example: \"make clean && make my-fuzz-test\"")
+	cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
+
+	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
+	cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
+
+	cmd.Flags().String("dict", "", "A file containing input language keywords or other interesting byte sequences.\nSee https://llvm.org/docs/LibFuzzer.html#dictionaries and\nhttps://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md.")
+	cmdutils.ViperMustBindPFlag("dict", cmd.Flags().Lookup("dict"))
+
+	cmd.Flags().StringArray("engine-arg", nil, "Command-line argument to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options and\nhttps://www.mankier.com/8/afl-fuzz.")
+	cmdutils.ViperMustBindPFlag("engine-args", cmd.Flags().Lookup("engine-arg"))
+
+	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
+	cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
+
+	cmd.Flags().Duration("timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
+	cmdutils.ViperMustBindPFlag("timeout", cmd.Flags().Lookup("timeout"))
+
+	cmd.Flags().Bool("use-sandbox", false, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
+	viper.SetDefault("use-sandbox", runtime.GOOS == "linux")
+	cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
+
+	cmd.Flags().BoolVar(&opts.PrintJSON, "json", false, "Print output as JSON")
+	cmdutils.ViperMustBindPFlag("print-json", cmd.Flags().Lookup("json"))
 
 	return cmd
 }
@@ -133,7 +165,7 @@ func (c *runCmd) run() error {
 	// the fuzz test, because this is storing a timestamp which is used
 	// to figure out how long the fuzzing run is running.
 	defaultSeedCorpusDir := c.opts.fuzzTest + "_seed_corpus"
-	c.reportHandler, err = report_handler.NewReportHandler(defaultSeedCorpusDir, c.opts.printJSON, viper.GetBool("verbose"))
+	c.reportHandler, err = report_handler.NewReportHandler(defaultSeedCorpusDir, c.opts.PrintJSON, viper.GetBool("verbose"))
 	if err != nil {
 		return err
 	}
@@ -162,9 +194,9 @@ func (c *runCmd) buildFuzzTest() (string, error) {
 		sanitizers = append(sanitizers, "undefined")
 	}
 
-	if c.config.BuildSystem == config.BuildSystemCMake {
+	if c.opts.BuildSystem == config.BuildSystemCMake {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
-			ProjectDir: c.config.ProjectDir,
+			ProjectDir: c.opts.ProjectDir,
 			// TODO: Do not hardcode this values.
 			Engine:     "libfuzzer",
 			Sanitizers: sanitizers,
@@ -183,10 +215,10 @@ func (c *runCmd) buildFuzzTest() (string, error) {
 			return "", err
 		}
 		return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
-	} else if c.config.BuildSystem == config.BuildSystemUnknown {
+	} else if c.opts.BuildSystem == config.BuildSystemUnknown {
 		return c.buildWithUnknownBuildSystem()
 	} else {
-		return "", errors.Errorf("Unsupported build system \"%s\"", c.config.BuildSystem)
+		return "", errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
 	}
 }
 
@@ -205,13 +237,13 @@ func (c *runCmd) buildWithUnknownBuildSystem() (string, error) {
 
 	// To build with an unknown build system, a build command must be
 	// provided
-	if c.opts.buildCommand == "" {
+	if c.opts.BuildCommand == "" {
 		return "", cmdutils.WrapIncorrectUsageError(errors.Errorf("Flag \"build-command\" must be set to build" +
 			" with an unknown build system"))
 	}
 
 	// Run the build command
-	cmd := exec.Command("/bin/sh", "-c", c.opts.buildCommand)
+	cmd := exec.Command("/bin/sh", "-c", c.opts.BuildCommand)
 	// Redirect the build command's stdout to stderr to only have
 	// reports printed to stdout
 	cmd.Stdout = c.ErrOrStderr()
@@ -231,7 +263,7 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 
 	// Store the generated corpus in a single persistent directory per
 	// fuzz test in a hidden subdirectory.
-	generatedCorpusDir := filepath.Join(c.config.ProjectDir, ".cifuzz-corpus", c.opts.fuzzTest)
+	generatedCorpusDir := filepath.Join(c.opts.ProjectDir, ".cifuzz-corpus", c.opts.fuzzTest)
 	err := os.MkdirAll(generatedCorpusDir, 0755)
 	if err != nil {
 		return errors.WithStack(err)
@@ -241,15 +273,15 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 	runnerOpts := &libfuzzer.RunnerOptions{
 		FuzzTarget:         fuzzTestExecutable,
 		GeneratedCorpusDir: generatedCorpusDir,
-		SeedCorpusDirs:     c.opts.seedCorpusDirs,
-		Dictionary:         c.opts.dictionary,
-		EngineArgs:         c.opts.engineArgs,
-		FuzzTestArgs:       c.opts.fuzzTestArgs,
+		SeedCorpusDirs:     c.opts.SeedCorpusDirs,
+		Dictionary:         c.opts.Dictionary,
+		EngineArgs:         c.opts.EngineArgs,
+		FuzzTestArgs:       c.opts.FuzzTestArgs,
 		ReportHandler:      c.reportHandler,
-		Timeout:            c.opts.timeout,
-		UseMinijail:        c.opts.useSandbox,
+		Timeout:            c.opts.Timeout,
+		UseMinijail:        c.opts.UseSandbox,
 		Verbose:            viper.GetBool("verbose"),
-		KeepColor:          !c.opts.printJSON,
+		KeepColor:          !c.opts.PrintJSON,
 	}
 	runner := libfuzzer.NewRunner(runnerOpts)
 
@@ -324,7 +356,7 @@ func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
 }
 
 func (c *runCmd) printFinalMetrics() error {
-	numSeeds, err := countSeeds(c.opts.seedCorpusDirs)
+	numSeeds, err := countSeeds(c.opts.SeedCorpusDirs)
 	if err != nil {
 		return err
 	}
