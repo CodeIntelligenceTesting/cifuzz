@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/internal/build"
-	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -24,44 +23,6 @@ import (
 // See enable_fuzz_testing in tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake for the rationale for using this
 // build type.
 const cmakeBuildConfiguration = "RelWithDebInfo"
-
-// BuildWithCMake builds the fuzz test fuzzTest with CMake and returns a reference to the cmake.Builder used to perform
-// the build, which can be used for follow-up actions (e.g. locating fuzz test executables).
-func BuildWithCMake(conf *config.Config, outWriter, errWriter io.Writer, fuzzTest string) (*Builder, error) {
-	// TODO: Make these configurable
-	engine := "libfuzzer"
-	sanitizers := []string{"address"}
-	// UBSan is not supported by MSVC
-	// TODO: Not needed anymore when sanitizers are configurable,
-	//       then we do want to fail if the user explicitly asked for
-	//       UBSan.
-	if runtime.GOOS != "windows" {
-		sanitizers = append(sanitizers, "undefined")
-	}
-
-	builder, err := NewBuilder(&BuilderOptions{
-		ProjectDir: conf.ProjectDir,
-		Engine:     engine,
-		Sanitizers: sanitizers,
-		Stdout:     outWriter,
-		Stderr:     errWriter,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = builder.Configure()
-	if err != nil {
-		return nil, err
-	}
-
-	err = builder.Build(fuzzTest)
-	if err != nil {
-		return nil, err
-	}
-
-	return builder, nil
-}
 
 type BuilderOptions struct {
 	ProjectDir string
@@ -171,12 +132,12 @@ func (b *Builder) Configure() error {
 }
 
 // Build builds the specified fuzz test with CMake
-func (b *Builder) Build(fuzzTest string) error {
+func (b *Builder) Build(fuzzTests []string) error {
 	cmd := exec.Command(
 		"cmake",
 		"--build", b.BuildDir(),
 		"--config", cmakeBuildConfiguration,
-		"--target", fuzzTest,
+		"--target", strings.Join(fuzzTests, ","),
 	)
 	// Redirect the build command's stdout to stderr to only have
 	// reports printed to stdout
@@ -200,6 +161,25 @@ func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
 // seed corpus directory.
 func (b *Builder) FindFuzzTestSeedCorpus(fuzzTest string) (string, error) {
 	return b.readInfoFile(fuzzTest, "seed_corpus")
+}
+
+// ListFuzzTests lists all fuzz tests defined in the CMake project after
+// Configure has been run.
+func (b *Builder) ListFuzzTests() ([]string, error) {
+	fuzzTestsDir, err := b.fuzzTestsInfoDir()
+	if err != nil {
+		return nil, err
+	}
+	fuzzTestEntries, err := os.ReadDir(fuzzTestsDir)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	var fuzzTests []string
+	for _, entry := range fuzzTestEntries {
+		fuzzTests = append(fuzzTests, entry.Name())
+	}
+	return fuzzTests, nil
 }
 
 // GetRuntimeDeps returns the absolute paths of all (transitive) runtime
@@ -279,25 +259,28 @@ func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
 
 // readInfoFile returns the contents of the CMake-generated info file of type kind for the given fuzz test.
 func (b *Builder) readInfoFile(fuzzTest string, kind string) (string, error) {
-	// The path to the info file for single-configuration CMake generators (e.g.
-	// Makefiles).
-	infoFileCandidate := filepath.Join(b.BuildDir(), ".cifuzz", "fuzz_tests", fuzzTest, kind)
-	exists, err := fileutil.Exists(infoFileCandidate)
-	if err != nil || !exists {
-		// The path to the info file for multi-configuration CMake generators
-		// (e.g. MSBuild).
-		infoFileCandidate = filepath.Join(b.BuildDir(), cmakeBuildConfiguration, ".cifuzz", "fuzz_tests", fuzzTest, kind)
-		exists, err = fileutil.Exists(infoFileCandidate)
-	}
+	fuzzTestsInfoDir, err := b.fuzzTestsInfoDir()
 	if err != nil {
 		return "", err
 	}
-	if !exists {
-		return "", os.ErrNotExist
-	}
-	content, err := os.ReadFile(infoFileCandidate)
+	infoFile := filepath.Join(fuzzTestsInfoDir, fuzzTest, kind)
+	content, err := os.ReadFile(infoFile)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 	return string(content), nil
+}
+
+func (b *Builder) fuzzTestsInfoDir() (string, error) {
+	// The path to the info file for single-configuration CMake generators (e.g. Makefiles).
+	fuzzTestsDir := filepath.Join(b.BuildDir(), ".cifuzz", "fuzz_tests")
+	if fileutil.IsDir(fuzzTestsDir) {
+		return fuzzTestsDir, nil
+	}
+	// The path to the info file for multi-configuration CMake generators (e.g. MSBuild).
+	fuzzTestsDir = filepath.Join(b.BuildDir(), cmakeBuildConfiguration, ".cifuzz", "fuzz_tests")
+	if fileutil.IsDir(fuzzTestsDir) {
+		return fuzzTestsDir, nil
+	}
+	return "", os.ErrNotExist
 }

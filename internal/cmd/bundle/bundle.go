@@ -6,10 +6,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/maps"
 
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/completion"
@@ -61,7 +63,7 @@ type bundleCmd struct {
 }
 
 type bundleOpts struct {
-	fuzzTest   string
+	fuzzTests  []string
 	outputPath string
 }
 
@@ -72,12 +74,12 @@ func New(conf *config.Config) *cobra.Command {
 		Short:             "Bundles the fuzz test into an archive",
 		Long:              "Bundles all runtime artifacts required by the given fuzz test into a self-contained archive that can be executed by a remote fuzzing worker",
 		ValidArgsFunction: completion.ValidFuzzTests,
-		Args:              cobra.ExactArgs(1),
+		Args:              cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if conf.BuildSystem != config.BuildSystemCMake {
 				return errors.New("cifuzz bundle currently only supports CMake projects")
 			}
-			opts.fuzzTest = args[0]
+			opts.fuzzTests = args
 			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {
@@ -97,24 +99,86 @@ func New(conf *config.Config) *cobra.Command {
 
 func (c *bundleCmd) run() (err error) {
 	if c.opts.outputPath == "" {
+		var defaultName string
+		if len(c.opts.fuzzTests) == 1 {
+			defaultName = c.opts.fuzzTests[0] + ".tar.gz"
+		} else {
+			defaultName = "fuzz_tests.tar.gz"
+		}
 		c.opts.outputPath, err = dialog.InputFilename(
 			c.InOrStdin(),
 			"Please enter the filename for the artifact (.tar.gz)",
-			c.opts.fuzzTest+".tar.gz",
+			defaultName,
 		)
 		if err != nil {
 			return err
 		}
 	}
 
-	builder, err := cmake.BuildWithCMake(c.config, c.OutOrStdout(), c.ErrOrStderr(), c.opts.fuzzTest)
-	if err != nil {
-		return errors.Wrapf(err, "failed to build %q", c.opts.fuzzTest)
+	// TODO: Do not hardcode these values.
+	sanitizers := []string{"address"}
+	// UBSan is not supported by MSVC
+	// TODO: Not needed anymore when sanitizers are configurable,
+	//       then we do want to fail if the user explicitly asked for
+	//       UBSan.
+	if runtime.GOOS != "windows" {
+		sanitizers = append(sanitizers, "undefined")
 	}
-	fuzzers, archiveManifest, systemDeps, err := assembleArtifacts(c.opts.fuzzTest, builder)
+
+	builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
+		ProjectDir: c.config.ProjectDir,
+		// TODO: Do not hardcode this values.
+		Engine:     "libfuzzer",
+		Sanitizers: sanitizers,
+		Stdout:     c.OutOrStdout(),
+		Stderr:     c.ErrOrStderr(),
+	})
 	if err != nil {
 		return err
 	}
+
+	err = builder.Configure()
+	if err != nil {
+		return err
+	}
+
+	if len(c.opts.fuzzTests) == 0 {
+		c.opts.fuzzTests, err = builder.ListFuzzTests()
+		if err != nil {
+			return err
+		}
+	}
+
+	err = builder.Build(c.opts.fuzzTests)
+	if err != nil {
+		return err
+	}
+
+	// Add all fuzz test artifacts to the archive.
+	var fuzzers []*artifact.Fuzzer
+	archiveManifest := make(map[string]string)
+	deduplicatedSystemDeps := make(map[string]struct{})
+	for _, fuzzTest := range c.opts.fuzzTests {
+		fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := assembleArtifacts(fuzzTest, builder)
+		if err != nil {
+			return err
+		}
+		fuzzers = append(fuzzers, fuzzTestFuzzers...)
+		for _, systemDep := range systemDeps {
+			deduplicatedSystemDeps[systemDep] = struct{}{}
+		}
+		// Produce an error when artifacts for different fuzzers conflict - this should never happen as
+		// assembleArtifacts is expected to add a unique prefix for each fuzz test.
+		for archivePath, absPath := range fuzzTestArchiveManifest {
+			existingAbsPath, conflict := archiveManifest[archivePath]
+			if conflict {
+				return errors.Errorf("conflict for archive path %q: %q and %q", archivePath, existingAbsPath, absPath)
+			}
+			archiveManifest[archivePath] = absPath
+		}
+	}
+	systemDeps := maps.Keys(deduplicatedSystemDeps)
+	sort.Strings(systemDeps)
 
 	tempDir, err := os.MkdirTemp("", "cifuzz-bundle-*")
 	if err != nil {

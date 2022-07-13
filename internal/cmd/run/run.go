@@ -151,8 +151,33 @@ func (c *runCmd) run() error {
 }
 
 func (c *runCmd) buildFuzzTest() (string, error) {
+	// TODO: Do not hardcode these values.
+	sanitizers := []string{"address"}
+	// UBSan is not supported by MSVC
+	// TODO: Not needed anymore when sanitizers are configurable,
+	//       then we do want to fail if the user explicitly asked for
+	//       UBSan.
+	if runtime.GOOS != "windows" {
+		sanitizers = append(sanitizers, "undefined")
+	}
+
 	if c.config.BuildSystem == config.BuildSystemCMake {
-		builder, err := cmake.BuildWithCMake(c.config, c.OutOrStdout(), c.ErrOrStderr(), c.opts.fuzzTest)
+		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
+			ProjectDir: c.config.ProjectDir,
+			// TODO: Do not hardcode this values.
+			Engine:     "libfuzzer",
+			Sanitizers: sanitizers,
+			Stdout:     c.OutOrStdout(),
+			Stderr:     c.ErrOrStderr(),
+		})
+		if err != nil {
+			return "", err
+		}
+		err = builder.Configure()
+		if err != nil {
+			return "", err
+		}
+		err = builder.Build([]string{c.opts.fuzzTest})
 		if err != nil {
 			return "", err
 		}

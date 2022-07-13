@@ -307,8 +307,8 @@ func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) st
 	defer fileutil.Cleanup(tempDir)
 	archivePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
 
-	// Bundle the fuzz into an archive.
-	cmd := executil.Command(cifuzz, "bundle", "parser_fuzz_test", "-o", archivePath)
+	// Bundle all fuzz tests into an archive.
+	cmd := executil.Command(cifuzz, "bundle", "-o", archivePath)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -333,7 +333,7 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	metadataYaml, err := os.ReadFile(metadataPath)
 	require.NoError(t, err)
 	// We use a simple regex here instead of duplicating knowledge of our metadata YAML schema.
-	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*)`)
+	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*parser_fuzz_test.*)`)
 	fuzzerPath := filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
 	require.FileExists(t, fuzzerPath)
 
@@ -344,7 +344,8 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	err = cmd.Run()
 	require.NoError(t, err)
 
-	// Verify that the seed corpus has been packaged with the fuzzer.
+	// Verify that the seed corpus has been packaged with the fuzzer. Only parser_fuzz_test has a corpus, so we can
+	// use the only matched line.
 	seedCorpusPattern := regexp.MustCompile(`\W*seeds: (.*)`)
 	seedCorpusPath := filepath.Join(archiveDir, string(seedCorpusPattern.FindSubmatch(metadataYaml)[1]))
 	require.DirExists(t, seedCorpusPath)
