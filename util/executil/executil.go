@@ -12,6 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
 )
 
@@ -25,6 +26,8 @@ const (
 
 // HandleExecError wraps an error returned by a function on exec.Cmd, adding
 // stderr to the message if the error is an exec.ExitError.
+// Note: exec.ExitError instances are logged without the stack trace and
+// returned as a cmdutils.SilentError.
 func HandleExecError(cmd *exec.Cmd, err error) error {
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		stderr := string(exitErr.Stderr)
@@ -32,7 +35,8 @@ func HandleExecError(cmd *exec.Cmd, err error) error {
 			stderr += "\n"
 		}
 		err = fmt.Errorf("%s%s: %w", stderr, cmd.Args[0], err)
-		return errors.WithStack(err)
+		log.Error(err)
+		return cmdutils.WrapSilentError(errors.WithStack(err))
 	}
 	return errors.WithStack(err)
 }
