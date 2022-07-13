@@ -1,5 +1,9 @@
 add_library(cifuzz_internal_replayer STATIC EXCLUDE_FROM_ALL
             "${CMAKE_CURRENT_LIST_DIR}/../src/replayer.c")
+if(MSVC)
+  # TODO(fmeum): Remove once ASan has been stabilized and we no longer have to set /MTd as a compile option globally.
+  target_compile_options(cifuzz_internal_replayer PUBLIC /MTd)
+endif()
 # If a CXX-only project depends on the replayer, it won't be able to compile and link the replayer's C source file.
 # Using enable_language(C) from a package is discouraged, but we can work around this by marking the replayer as a CXX
 # target if C is not enabled - it should build just fine with any C++ compiler.

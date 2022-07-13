@@ -27,6 +27,11 @@ function(enable_fuzz_testing)
           # Undefine NDEBUG, which is explicitly defined by the RelWithDebInfo CMake configuration, so that asserts are
           # kept.
           /UNDEBUG
+          # Link the CRT statically so that ASan is also linked statically.
+          # TODO(fmeum): Remove once ASan has been stabilized and clang_rt.asan_dynamic-x86_64.dll is available in the
+          #  default PATH, e.g. in System32.
+          # https://stackoverflow.com/a/66532115/297261
+          /MTd
       )
       add_link_options(
           # /INCREMENTAL is enabled by default with RelWithDebInfo, but is unsupported with ASan and potentially impacts
