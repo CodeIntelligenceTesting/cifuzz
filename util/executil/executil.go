@@ -35,7 +35,7 @@ func HandleExecError(cmd *exec.Cmd, err error) error {
 			stderr += "\n"
 		}
 		err = fmt.Errorf("%s%s: %w", stderr, cmd.Args[0], err)
-		log.Error(err)
+		log.Error(err, err.Error())
 		return cmdutils.WrapSilentError(errors.WithStack(err))
 	}
 	return errors.WithStack(err)
