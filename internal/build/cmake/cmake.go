@@ -190,6 +190,7 @@ func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
 		"cmake",
 		"--install",
 		b.BuildDir(),
+		"--config", cmakeBuildConfiguration,
 		"--component", "cifuzz_internal_deps_"+fuzzTest,
 	)
 	stdout, err := cmd.Output()
