@@ -74,6 +74,10 @@ func Errorf(err error, format string, a ...any) {
 }
 
 func Error(err error, a ...any) {
+	// If no message is provided, print the message of the error
+	if len(a) == 0 {
+		a = []any{err.Error()}
+	}
 	log(pterm.Style{pterm.Bold, pterm.FgRed}, "❌ ", a...)
 	Debugf("%+v", err)
 }
