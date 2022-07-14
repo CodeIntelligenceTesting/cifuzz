@@ -116,11 +116,11 @@ func (r *Runner) Run(ctx context.Context) error {
 	// -----------------------------
 	// --- fuzz target arguments ---
 	// -----------------------------
-	if len(r.FuzzTargetArgs) > 0 {
-		// separate the Jazzer/libfuzzer arguments and fuzz target
+	if len(r.FuzzTestArgs) > 0 {
+		// separate the Jazzer/libfuzzer arguments and fuzz test
 		// arguments with a "--"
 		args = append(args, "--")
-		args = append(args, r.FuzzTargetArgs...)
+		args = append(args, r.FuzzTestArgs...)
 	}
 	// -----------------------------
 

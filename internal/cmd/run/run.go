@@ -36,7 +36,7 @@ type runOptions struct {
 	seedCorpusDirs []string
 	dictionary     string
 	engineArgs     []string
-	fuzzTargetArgs []string
+	fuzzTestArgs   []string
 	timeout        time.Duration
 	useSandbox     bool
 	printJSON      bool
@@ -112,7 +112,7 @@ func New(config *config.Config) *cobra.Command {
 	cmd.Flags().StringArrayVarP(&opts.seedCorpusDirs, "seed-corpus", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
 	cmd.Flags().StringVar(&opts.dictionary, "dict", "", "A file containing input language keywords or other interesting byte sequences.\nSee https://llvm.org/docs/LibFuzzer.html#dictionaries and\nhttps://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md.")
 	cmd.Flags().StringArrayVar(&opts.engineArgs, "engine-arg", nil, "Command-line argument to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options and\nhttps://www.mankier.com/8/afl-fuzz.")
-	cmd.Flags().StringArrayVar(&opts.fuzzTargetArgs, "fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
+	cmd.Flags().StringArrayVar(&opts.fuzzTestArgs, "fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
 	useMinijailDefault := runtime.GOOS == "linux"
 	cmd.Flags().BoolVar(&opts.useSandbox, "use-sandbox", useMinijailDefault, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
@@ -244,7 +244,7 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 		SeedCorpusDirs:     c.opts.seedCorpusDirs,
 		Dictionary:         c.opts.dictionary,
 		EngineArgs:         c.opts.engineArgs,
-		FuzzTargetArgs:     c.opts.fuzzTargetArgs,
+		FuzzTestArgs:       c.opts.fuzzTestArgs,
 		ReportHandler:      c.reportHandler,
 		Timeout:            c.opts.timeout,
 		UseMinijail:        c.opts.useSandbox,

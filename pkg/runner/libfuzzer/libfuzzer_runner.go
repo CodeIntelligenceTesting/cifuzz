@@ -43,7 +43,7 @@ type RunnerOptions struct {
 	LibraryDirs        []string
 	EnvVars            []string
 	EngineArgs         []string
-	FuzzTargetArgs     []string
+	FuzzTestArgs       []string
 	ReportHandler      report.Handler
 	Timeout            time.Duration
 	UseMinijail        bool
@@ -115,10 +115,10 @@ func (r *Runner) Run(ctx context.Context) error {
 	// Add any seed corpus directories as further positional arguments
 	args = append(args, r.SeedCorpusDirs...)
 
-	if len(r.FuzzTargetArgs) > 0 {
-		// separate the libfuzzer and fuzz target arguments with a "--"
+	if len(r.FuzzTestArgs) > 0 {
+		// separate the libfuzzer and fuzz test arguments with a "--"
 		args = append(args, "--")
-		args = append(args, r.FuzzTargetArgs...)
+		args = append(args, r.FuzzTestArgs...)
 	}
 
 	// The environment to run libfuzzer in

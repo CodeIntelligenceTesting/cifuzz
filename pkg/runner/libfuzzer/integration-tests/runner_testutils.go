@@ -43,7 +43,7 @@ type RunnerTest struct {
 	GeneratedCorpusDir string
 	Timeout            time.Duration
 	EngineArgs         []string
-	FuzzTargetArgs     []string
+	FuzzTestArgs       []string
 	FuzzerEnv          []string
 	DisableMinijail    bool
 	RunsLimit          int
@@ -89,7 +89,7 @@ func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error 
 		SeedCorpusDirs:     []string{seedCorpusDir},
 		Timeout:            test.Timeout,
 		EngineArgs:         test.EngineArgs,
-		FuzzTargetArgs:     test.FuzzTargetArgs,
+		FuzzTestArgs:       test.FuzzTestArgs,
 		EnvVars:            test.FuzzerEnv,
 		UseMinijail:        !test.DisableMinijail,
 		ReportHandler:      &ChannelPassthrough{ch: reportCh},
