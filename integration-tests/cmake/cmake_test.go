@@ -345,7 +345,7 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	metadataYaml, err := os.ReadFile(metadataPath)
 	require.NoError(t, err)
 	// We use a simple regex here instead of duplicating knowledge of our metadata YAML schema.
-	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*parser_fuzz_test.*)`)
+	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*address.*parser_fuzz_test.*)`)
 	fuzzerPath := filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
 	require.FileExists(t, fuzzerPath)
 
@@ -362,4 +362,24 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	seedCorpusPath := filepath.Join(archiveDir, string(seedCorpusPattern.FindSubmatch(metadataYaml)[1]))
 	require.DirExists(t, seedCorpusPath)
 	require.FileExists(t, filepath.Join(seedCorpusPath, "some_seed"))
+
+	if runtime.GOOS == "windows" {
+		// There are no coverage builds on Windows.
+		return
+	}
+	// Verify that a coverage build has been added to the archive.
+	fuzzerPathPattern = regexp.MustCompile(`\W*path: (coverage.*parser_fuzz_test.*)`)
+	fuzzerPath = filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
+	require.FileExists(t, fuzzerPath)
+
+	// Run the coverage build, which uses the replayer, on the seed corpus and verify that it creates a coverage
+	// profile.
+	coverageProfile := filepath.Join(archiveDir, "profile.lcov")
+	cmd = executil.Command(fuzzerPath, seedCorpusPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), "LLVM_PROFILE_FILE="+coverageProfile)
+	err = cmd.Run()
+	require.NoError(t, err)
+	require.FileExists(t, coverageProfile)
 }

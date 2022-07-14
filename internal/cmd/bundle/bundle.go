@@ -66,6 +66,19 @@ type bundleOpts struct {
 	outputPath string
 }
 
+type configureVariant struct {
+	Engine     string
+	Sanitizers []string
+}
+
+// Nothing stops users from including fuzz tests only conditionally by e.g. wrapping their `add_fuzz_test` target in
+// CMake into an `if(address IN_LIST CIFUZZ_SANITIZERS)`, so we maintain the list of fuzz tests per build configuration.
+// We don't expect this to happen, but it also decouples the code a bit better.
+type builderAndFuzzTests struct {
+	FuzzTests []string
+	Builder   *cmake.Builder
+}
+
 func New(conf *config.Config) *cobra.Command {
 	opts := &bundleOpts{}
 	cmd := &cobra.Command{
@@ -115,56 +128,35 @@ func (c *bundleCmd) run() (err error) {
 		sanitizers = append(sanitizers, "undefined")
 	}
 
-	builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
-		ProjectDir: c.config.ProjectDir,
-		// TODO: Do not hardcode this values.
-		Engine:     "libfuzzer",
-		Sanitizers: sanitizers,
-		Stdout:     c.OutOrStdout(),
-		Stderr:     c.ErrOrStderr(),
-	})
+	buildVariants, err := c.buildAllVariants()
 	if err != nil {
 		return err
 	}
 
-	err = builder.Configure()
-	if err != nil {
-		return err
-	}
-
-	if len(c.opts.fuzzTests) == 0 {
-		c.opts.fuzzTests, err = builder.ListFuzzTests()
-		if err != nil {
-			return err
-		}
-	}
-
-	err = builder.Build(c.opts.fuzzTests)
-	if err != nil {
-		return err
-	}
-
-	// Add all fuzz test artifacts to the archive.
+	// Add all fuzz test artifacts to the archive. There will be one "Fuzzer" metadata object for each pair of fuzz test
+	// and Builder instance.
 	var fuzzers []*artifact.Fuzzer
 	archiveManifest := make(map[string]string)
 	deduplicatedSystemDeps := make(map[string]struct{})
-	for _, fuzzTest := range c.opts.fuzzTests {
-		fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := assembleArtifacts(fuzzTest, builder)
-		if err != nil {
-			return err
-		}
-		fuzzers = append(fuzzers, fuzzTestFuzzers...)
-		for _, systemDep := range systemDeps {
-			deduplicatedSystemDeps[systemDep] = struct{}{}
-		}
-		// Produce an error when artifacts for different fuzzers conflict - this should never happen as
-		// assembleArtifacts is expected to add a unique prefix for each fuzz test.
-		for archivePath, absPath := range fuzzTestArchiveManifest {
-			existingAbsPath, conflict := archiveManifest[archivePath]
-			if conflict {
-				return errors.Errorf("conflict for archive path %q: %q and %q", archivePath, existingAbsPath, absPath)
+	for _, variant := range buildVariants {
+		for _, fuzzTest := range variant.FuzzTests {
+			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := assembleArtifacts(fuzzTest, variant.Builder)
+			if err != nil {
+				return err
 			}
-			archiveManifest[archivePath] = absPath
+			fuzzers = append(fuzzers, fuzzTestFuzzers...)
+			for _, systemDep := range systemDeps {
+				deduplicatedSystemDeps[systemDep] = struct{}{}
+			}
+			// Produce an error when artifacts for different fuzzers conflict - this should never happen as
+			// assembleArtifacts is expected to add a unique prefix for each fuzz test.
+			for archivePath, absPath := range fuzzTestArchiveManifest {
+				existingAbsPath, conflict := archiveManifest[archivePath]
+				if conflict {
+					return errors.Errorf("conflict for archive path %q: %q and %q", archivePath, existingAbsPath, absPath)
+				}
+				archiveManifest[archivePath] = absPath
+			}
 		}
 	}
 	systemDeps := maps.Keys(deduplicatedSystemDeps)
@@ -221,6 +213,79 @@ func (c *bundleCmd) run() (err error) {
   %s`, metadata.RunEnvironment.Docker, strings.Join(systemDeps, "\n  "))
 	}
 	return nil
+}
+
+func (c *bundleCmd) buildAllVariants() ([]builderAndFuzzTests, error) {
+	fuzzingVariant := configureVariant{
+		// TODO: Do not hardcode these values.
+		Engine:     "libfuzzer",
+		Sanitizers: []string{"address"},
+	}
+	// UBSan is not supported by MSVC.
+	// TODO: Not needed anymore when sanitizers are configurable,
+	//       then we do want to fail if the user explicitly asked for
+	//       UBSan.
+	if runtime.GOOS != "windows" {
+		fuzzingVariant.Sanitizers = append(fuzzingVariant.Sanitizers, "undefined")
+	}
+	configureVariants := []configureVariant{fuzzingVariant}
+
+	// Coverage builds are not supported by MSVC.
+	if runtime.GOOS != "windows" {
+		coverageVariant := configureVariant{
+			Engine: "coverage",
+		}
+		configureVariants = append(configureVariants, coverageVariant)
+	}
+
+	var buildVariants []builderAndFuzzTests
+	for _, variant := range configureVariants {
+		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
+			ProjectDir: c.config.ProjectDir,
+			Engine:     variant.Engine,
+			Sanitizers: variant.Sanitizers,
+			Stdout:     c.OutOrStdout(),
+			Stderr:     c.ErrOrStderr(),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		var typeDisplayString string
+		if variant.Engine == "coverage" {
+			typeDisplayString = "coverage"
+		} else {
+			typeDisplayString = "fuzzing"
+		}
+		log.Infof("\nBuilding for %s...", typeDisplayString)
+
+		err = builder.Configure()
+		if err != nil {
+			return nil, err
+		}
+
+		var fuzzTests []string
+		if len(c.opts.fuzzTests) == 0 {
+			fuzzTests, err = builder.ListFuzzTests()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			fuzzTests = c.opts.fuzzTests
+		}
+
+		err = builder.Build(fuzzTests)
+		if err != nil {
+			return nil, err
+		}
+
+		buildVariants = append(buildVariants, builderAndFuzzTests{
+			Builder:   builder,
+			FuzzTests: fuzzTests,
+		})
+	}
+
+	return buildVariants, nil
 }
 
 func assembleArtifacts(fuzzTest string, builder Builder) (
@@ -337,20 +402,31 @@ depsLoop:
 		err = artifact.AddDirToManifest(archiveManifest, archiveSeedsDir, seedCorpus)
 	}
 
+	baseFuzzerInfo := artifact.Fuzzer{
+		Target:       fuzzTest,
+		Path:         fuzzTestArchivePath,
+		BuildDir:     builder.BuildDir(),
+		Seeds:        archiveSeedsDir,
+		LibraryPaths: externalLibrariesPrefix,
+	}
+
+	if builder.Opts().Engine == "coverage" {
+		fuzzer := baseFuzzerInfo
+		fuzzer.Engine = "LLVM_COV"
+		fuzzers = []*artifact.Fuzzer{&fuzzer}
+		// Coverage builds are separate from sanitizer builds, so we don't have any other fuzzers to add.
+		return
+	}
+
 	for _, sanitizer := range builder.Opts().Sanitizers {
 		if sanitizer == "undefined" {
 			// The artifact archive spec does not support UBSan as a standalone sanitizer.
 			continue
 		}
-		fuzzers = append(fuzzers, &artifact.Fuzzer{
-			Target:       fuzzTest,
-			Path:         fuzzTestArchivePath,
-			Engine:       "LIBFUZZER",
-			Sanitizer:    strings.ToUpper(sanitizer),
-			BuildDir:     builder.BuildDir(),
-			Seeds:        archiveSeedsDir,
-			LibraryPaths: externalLibrariesPrefix,
-		})
+		fuzzer := baseFuzzerInfo
+		fuzzer.Engine = "LIBFUZZER"
+		fuzzer.Sanitizer = strings.ToUpper(sanitizer)
+		fuzzers = append(fuzzers, &fuzzer)
 	}
 
 	return
