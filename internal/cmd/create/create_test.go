@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,26 +41,6 @@ func TestCreateCmd_InvalidType(t *testing.T) {
 	}
 	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin, args...)
 	assert.Error(t, err)
-}
-
-func TestCreateCmd_AskForOutputPath(t *testing.T) {
-	outputPath := filepath.Join(baseTempDir, "my_test_file.cpp")
-	input := []byte(strings.ReplaceAll(outputPath, "\\", "\\\\") + "\n")
-	r, w, err := os.Pipe()
-	assert.NoError(t, err)
-
-	_, err = w.Write(input)
-	assert.NoError(t, err)
-	w.Close()
-
-	args := []string{"cpp"}
-
-	_, err = cmdutils.ExecuteCommand(t, New(config.NewConfig()), r, args...)
-	assert.NoError(t, err)
-
-	exists, err := fileutil.Exists(outputPath)
-	assert.NoError(t, err)
-	assert.True(t, exists)
 }
 
 func TestCreateCmd_OutDir(t *testing.T) {

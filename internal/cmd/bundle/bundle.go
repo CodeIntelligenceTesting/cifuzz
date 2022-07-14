@@ -17,7 +17,6 @@ import (
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/artifact"
-	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/vcs"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -99,19 +98,10 @@ func New(conf *config.Config) *cobra.Command {
 
 func (c *bundleCmd) run() (err error) {
 	if c.opts.outputPath == "" {
-		var defaultName string
 		if len(c.opts.fuzzTests) == 1 {
-			defaultName = c.opts.fuzzTests[0] + ".tar.gz"
+			c.opts.outputPath = c.opts.fuzzTests[0] + ".tar.gz"
 		} else {
-			defaultName = "fuzz_tests.tar.gz"
-		}
-		c.opts.outputPath, err = dialog.InputFilename(
-			c.InOrStdin(),
-			"Please enter the filename for the artifact (.tar.gz)",
-			defaultName,
-		)
-		if err != nil {
-			return err
+			c.opts.outputPath = "fuzz_tests.tar.gz"
 		}
 	}
 

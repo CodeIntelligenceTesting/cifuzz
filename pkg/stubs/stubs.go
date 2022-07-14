@@ -41,9 +41,9 @@ func Create(path string, testType config.FuzzTestType) error {
 	return nil
 }
 
-// SuggestFilename returns a proposal for a filename,
+// FuzzTestFilename returns a proposal for a filename,
 // depending on the test type and given directory
-func SuggestFilename(testType config.FuzzTestType) (string, error) {
+func FuzzTestFilename(testType config.FuzzTestType) (string, error) {
 	var basename, ext, filename string
 
 	switch testType {

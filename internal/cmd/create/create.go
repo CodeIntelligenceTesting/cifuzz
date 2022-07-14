@@ -56,7 +56,7 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	log.Debugf("Selected fuzz test type: %s", opts.testType)
 
 	if opts.outputPath == "" {
-		opts.outputPath, err = determineOutputPath(opts, cmd.InOrStdin())
+		opts.outputPath, err = stubs.FuzzTestFilename(opts.testType)
 		if err != nil {
 			return err
 		}
@@ -91,22 +91,6 @@ func getTestType(args []string, stdin io.Reader) (config.FuzzTestType, error) {
 		return "", cmdutils.ErrSilent
 	}
 	return config.FuzzTestType(userSelectedType), nil
-}
-
-func determineOutputPath(opts *cmdOpts, stdin io.Reader) (string, error) {
-	suggestedFilename, err := stubs.SuggestFilename(opts.testType)
-	if err != nil {
-		// as this error only results in a missing filename suggestion we just show
-		// it but do not stop the application
-		log.Errorf(err, "unable to suggest filename for given test type %s", opts.testType)
-	}
-
-	outputPath, err := dialog.InputFilename(stdin, "Please enter filename", suggestedFilename)
-	if err != nil {
-		return "", err
-	}
-
-	return outputPath, nil
 }
 
 func printBuildSystemInstructions(buildSystem, filename string) {

@@ -71,14 +71,14 @@ func TestSuggestFilename(t *testing.T) {
 	err = os.Chdir(projectDir)
 	require.NoError(t, err)
 
-	filename1, err := SuggestFilename(config.CPP)
+	filename1, err := FuzzTestFilename(config.CPP)
 	assert.NoError(t, err)
 	assert.Equal(t, filepath.Join(".", "my_fuzz_test_1.cpp"), filename1)
 
 	err = os.WriteFile(filename1, []byte("TEST"), 0644)
 	require.NoError(t, err)
 
-	filename2, err := SuggestFilename(config.CPP)
+	filename2, err := FuzzTestFilename(config.CPP)
 	assert.NoError(t, err)
 	assert.Equal(t, filepath.Join(".", "my_fuzz_test_2.cpp"), filename2)
 }
