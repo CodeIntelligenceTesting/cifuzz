@@ -104,7 +104,12 @@ const char *__ubsan_default_options() {
   return "halt_on_error=1";
 }
 
-extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
+#ifdef __cplusplus
+extern "C"
+#else
+extern
+#endif
+int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
 
 #define STRINGIFY_(x) #x
 #define STRINGIFY(x) STRINGIFY_(x)
@@ -479,7 +484,7 @@ int main(int argc, char **argv) {
       }
     } else {
       seed_corpus_path_size = strlen(argv[0]) + strlen(SEED_CORPUS_SUFFIX) + 1;
-      seed_corpus_path = malloc(seed_corpus_path_size);
+      seed_corpus_path = (char*) malloc(seed_corpus_path_size);
       assert(seed_corpus_path != NULL);
 #ifdef _WIN32
       /* Use the non-deprecated safe versions of the standard string functions with the Microsoft CRT.
