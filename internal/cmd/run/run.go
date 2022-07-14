@@ -115,7 +115,7 @@ func New(config *config.Config) *cobra.Command {
 	cmd.Flags().StringArrayVar(&opts.fuzzTargetArgs, "fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
 	useMinijailDefault := runtime.GOOS == "linux"
-	cmd.Flags().BoolVar(&opts.useSandbox, "sandbox", useMinijailDefault, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
+	cmd.Flags().BoolVar(&opts.useSandbox, "use-sandbox", useMinijailDefault, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
 	cmd.Flags().BoolVar(&opts.printJSON, "json", false, "Print output as JSON")
 
 	return cmd
