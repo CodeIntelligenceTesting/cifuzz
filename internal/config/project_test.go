@@ -93,7 +93,7 @@ func TestReadProjectConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	configFile := filepath.Join(projectDir, "cifuzz.yaml")
-	err = os.WriteFile(configFile, []byte("build_system: "+BuildSystemAuto), 0644)
+	err = os.WriteFile(configFile, []byte("build_system: "), 0644)
 	require.NoError(t, err)
 
 	config, err := ReadProjectConfig(projectDir)
@@ -107,7 +107,7 @@ func TestReadProjectConfigCMake(t *testing.T) {
 	require.NoError(t, err)
 
 	configFile := filepath.Join(projectDir, "cifuzz.yaml")
-	err = os.WriteFile(configFile, []byte("build_system: "+BuildSystemAuto), 0644)
+	err = os.WriteFile(configFile, []byte("build_system: "), 0644)
 	require.NoError(t, err)
 
 	// Create a CMakeLists.txt in the project dir, which should cause

@@ -75,7 +75,7 @@ func (opts *runOptions) validate() error {
 		}
 	}
 
-	if opts.BuildSystem == "" || opts.BuildSystem == config.BuildSystemAuto {
+	if opts.BuildSystem == "" {
 		opts.BuildSystem, err = config.DetermineBuildSystem(opts.ProjectDir)
 		if err != nil {
 			return err

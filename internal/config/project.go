@@ -17,7 +17,6 @@ import (
 )
 
 const (
-	BuildSystemAuto    string = "auto"
 	BuildSystemCMake   string = "cmake"
 	BuildSystemUnknown string = "unknown"
 )
@@ -109,7 +108,7 @@ func ReadProjectConfig(projectDir string) (*ProjectConfig, error) {
 		BuildSystem: viper.GetString("build-system"),
 	}
 
-	if config.BuildSystem == "" || config.BuildSystem == BuildSystemAuto {
+	if config.BuildSystem == "" {
 		config.BuildSystem, err = DetermineBuildSystem(projectDir)
 		if err != nil {
 			return nil, err

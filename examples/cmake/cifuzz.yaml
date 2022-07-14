@@ -1,7 +1,7 @@
 ## Configuration for a CI Fuzz project
-## Generated on 2022-06-15
+## Generated on 2022-07-14
 
-## The build system used to build this project. If set to "auto" (the
-## default), cifuzz tries to detect the build system automatically.
-## Valid values: "auto", "cmake", "unknown".
-#build-system: auto
+## The build system used to build this project. If not set, cifuzz tries
+## to detect the build system automatically.
+## Valid values: "cmake", "unknown".
+#build-system: cmake
