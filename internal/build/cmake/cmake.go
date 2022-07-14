@@ -81,11 +81,15 @@ func (b *Builder) BuildDir() string {
 	// variables is a no-op. For this reason, we have to encode all choices made
 	// for the cache variables below in the path to the build directory.
 	// Currently, this includes the fuzzing engine and the choice of sanitizers.
+	sanitizersSegment := strings.Join(b.Sanitizers, "+")
+	if sanitizersSegment == "" {
+		sanitizersSegment = "none"
+	}
 	return filepath.Join(
 		b.ProjectDir,
 		".cifuzz-build",
 		b.Engine,
-		strings.Join(b.Sanitizers, "+"),
+		sanitizersSegment,
 	)
 }
 

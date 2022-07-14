@@ -20,7 +20,7 @@ type Fuzzer struct {
 	Target       string `yaml:"target"`
 	Path         string `yaml:"path"`
 	Engine       string `yaml:"engine"`
-	Sanitizer    string `yaml:"sanitizer"`
+	Sanitizer    string `yaml:"sanitizer,omitempty"`
 	BuildDir     string `yaml:"build_dir"`
 	Seeds        string `yaml:"seeds,omitempty"`
 	LibraryPaths string `yaml:"library_paths,omitempty"`

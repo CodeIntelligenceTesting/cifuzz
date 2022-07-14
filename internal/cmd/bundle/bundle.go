@@ -359,7 +359,11 @@ depsLoop:
 // fuzzTestPrefix returns the path in the resulting artifact archive under which fuzz test specific files should be
 // added.
 func fuzzTestPrefix(fuzzTest string, builder Builder) string {
-	return filepath.Join(builder.Opts().Engine, strings.Join(builder.Opts().Sanitizers, "+"), fuzzTest)
+	sanitizerSegment := strings.Join(builder.Opts().Sanitizers, "+")
+	if sanitizerSegment == "" {
+		sanitizerSegment = "none"
+	}
+	return filepath.Join(builder.Opts().Engine, sanitizerSegment, fuzzTest)
 }
 
 func getCodeRevision() (codeRevision *artifact.CodeRevision) {
