@@ -3,6 +3,7 @@ package report_handler
 import (
 	"bytes"
 	"io"
+	"os"
 	"testing"
 	"time"
 
@@ -34,7 +35,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestReportHandler_EmptyCorpus(t *testing.T) {
-	h, err := NewReportHandler(false, false)
+	h, err := NewReportHandler("", false, false)
 	require.NoError(t, err)
 
 	initStartedReport := &report.Report{
@@ -48,7 +49,7 @@ func TestReportHandler_EmptyCorpus(t *testing.T) {
 }
 
 func TestReportHandler_NonEmptyCorpus(t *testing.T) {
-	h, err := NewReportHandler(false, false)
+	h, err := NewReportHandler("", false, false)
 	require.NoError(t, err)
 
 	initStartedReport := &report.Report{
@@ -66,7 +67,7 @@ func TestReportHandler_NonEmptyCorpus(t *testing.T) {
 }
 
 func TestReportHandler_Metrics(t *testing.T) {
-	h, err := NewReportHandler(false, false)
+	h, err := NewReportHandler("", false, false)
 	require.NoError(t, err)
 
 	printerOut := bytes.NewBuffer([]byte{})
@@ -86,23 +87,36 @@ func TestReportHandler_Metrics(t *testing.T) {
 }
 
 func TestReportHandler_Finding(t *testing.T) {
-	h, err := NewReportHandler(false, false)
+	h, err := NewReportHandler("seed_corpus", false, false)
+	require.NoError(t, err)
+
+	// create an input file
+	testfile := "crash_123_test"
+	err = os.WriteFile(testfile, []byte("TEST"), 0644)
 	require.NoError(t, err)
 
 	findingLogs := []string{"Oops", "The application crashed"}
 	findingReport := &report.Report{
 		Status: report.RunStatus_RUNNING,
 		Finding: &report.Finding{
-			Logs: findingLogs,
+			Logs:      findingLogs,
+			InputFile: testfile,
 		},
 	}
 	err = h.Handle(findingReport)
 	require.NoError(t, err)
-	checkOutput(t, logOutput, append([]string{"Finding 1"}, findingLogs...)...)
+
+	expectedOutputs := append([]string{"Finding 1"}, findingLogs...)
+	expectedOutputs = append(expectedOutputs,
+		findingReport.Finding.InputFile,
+		h.seedCorpusDir,
+		findingReport.Finding.Name,
+	)
+	checkOutput(t, logOutput, expectedOutputs...)
 }
 
 func TestReportHandler_PrintJSON(t *testing.T) {
-	h, err := NewReportHandler(true, false)
+	h, err := NewReportHandler("", true, false)
 	require.NoError(t, err)
 
 	jsonOut := bytes.NewBuffer([]byte{})
@@ -121,7 +135,7 @@ func TestReportHandler_PrintJSON(t *testing.T) {
 }
 
 func TestReportHandler_GenerateName(t *testing.T) {
-	h, err := NewReportHandler(true, false)
+	h, err := NewReportHandler("", true, false)
 	require.NoError(t, err)
 
 	findingLogs := []string{"Oops", "The program crashed"}
@@ -138,7 +152,7 @@ func TestReportHandler_GenerateName(t *testing.T) {
 }
 
 func TestReportHandler_NotOverrideName(t *testing.T) {
-	h, err := NewReportHandler(true, false)
+	h, err := NewReportHandler("", true, false)
 	require.NoError(t, err)
 
 	findingLogs := []string{"Oops", "The program crashed"}

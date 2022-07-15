@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -37,17 +39,19 @@ type ReportHandler struct {
 
 	numFindings    uint
 	numSeedsAtInit uint
+	seedCorpusDir  string
 
 	jsonOutput io.Writer
 }
 
-func NewReportHandler(printJSON, verbose bool) (*ReportHandler, error) {
+func NewReportHandler(seedCorpusDir string, printJSON, verbose bool) (*ReportHandler, error) {
 	var err error
 	h := &ReportHandler{
-		printJSON:  printJSON,
-		verbose:    verbose,
-		startedAt:  time.Now(),
-		jsonOutput: os.Stdout,
+		seedCorpusDir: seedCorpusDir,
+		printJSON:     printJSON,
+		verbose:       verbose,
+		startedAt:     time.Now(),
+		jsonOutput:    os.Stdout,
 	}
 
 	// When --json was used, we don't want anything but JSON output on
@@ -136,6 +140,22 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 		log.Print("\n")
 		log.Printf("=========================== Finding %d ===========================", h.numFindings)
 		log.Print(strings.Join(r.Finding.Logs, "\n"))
+
+		if r.Finding.InputFile != "" {
+			destPath := filepath.Join(h.seedCorpusDir, r.Finding.Name)
+
+			copyCmd := fmt.Sprintf("mkdir -p %s && cp", h.seedCorpusDir)
+			if runtime.GOOS == "windows" {
+				copyCmd = fmt.Sprintf("if not exist %s mkdir %s && copy", destPath, destPath)
+			}
+
+			log.Print("\n")
+			log.Print("You can add this crashing input to the seed corpus with:")
+			log.Infof("  %s %s %s", copyCmd, r.Finding.InputFile, destPath)
+			log.Print("After adding, the input will be applied every time you run the regression tests / replayer binary (for example during your CI/CD pipeline).")
+			log.Print("For more information you can take a look at https://github.com/CodeIntelligenceTesting/cifuzz#regression-testing")
+		}
+
 		log.Print("=================================================================")
 	}
 
