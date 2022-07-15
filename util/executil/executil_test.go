@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -191,4 +193,9 @@ func TestCmd_StdoutTeePipe_NoReadWithRun(t *testing.T) {
 
 	err = pipe.Close()
 	require.NoError(t, err)
+}
+
+func TestCallablePath(t *testing.T) {
+	assert.Equal(t, "."+string(os.PathSeparator)+"my_binary", CallablePath("my_binary"))
+	assert.Equal(t, filepath.Join("dir", "my_binary"), CallablePath(filepath.Join("dir", "my_binary")))
 }

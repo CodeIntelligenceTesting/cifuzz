@@ -27,6 +27,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/envutil"
+	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
@@ -333,7 +334,7 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 
 func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
 	if exists, _ := fileutil.Exists(fuzzTest); exists {
-		return fuzzTest, nil
+		return executil.CallablePath(fuzzTest), nil
 	}
 	var executable string
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
@@ -363,7 +364,7 @@ func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
 	if executable == "" {
 		return "", errors.Errorf("Could not find executable for fuzz test %s", fuzzTest)
 	}
-	return executable, nil
+	return executil.CallablePath(executable), nil
 }
 
 func (c *runCmd) printFinalMetrics() error {
