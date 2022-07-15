@@ -45,7 +45,7 @@ var (
 	// #2	INITED cov: 10 ft: 11 corp: 1/1b exec/s: 0 rss: 30Mb
 	// #670	REDUCE cov: 13 ft: 15 corp: 4/5b lim: 8 exec/s: 0 rss: 31Mb L: 1/2 MS: 2 CopyPart-EraseBytes-
 	statsPattern = regexp.MustCompile(
-		`#(?P<total_execs>\d+)\s(?P<status>.*)\scov:\s(?P<edges>\d+)\sft:\s(?P<features>\d+)\scorp:\s(?P<corpus_size>\d+)/.*exec/s:\s(?P<executions_per_second>\d+)\s`)
+		`#(?P<total_execs>\d+)\s+(?P<status>\S*)\s+(cov:\s+(?P<edges>\d+)\s+)?ft:\s+(?P<features>\d+)\s+corp:\s+(?P<corpus_size>\d+)/.*exec/s:\s+(?P<executions_per_second>\d+)\s+`)
 	testInputFilePattern = regexp.MustCompile(
 		`Test unit written to\s*(?P<test_input_file>.*)`)
 	slowInputPattern = regexp.MustCompile(
@@ -418,10 +418,17 @@ func (p *parser) parseAsFuzzingMetric(line string) *report.FuzzingMetric {
 		if err != nil {
 			return nil
 		}
-		edges, err := strconv.Atoi(result["edges"])
-		if err != nil {
-			return nil
+
+		var edges int
+		if result["edges"] == "" {
+			edges = 0
+		} else {
+			edges, err = strconv.Atoi(result["edges"])
+			if err != nil {
+				return nil
+			}
 		}
+
 		execsPerSec, err := strconv.Atoi(result["executions_per_second"])
 		if err != nil {
 			return nil
