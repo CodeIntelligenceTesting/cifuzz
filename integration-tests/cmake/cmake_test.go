@@ -137,7 +137,8 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 	cmd.Dir = dir
 	stdoutPipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
-	cmd.Stderr = os.Stderr
+	stderrPipe, err := cmd.StderrTeePipe(os.Stderr)
+	require.NoError(t, err)
 
 	// Terminate the cifuzz process when we receive a termination signal
 	// (else the test won't stop). An alternative would be to run the
@@ -165,7 +166,19 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 
 	// Check that the output contains the expected output
 	var seenExpectedOutput bool
+	// cifuzz progress messages go to stdout.
 	scanner := bufio.NewScanner(stdoutPipe)
+	for scanner.Scan() {
+		if expectedOutput.MatchString(scanner.Text()) {
+			seenExpectedOutput = true
+			if terminate {
+				err = cmd.TerminateProcessGroup()
+				require.NoError(t, err)
+			}
+		}
+	}
+	// Fuzzer output goes to stderr.
+	scanner = bufio.NewScanner(stderrPipe)
 	for scanner.Scan() {
 		if expectedOutput.MatchString(scanner.Text()) {
 			seenExpectedOutput = true
@@ -198,6 +211,8 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 	case <-runCtx.Done():
 		require.NoError(t, runCtx.Err())
 	}
+
+	require.True(t, seenExpectedOutput, "Did not see %q in fuzzer output", expectedOutput.String())
 }
 
 func followStepsPrintedByInitCommand(t *testing.T, initOutput io.Reader, cmakeLists string) {
