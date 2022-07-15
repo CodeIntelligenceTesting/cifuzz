@@ -254,6 +254,11 @@ func build(t *testing.T, buildType string, cacheVariables map[string]string) str
 	if buildType != "" {
 		buildArgs = append(buildArgs, "--config", buildType)
 	}
+	if runtime.GOOS == "windows" {
+		// CMAKE_VERBOSE_MAKEFILE has no effect on MSBuild, so we have to increase verbosity manually.
+		// https://stackoverflow.com/a/70728115/297261
+		buildArgs = append(buildArgs, "--", "-clp:ShowCommandLine")
+	}
 	runInDir(t, buildDir, "cmake", buildArgs...)
 
 	return buildDir
