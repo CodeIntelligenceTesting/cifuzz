@@ -60,6 +60,13 @@ static const int DOCTEST_ANON_VAR_15771531 =    \
 #define CIFUZZ_C_LINKAGE
 #endif
 
+#ifndef CIFUZZ_TEST_NAME
+#define CIFUZZ_TEST_NAME NULL
+#endif
+#ifndef CIFUZZ_SEED_CORPUS
+#define CIFUZZ_SEED_CORPUS NULL
+#endif
+
 #define FUZZ_TEST                                                                \
 static void LLVMFuzzerTestOneInputNoReturn(const uint8_t *data, size_t size);    \
 CIFUZZ_C_LINKAGE int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {  \
