@@ -269,9 +269,7 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
 	log.Debugf("Executable: %s", fuzzTestExecutable)
 
-	// Store the generated corpus in a single persistent directory per
-	// fuzz test in a hidden subdirectory.
-	generatedCorpusDir := filepath.Join(c.opts.ProjectDir, ".cifuzz-corpus", c.opts.fuzzTest)
+	generatedCorpusDir := c.generatedCorpusPath()
 	err := os.MkdirAll(generatedCorpusDir, 0755)
 	if err != nil {
 		return errors.WithStack(err)
@@ -368,12 +366,18 @@ func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
 }
 
 func (c *runCmd) printFinalMetrics() error {
-	numSeeds, err := countSeeds(c.opts.SeedCorpusDirs)
+	numSeeds, err := countSeeds(append(c.opts.SeedCorpusDirs, c.generatedCorpusPath()))
 	if err != nil {
 		return err
 	}
 
 	return c.reportHandler.PrintFinalMetrics(numSeeds)
+}
+
+func (c *runCmd) generatedCorpusPath() string {
+	// Store the generated corpus in a single persistent directory per
+	// fuzz test in a hidden subdirectory.
+	return filepath.Join(c.opts.ProjectDir, ".cifuzz-corpus", c.opts.fuzzTest)
 }
 
 func setBuildFlagsEnvVars(env []string) ([]string, error) {
