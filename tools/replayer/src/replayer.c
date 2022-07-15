@@ -105,11 +105,12 @@ const char *__ubsan_default_options() {
 }
 
 #ifdef __cplusplus
-extern "C"
+#define C_LINKAGE extern "C"
 #else
-extern
+#define C_LINKAGE extern
 #endif
-int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
+
+C_LINKAGE int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
 
 #define STRINGIFY_(x) #x
 #define STRINGIFY(x) STRINGIFY_(x)
@@ -134,7 +135,7 @@ ret name##Default args
 #define DEFINE_DEFAULT(ret, name, args)                \
 ret name##Default args;                                \
 __attribute__((weak, alias(STRINGIFY(name##Default)))) \
-ret name args;                                         \
+C_LINKAGE ret name args;                               \
 ret name##Default args
 #endif
 
