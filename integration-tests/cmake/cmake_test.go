@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -167,9 +168,19 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 	select {
 	case err := <-waitErrCh:
 		var exitErr *exec.ExitError
-		// The expected exit code when the process was terminated via
-		// SIGTERM is 128 + 15 = 143
-		if seenExpectedOutput && terminate && errors.As(err, &exitErr) && exitErr.ExitCode() == 143 {
+		var expectedExitCode int
+		if runtime.GOOS == "windows" {
+			// On Windows we terminate the process via taskkill [1],
+			// which causes the process to exit with exit code 1
+			// [1] https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/taskkill
+			expectedExitCode = 1
+		} else {
+			// On Unix we terminate the process via SIGTERM, so the
+			// expected exit code is 128 + 15 = 143
+			expectedExitCode = 143
+		}
+
+		if seenExpectedOutput && terminate && errors.As(err, &exitErr) && exitErr.ExitCode() == expectedExitCode {
 			return
 		}
 		require.NoError(t, err)
