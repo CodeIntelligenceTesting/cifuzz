@@ -25,7 +25,7 @@ import (
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
-func TestIntegration_InitCreateRunBundle(t *testing.T) {
+func TestIntegration_CMake_InitCreateRunBundle(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
