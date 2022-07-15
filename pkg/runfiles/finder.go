@@ -37,7 +37,7 @@ func (f RunfilesFinderImpl) ProcessWrapperPath() (string, error) {
 	return f.findFollowSymlinks("lib/process_wrapper")
 }
 
-func (f RunfilesFinderImpl) CifuzzIncludePath() (string, error) {
+func (f RunfilesFinderImpl) CIFuzzIncludePath() (string, error) {
 	return f.findFollowSymlinks("share/cmake/cifuzz/include/cifuzz")
 }
 

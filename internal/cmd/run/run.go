@@ -391,7 +391,7 @@ func setBuildFlagsEnvVars(env []string) ([]string, error) {
 
 	// Users should pass the environment variable FUZZ_TEST_CFLAGS to the
 	// compiler command building the fuzz test.
-	cifuzzIncludePath, err := runfiles.Finder.CifuzzIncludePath()
+	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
 	if err != nil {
 		return nil, err
 	}

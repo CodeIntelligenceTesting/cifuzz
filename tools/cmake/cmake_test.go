@@ -145,7 +145,7 @@ func TestIntegration_Build_LegacyFuzzTests(t *testing.T) {
 	runAndAssertTests(t, buildDir, cifuzzCmakeBuildType, map[string]bool{"legacy_fuzz_test_regression_test": true})
 }
 
-func TestIntegration_CifuzzInfoIsCreated(t *testing.T) {
+func TestIntegration_CIFuzzInfoIsCreated(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
