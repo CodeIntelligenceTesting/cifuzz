@@ -220,6 +220,9 @@ func (c *runCmd) buildFuzzTest() (string, error) {
 		}
 		return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
 	} else if c.opts.BuildSystem == config.BuildSystemUnknown {
+		if runtime.GOOS == "windows" {
+			return "", errors.New("CMake is the only supported build system on Windows")
+		}
 		return c.buildWithUnknownBuildSystem()
 	} else {
 		return "", errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
