@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -83,14 +82,7 @@ func TestIntegration_InitCreateRunBundle(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run the (empty) fuzz test
-	//
-	// TODO: Disabled on Windows since it fails there for at least the following reasons:
-	//  1. The CI log output doesn't contain the pterm log output.
-	//  2. The command we use for process group termination sometimes exits with a non-zero exit code.
-	//  3. The exit code of the fuzzer on termination appears to be 1 rather than 128 + SIGTERM.
-	if runtime.GOOS != "windows" {
-		runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^paths: \d+`), true)
-	}
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^paths: \d+`), true)
 
 	// Make the fuzz test call a function. Before we do that, we sleep
 	// for one second, to avoid make implementations which only look at
