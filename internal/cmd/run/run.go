@@ -334,6 +334,9 @@ func (c *runCmd) findFuzzTestExecutable(fuzzTest string) (string, error) {
 	}
 	var executable string
 	err := filepath.Walk(c.buildDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return errors.WithStack(err)
+		}
 		if info.IsDir() {
 			return nil
 		}
