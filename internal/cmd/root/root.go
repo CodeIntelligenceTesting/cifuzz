@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	bundleCmd "code-intelligence.com/cifuzz/internal/cmd/bundle"
@@ -77,6 +78,8 @@ func New() (*cobra.Command, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	rootCmd.SetFlagErrorFunc(rootFlagErrorFunc)
+
 	rootCmd.AddCommand(initCmd.New())
 	rootCmd.AddCommand(createCmd.New(cmdConfig))
 	rootCmd.AddCommand(runCmd.New(cmdConfig))
@@ -108,7 +111,6 @@ func Execute() {
 		// caused by incorrect usage
 		var usageErr *cmdutils.IncorrectUsageError
 		if errors.As(err, &usageErr) ||
-			strings.HasPrefix(err.Error(), "required flag") ||
 			strings.HasPrefix(err.Error(), "unknown command") ||
 			regexp.MustCompile(`(accepts|requires).*arg\(s\)`).MatchString(err.Error()) {
 			// Ensure that there is an extra newline between the error
@@ -126,4 +128,11 @@ func Execute() {
 
 		os.Exit(1)
 	}
+}
+
+func rootFlagErrorFunc(cmd *cobra.Command, err error) error {
+	if err == pflag.ErrHelp {
+		return err
+	}
+	return cmdutils.WrapIncorrectUsageError(err)
 }
