@@ -1,0 +1,7 @@
+* @CodeIntelligenceTesting/cifuzz-devs
+
+/pkg/minijail @adombeck
+/pkg/runner @adombeck
+
+/tools/cmake @fmeum
+/tools/replayer @fmeum
