@@ -88,7 +88,7 @@ func TestAssembleArtifacts(t *testing.T) {
 
 	builder := NewMockBuilder(projectDir, seedCorpus)
 
-	fuzzers, manifest, systemDeps, err := assembleArtifacts("some_fuzz_test", builder)
+	fuzzers, manifest, systemDeps, err := assembleArtifacts("some_fuzz_test", builder, projectDir)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(fuzzers))
@@ -97,7 +97,7 @@ func TestAssembleArtifacts(t *testing.T) {
 		Path:         filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "pkg", "some_fuzz_test"),
 		Engine:       "LIBFUZZER",
 		Sanitizer:    "ADDRESS",
-		BuildDir:     builder.BuildDir(),
+		ProjectDir:   projectDir,
 		Seeds:        filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds"),
 		LibraryPaths: filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs"),
 	}, *fuzzers[0])

@@ -140,7 +140,7 @@ func (c *bundleCmd) run() (err error) {
 	deduplicatedSystemDeps := make(map[string]struct{})
 	for _, variant := range buildVariants {
 		for _, fuzzTest := range variant.FuzzTests {
-			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := assembleArtifacts(fuzzTest, variant.Builder)
+			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := assembleArtifacts(fuzzTest, variant.Builder, c.config.ProjectDir)
 			if err != nil {
 				return err
 			}
@@ -288,7 +288,7 @@ func (c *bundleCmd) buildAllVariants() ([]builderAndFuzzTests, error) {
 	return buildVariants, nil
 }
 
-func assembleArtifacts(fuzzTest string, builder Builder) (
+func assembleArtifacts(fuzzTest string, builder Builder, projectDir string) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,
@@ -405,7 +405,7 @@ depsLoop:
 	baseFuzzerInfo := artifact.Fuzzer{
 		Target:       fuzzTest,
 		Path:         fuzzTestArchivePath,
-		BuildDir:     builder.BuildDir(),
+		ProjectDir:   projectDir,
 		Seeds:        archiveSeedsDir,
 		LibraryPaths: externalLibrariesPrefix,
 	}
