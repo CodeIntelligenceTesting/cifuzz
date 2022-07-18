@@ -15,6 +15,11 @@ func (c *Cmd) TerminateProcessGroup() error {
 	kill.Stderr = os.Stderr
 	kill.Stdout = os.Stderr
 	err := kill.Run()
+	// taskkill can fail e.g. because the process has already been terminated.
+	// We only report non-ExitErrors.
+	if _, isExitErr := err.(*exec.ExitError); isExitErr {
+		return nil
+	}
 	return errors.WithStack(err)
 }
 
