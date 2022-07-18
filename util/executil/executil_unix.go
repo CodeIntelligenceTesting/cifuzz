@@ -19,10 +19,7 @@ func (c *Cmd) TerminateProcessGroup() error {
 	log.Infof("Sending SIGTERM to process group %d", c.pgid)
 	// We ignore errors here because the process group might not exist
 	// anymore at this point.
-	err := syscall.Kill(-c.pgid, syscall.SIGTERM) // note the minus sign
-	if err != nil {
-		return errors.WithStack(err)
-	}
+	_ = syscall.Kill(-c.pgid, syscall.SIGTERM) // note the minus sign
 
 	// Give the process group a few seconds to exit
 	select {
@@ -32,10 +29,7 @@ func (c *Cmd) TerminateProcessGroup() error {
 		log.Infof("Sending SIGKILL to process group %d", c.pgid)
 		// We ignore errors here because the process group might not exist
 		// anymore at this point.
-		err = syscall.Kill(-c.pgid, syscall.SIGKILL) // note the minus sign
-		if err != nil {
-			return errors.WithStack(err)
-		}
+		_ = syscall.Kill(-c.pgid, syscall.SIGKILL) // note the minus sign
 	case <-c.waitDone:
 		// The process has already exited, nothing else to do here.
 		// Note: This might leave other processes in the process group
