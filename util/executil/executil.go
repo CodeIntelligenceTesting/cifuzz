@@ -29,7 +29,8 @@ const (
 // Note: exec.ExitError instances are logged without the stack trace and
 // returned as a cmdutils.SilentError.
 func HandleExecError(cmd *exec.Cmd, err error) error {
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		stderr := string(exitErr.Stderr)
 		if stderr != "" && !strings.HasSuffix(stderr, "\n") {
 			stderr += "\n"
