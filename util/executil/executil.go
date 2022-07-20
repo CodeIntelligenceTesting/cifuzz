@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -35,7 +36,7 @@ func HandleExecError(cmd *exec.Cmd, err error) error {
 		if stderr != "" && !strings.HasSuffix(stderr, "\n") {
 			stderr += "\n"
 		}
-		err = fmt.Errorf("%s%s: %w", stderr, cmd.Args[0], err)
+		err = fmt.Errorf("%s%s: %w", stderr, filepath.Base(cmd.Args[0]), err)
 		log.Error(err, err.Error())
 		return cmdutils.WrapSilentError(errors.WithStack(err))
 	}
