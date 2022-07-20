@@ -276,7 +276,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 				if !r.Verbose {
 					log.Print(reporter.StartupOutput())
 				}
-				return errors.WithMessagef(err, "Unexpected exit code %d", exitErr.ExitCode())
+				return executil.HandleExecError(r.cmd.Cmd, err)
 			}
 
 			if !reporter.FindingReported {
