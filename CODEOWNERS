@@ -1,7 +1,19 @@
 * @CodeIntelligenceTesting/cifuzz-devs
 
+/cmd/installer @adombeck
+/githooks @adombeck
+/internal/cmd/run @adombeck
+/internal/completion @adombeck
+/internal/config @adombeck
 /pkg/minijail @adombeck
+/pkg/parser @adombeck
 /pkg/runner @adombeck
+/tools/install @adombeck
+/util/envutil @adombeck
+/util/executil @adombeck
+/util/fileutil @adombeck
+/util/sliceutil @adombeck
+/util/stringutil @adombeck
 
 /tools/cmake @fmeum
 /tools/replayer @fmeum
