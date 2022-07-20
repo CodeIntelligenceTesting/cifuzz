@@ -16,6 +16,8 @@ import (
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
+var expectedFinding = regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-buffer-overflow`)
+
 func TestIntegration_Make_Run(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -36,8 +38,8 @@ func TestIntegration_Make_Run(t *testing.T) {
 	t.Logf("executing make integration test in %s", dir)
 
 	// Run the two fuzz tests and verify that they crash with the expected finding.
-	runFuzzer(t, cifuzz, dir, "my_fuzz_test_1", regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-buffer-overflow`))
-	runFuzzer(t, cifuzz, dir, "my_fuzz_test_2", regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-buffer-overflow`))
+	runFuzzer(t, cifuzz, dir, "my_fuzz_test_1", expectedFinding)
+	runFuzzer(t, cifuzz, dir, filepath.Join(dir, "my_fuzz_test_2"), expectedFinding)
 }
 
 func copyMakeExampleDir(t *testing.T) string {
@@ -62,7 +64,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expecte
 	cmd := executil.Command(
 		cifuzz,
 		"run", "-v", fuzzTest,
-		"--build-command", "make clean && make "+fuzzTest,
+		"--build-command", "make clean && make "+filepath.Base(fuzzTest),
 		// The crashes are expected to be found quickly.
 		"--engine-arg=-run=1000",
 		"--engine-arg=-seed=1",
