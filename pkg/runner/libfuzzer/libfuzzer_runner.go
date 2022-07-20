@@ -1,6 +1,7 @@
 package libfuzzer
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"os"
@@ -212,8 +213,15 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 		// Write the command's stderr to both a pipe and the pterm
 		// writer which prints it to stderr, so that we can parse the
 		// output but still allow the caller to observe the status and
-		// progress in realtime.
-		stderrPipe, err = r.cmd.StderrTeePipe(ptermWriter)
+		// progress in realtime. If minijail is used, we also filter
+		// the output via minijail.OutputFilter
+		var stderrOutput io.Writer
+		if r.UseMinijail {
+			stderrOutput = minijail.NewOutputFilter(ptermWriter)
+		} else {
+			stderrOutput = ptermWriter
+		}
+		stderrPipe, err = r.cmd.StderrTeePipe(stderrOutput)
 		if err != nil {
 			return err
 		}
@@ -230,9 +238,17 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 		return err
 	}
 
+	var startupOutput bytes.Buffer
+	var startupOutputWriter io.Writer
+	if r.UseMinijail {
+		startupOutputWriter = minijail.NewOutputFilter(&startupOutput)
+	} else {
+		startupOutputWriter = &startupOutput
+	}
 	reporter := libfuzzer_parser.NewLibfuzzerOutputParser(&libfuzzer_parser.Options{
-		SupportJazzer: r.SupportJazzer,
-		KeepColor:     r.KeepColor,
+		SupportJazzer:       r.SupportJazzer,
+		KeepColor:           r.KeepColor,
+		StartupOutputWriter: startupOutputWriter,
 	})
 	reportsCh := make(chan *report.Report, MaxBufferedReports)
 
@@ -274,7 +290,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 				// it has been successfully initialized to provide users with
 				// the context of this abnormal exit even without verbose mode.
 				if !r.Verbose {
-					log.Print(reporter.StartupOutput())
+					log.Print(startupOutput.String())
 				}
 				return executil.HandleExecError(r.cmd.Cmd, err)
 			}

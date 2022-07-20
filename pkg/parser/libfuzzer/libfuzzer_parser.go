@@ -2,7 +2,6 @@ package libfuzzer_output_parser
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -79,15 +78,14 @@ type parser struct {
 	lastFeatures       int       // Last features reported by Libfuzzer
 	lastNewEdgeTime    time.Time // Timestamp representing the point when the last new edge was reported
 	lastEdges          int       // Last edges reported by Libfuzzer
-
-	// Collects the parsed lines up to the point where the fuzzer has completed
-	// initialization.
-	startupOutput bytes.Buffer
 }
 
 type Options struct {
 	SupportJazzer bool
 	KeepColor     bool
+	// The parser writes all parsed lines to StartupOutputWriter up to
+	// the point where the fuzzer has completed initialization.
+	StartupOutputWriter io.Writer
 }
 
 func NewLibfuzzerOutputParser(options *Options) *parser {
@@ -119,10 +117,6 @@ func (p *parser) Parse(ctx context.Context, input io.Reader, reportsCh chan *rep
 	return nil
 }
 
-func (p *parser) StartupOutput() string {
-	return p.startupOutput.String()
-}
-
 func (p *parser) sendReport(ctx context.Context, report *report.Report) error {
 	select {
 	case p.reportsCh <- report:
@@ -152,11 +146,16 @@ func (p *parser) parseLine(ctx context.Context, line string) error {
 			if !errors.Is(err, errNotFound) {
 				return err
 			}
-			// Store all lines printed before the fuzzer has been initialized
-			// so that they can be printed in case of a startup error (e.g.
-			// a missing shared library dependency).
-			p.startupOutput.WriteString(line)
-			p.startupOutput.WriteRune('\n')
+
+			if p.StartupOutputWriter != nil {
+				// Store all lines printed before the fuzzer has been initialized
+				// so that they can be printed in case of a startup error (e.g.
+				// a missing shared library dependency).
+				_, err = p.StartupOutputWriter.Write(append([]byte(line), '\n'))
+				if err != nil {
+					return errors.WithStack(err)
+				}
+			}
 		}
 		if err == nil {
 			p.initStarted = true
