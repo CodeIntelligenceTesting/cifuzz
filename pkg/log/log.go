@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/viper"
 	"golang.org/x/term"
@@ -79,7 +80,15 @@ func Error(err error, a ...any) {
 		a = []any{err.Error()}
 	}
 	log(pterm.Style{pterm.Bold, pterm.FgRed}, "❌ ", a...)
-	Debugf("%+v", err)
+
+	type stackTracer interface {
+		StackTrace() errors.StackTrace
+	}
+
+	st, ok := errors.Cause(err).(stackTracer)
+	if ok {
+		Debugf("%+v", st)
+	}
 }
 
 // Infof outputs a regular user message without any highlighting
