@@ -63,3 +63,26 @@ type SignalError struct {
 func (e SignalError) Error() string {
 	return fmt.Sprintf("terminated by signal %d (%s)", int(e.Signal), e.Signal.String())
 }
+
+// CouldBeSandboxError indicates that the error might have been caused
+// by the sandbox restricting access. When a CouldBeSandboxError is
+// handled, a message should be printed which suggests to disable the
+// sandbox if its not needed.
+type CouldBeSandboxError struct {
+	err error
+}
+
+func (e CouldBeSandboxError) Error() string {
+	return e.err.Error()
+}
+
+func (e CouldBeSandboxError) Unwrap() error {
+	return e.err
+}
+
+// WrapCouldBeSandboxError wraps an existing error into a
+// CouldBeSandboxError to hint on disabling the sandbox when the error
+// is handled.
+func WrapCouldBeSandboxError(err error) error {
+	return &CouldBeSandboxError{err}
+}

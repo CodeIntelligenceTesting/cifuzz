@@ -172,6 +172,10 @@ func (c *runCmd) run() error {
 
 	err = c.runFuzzTest(fuzzTestExecutable)
 	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && c.opts.UseSandbox {
+			return cmdutils.WrapCouldBeSandboxError(err)
+		}
 		return err
 	}
 
@@ -320,6 +324,7 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 		log.Error(signalErr, signalErr.Error())
 		return cmdutils.WrapSilentError(signalErr)
 	}
+
 	return err
 }
 

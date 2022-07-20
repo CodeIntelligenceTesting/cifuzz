@@ -121,6 +121,23 @@ func Execute() {
 			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), cmd.UsageString())
 		}
 
+		var couldBeSandboxError *cmdutils.CouldBeSandboxError
+		if errors.As(err, &couldBeSandboxError) {
+			// Ensure that there is an extra newline between the error
+			// and the following message
+			if !strings.HasSuffix(err.Error(), "\n") {
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr())
+			}
+			msg := `If you don't expect this fuzz test to do any harm to the system
+accidentally (like overwriting files), you might want to try
+running it without sandboxing:
+
+    %s --use-sandbox=false
+
+`
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), msg, strings.Join(os.Args, " "))
+		}
+
 		var signalErr *cmdutils.SignalError
 		if errors.As(err, &signalErr) {
 			os.Exit(128 + int(signalErr.Signal))
