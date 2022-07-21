@@ -156,8 +156,7 @@ func (p *parser) parseLine(ctx context.Context, line string) error {
 					return errors.WithStack(err)
 				}
 			}
-		}
-		if err == nil {
+		} else {
 			p.initStarted = true
 
 			if numSeeds == 0 {
