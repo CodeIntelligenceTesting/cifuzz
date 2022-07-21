@@ -85,6 +85,13 @@ writing fuzz tests you can take a look at our
 4. Start the fuzzing by executing `cifuzz run my_fuzz_test`.
 **cifuzz** now tries to build the fuzz test and starts a fuzzing run.
 
+### Generate coverage report
+
+Once you executed a fuzz test, you can generate a coverage report which
+shows the line by line coverage of the fuzzed code:
+
+    cifuzz coverage my_fuzz_test
+
 ### Regression testing
 
 **Important:** In general there are two ways to run your fuzz test:

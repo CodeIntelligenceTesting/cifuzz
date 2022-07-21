@@ -12,13 +12,15 @@ import (
 )
 
 type RunfilesFinder interface {
+	CIFuzzIncludePath() (string, error)
 	JazzerAgentDeployJarPath() (string, error)
 	JazzerDriverPath() (string, error)
 	LibMinijailPreloadPath() (string, error)
+	LLVMCovPath() (string, error)
+	LLVMProfDataPath() (string, error)
 	LLVMSymbolizerPath() (string, error)
 	Minijail0Path() (string, error)
 	ProcessWrapperPath() (string, error)
-	CIFuzzIncludePath() (string, error)
 	ReplayerSourcePath() (string, error)
 }
 

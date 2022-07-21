@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 
 	bundleCmd "code-intelligence.com/cifuzz/internal/cmd/bundle"
+	coverageCmd "code-intelligence.com/cifuzz/internal/cmd/coverage"
 	createCmd "code-intelligence.com/cifuzz/internal/cmd/create"
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
 	reloadCmd "code-intelligence.com/cifuzz/internal/cmd/reload"
@@ -88,6 +89,7 @@ func New() (*cobra.Command, error) {
 	rootCmd.AddCommand(runCmd.New())
 	rootCmd.AddCommand(reloadCmd.New())
 	rootCmd.AddCommand(bundleCmd.New(cmdConfig))
+	rootCmd.AddCommand(coverageCmd.New())
 
 	return rootCmd, nil
 }

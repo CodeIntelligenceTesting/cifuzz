@@ -45,21 +45,10 @@ type runOptions struct {
 func (opts *runOptions) validate() error {
 	var err error
 
-	// Check if the seed dirs exist and can be accessed and ensure that
-	// the paths are absolute
-	for i, d := range opts.SeedCorpusDirs {
-		_, err := os.Stat(d)
-		if err != nil {
-			err = errors.WithStack(err)
-			log.Error(err, err.Error())
-			return cmdutils.ErrSilent
-		}
-		opts.SeedCorpusDirs[i], err = filepath.Abs(d)
-		if err != nil {
-			err = errors.WithStack(err)
-			log.Error(err, err.Error())
-			return cmdutils.ErrSilent
-		}
+	opts.SeedCorpusDirs, err = cmdutils.ValidateSeedCorpusDirs(opts.SeedCorpusDirs)
+	if err != nil {
+		log.Error(err, err.Error())
+		return cmdutils.ErrSilent
 	}
 
 	if opts.Dictionary != "" {
@@ -114,6 +103,18 @@ func New() *cobra.Command {
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// Bind viper keys to flags. We can't do this in the New
+			// function, because that would re-bind viper keys which
+			// were bound to the flags of other commands before.
+			cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
+			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
+			cmdutils.ViperMustBindPFlag("dict", cmd.Flags().Lookup("dict"))
+			cmdutils.ViperMustBindPFlag("engine-args", cmd.Flags().Lookup("engine-arg"))
+			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
+			cmdutils.ViperMustBindPFlag("timeout", cmd.Flags().Lookup("timeout"))
+			cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
+			cmdutils.ViperMustBindPFlag("print-json", cmd.Flags().Lookup("json"))
+
 			err := config.ParseProjectConfig(opts)
 			if err != nil {
 				return err
@@ -128,30 +129,17 @@ func New() *cobra.Command {
 		},
 	}
 
+	// Note: If a flag should be configurable via cifuzz.yaml as well,
+	// bind it to viper in the PreRunE function.
 	cmd.Flags().String("build-command", "", "The command to build the fuzz test. Example: \"make clean && make my-fuzz-test\"")
-	cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
-
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
-	cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
-
 	cmd.Flags().String("dict", "", "A file containing input language keywords or other interesting byte sequences.\nSee https://llvm.org/docs/LibFuzzer.html#dictionaries and\nhttps://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md.")
-	cmdutils.ViperMustBindPFlag("dict", cmd.Flags().Lookup("dict"))
-
 	cmd.Flags().StringArray("engine-arg", nil, "Command-line argument to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options and\nhttps://www.mankier.com/8/afl-fuzz.")
-	cmdutils.ViperMustBindPFlag("engine-args", cmd.Flags().Lookup("engine-arg"))
-
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
-	cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
-
 	cmd.Flags().Duration("timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
-	cmdutils.ViperMustBindPFlag("timeout", cmd.Flags().Lookup("timeout"))
-
 	cmd.Flags().Bool("use-sandbox", false, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --use-sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
 	viper.SetDefault("use-sandbox", runtime.GOOS == "linux")
-	cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
-
 	cmd.Flags().BoolVar(&opts.PrintJSON, "json", false, "Print output as JSON")
-	cmdutils.ViperMustBindPFlag("print-json", cmd.Flags().Lookup("json"))
 
 	return cmd
 }
@@ -251,7 +239,7 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
 	log.Debugf("Executable: %s", fuzzTestExecutable)
 
-	generatedCorpusDir := c.generatedCorpusPath()
+	generatedCorpusDir := cmdutils.GeneratedCorpusDir(c.opts.ProjectDir, c.opts.fuzzTest)
 	err := os.MkdirAll(generatedCorpusDir, 0755)
 	if err != nil {
 		return errors.WithStack(err)
