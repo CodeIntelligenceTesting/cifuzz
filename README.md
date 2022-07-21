@@ -106,3 +106,16 @@ directory has to be created manually.
 In this case the fuzz test will stop immediately after
 applying all input or earlier if a regression occurs.
 
+
+### Sandboxing
+
+On Linux, **cifuzz** runs the fuzz tests in a sandbox by default, to
+avoid the fuzz test accidentally harming the system, for example by
+deleting files or killing processes. It uses [Minijail](https://google.github.io/minijail/minijail0.1.html) for
+that.
+
+If you experience problems when running fuzz tests via **cifuzz** and
+you don't expect your fuzz tests to do any harm to the system (or you're
+already running **cifuzz** in a container), you might want to disable
+the sandbox via the `--use-sandbox=false` flag or the
+[`use-sandbox: false` config file setting](docs/Configuration.md#use-sandbox).
