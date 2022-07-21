@@ -101,6 +101,10 @@ func TestIntegration_CMake_InitCreateRunBundle(t *testing.T) {
 	// output path
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`artifact_prefix='./'`), false)
 
+	// Check that command-line flags take precedence over config file
+	// settings
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`minijail`), false, "--use-sandbox=true")
+
 	// Run cifuzz bundle and verify the contents of the archive.
 	archiveDir := createAndExtractArtifactArchive(t, dir, cifuzz)
 	defer fileutil.Cleanup(archiveDir)
@@ -123,17 +127,19 @@ func copyTestdataDir(t *testing.T) string {
 	return dir
 }
 
-func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.Regexp, terminate bool) {
+func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.Regexp, terminate bool, args ...string) {
 	t.Helper()
 
 	runCtx, closeRunCtx := context.WithCancel(context.Background())
 	defer closeRunCtx()
+	args = append([]string{"run", "-v", "parser_fuzz_test",
+		"--engine-arg=-seed=1",
+		"--engine-arg=-runs=1000000"},
+		args...)
 	cmd := executil.CommandContext(
 		runCtx,
 		cifuzz,
-		"run", "-v", "parser_fuzz_test",
-		"--engine-arg=-seed=1",
-		"--engine-arg=-runs=1000000",
+		args...,
 	)
 	cmd.Dir = dir
 	stdoutPipe, err := cmd.StdoutTeePipe(os.Stdout)
