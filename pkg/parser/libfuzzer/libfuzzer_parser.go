@@ -151,7 +151,7 @@ func (p *parser) parseLine(ctx context.Context, line string) error {
 				// Store all lines printed before the fuzzer has been initialized
 				// so that they can be printed in case of a startup error (e.g.
 				// a missing shared library dependency).
-				_, err = p.StartupOutputWriter.Write(append([]byte(line), '\n'))
+				_, err := p.StartupOutputWriter.Write(append([]byte(line), '\n'))
 				if err != nil {
 					return errors.WithStack(err)
 				}
