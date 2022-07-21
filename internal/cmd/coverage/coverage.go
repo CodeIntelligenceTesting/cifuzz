@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/build/other"
 	"code-intelligence.com/cifuzz/internal/completion"
@@ -25,8 +25,6 @@ import (
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
-
-var sharedLibraryRegex = regexp.MustCompile(`^.+\.((so)|(dylib))(\.\d\w*)*$`)
 
 type coverageOptions struct {
 	BuildSystem    string   `mapstructure:"build-system"`
@@ -152,12 +150,12 @@ func (c *coverageCmd) run() error {
 	}
 	defer fileutil.Cleanup(c.tmpDir)
 
-	fuzzTestExecutable, err := c.buildFuzzTest()
+	buildResult, err := c.buildFuzzTest()
 	if err != nil {
 		return err
 	}
 
-	err = c.runFuzzTest(fuzzTestExecutable)
+	err = c.runFuzzTest(buildResult.Executable)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && c.opts.UseSandbox {
@@ -166,22 +164,22 @@ func (c *coverageCmd) run() error {
 		return err
 	}
 
-	err = c.indexRawProfile(fuzzTestExecutable)
+	err = c.indexRawProfile(buildResult.Executable)
 	if err != nil {
 		return err
 	}
 
-	err = c.generateHTMLReport(fuzzTestExecutable)
+	err = c.generateHTMLReport(buildResult.Executable, buildResult.RuntimeDeps)
 	if err != nil {
 		return err
 	}
 
-	log.Successf("Created coverage report %s", c.htmlReportPath(fuzzTestExecutable))
+	log.Successf("Created coverage report %s", c.htmlReportPath(buildResult.Executable))
 
 	return nil
 }
 
-func (c *coverageCmd) buildFuzzTest() (string, error) {
+func (c *coverageCmd) buildFuzzTest() (*build.Result, error) {
 	log.Infof("Building %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
 
 	if c.opts.BuildSystem == config.BuildSystemCMake {
@@ -191,22 +189,25 @@ func (c *coverageCmd) buildFuzzTest() (string, error) {
 			Sanitizers: []string{"coverage"},
 			Stdout:     c.OutOrStdout(),
 			Stderr:     c.ErrOrStderr(),
+			// We want the runtime deps in the build result because we
+			// pass them to the llvm-cov command.
+			FindRuntimeDeps: true,
 		})
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		err = builder.Configure()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		err = builder.Build([]string{c.opts.fuzzTest})
+		buildResults, err := builder.Build([]string{c.opts.fuzzTest})
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
+		return buildResults[c.opts.fuzzTest], nil
 	} else if c.opts.BuildSystem == config.BuildSystemOther {
 		if runtime.GOOS == "windows" {
-			return "", errors.New("CMake is the only supported build system on Windows")
+			return nil, errors.New("CMake is the only supported build system on Windows")
 		}
 		builder, err := other.NewBuilder(&other.BuilderOptions{
 			BuildCommand: c.opts.BuildCommand,
@@ -216,15 +217,15 @@ func (c *coverageCmd) buildFuzzTest() (string, error) {
 			Stderr:       c.ErrOrStderr(),
 		})
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		err = builder.Build()
+		buildResult, err := builder.Build(c.opts.fuzzTest)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
+		return buildResult, nil
 	} else {
-		return "", errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
+		return nil, errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
 	}
 }
 
@@ -342,47 +343,17 @@ func (c *coverageCmd) indexRawProfile(fuzzTestExecutable string) error {
 	return nil
 }
 
-func (c *coverageCmd) generateHTMLReport(fuzzTestExecutable string) error {
+func (c *coverageCmd) generateHTMLReport(fuzzTestExecutable string, runtimeDeps []string) error {
 	llvmCov, err := runfiles.Finder.LLVMCovPath()
 	if err != nil {
 		return err
 	}
 
-	// Add all shared objects in the project directory as arguments, for
-	// the case that the executable uses those and we therefore want
-	// them to be included in the coverage report.
-	// TODO: Only add those objects which are actually used, and which
-	//       might live outside of the project directory, by parsing the
-	//       shared object dependencies of the executable (we could use
-	//       cmake for that or do it ourselves in Go).
-	var sharedObjects []string
-	err = filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		if info.IsDir() {
-			return nil
-		}
-		// Ignore shared objects in .dSYM directories, to avoid llvm-cov
-		// failing with:
-		//
-		//    Failed to load coverage: Unsupported coverage format version
-		//
-		if strings.Contains(path, "dSYM") {
-			return nil
-		}
-		if sharedLibraryRegex.MatchString(info.Name()) {
-			sharedObjects = append(sharedObjects, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
+	// Add all runtime dependencies of the fuzz test to the binaries
+	// processed by llvm-cov to include them in the coverage report
 	args := []string{"show", "-instr-profile=" + c.indexedProfilePath(fuzzTestExecutable), "-format=html",
 		fuzzTestExecutable}
-	for _, path := range sharedObjects {
+	for _, path := range runtimeDeps {
 		args = append(args, "-object="+path)
 	}
 

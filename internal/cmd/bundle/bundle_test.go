@@ -9,45 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/internal/build/cmake"
+	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/pkg/artifact"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
-
-type mockBuilder struct {
-	*cmake.BuilderOptions
-	seedCorpus string
-}
-
-func NewMockBuilder(projectDir, seedCorpus string) Builder {
-	opts := &cmake.BuilderOptions{
-		ProjectDir: projectDir,
-		Engine:     "libfuzzer",
-		Sanitizers: []string{"address"},
-		Stdout:     os.Stdout,
-		Stderr:     os.Stderr,
-	}
-	return &mockBuilder{
-		BuilderOptions: opts,
-		seedCorpus:     seedCorpus,
-	}
-}
-
-func (m *mockBuilder) Opts() *cmake.BuilderOptions {
-	return m.BuilderOptions
-}
-
-func (m *mockBuilder) BuildDir() string {
-	return filepath.Join(m.Opts().ProjectDir, "build")
-}
-
-func (m *mockBuilder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
-	return filepath.Join(m.BuildDir(), "pkg", fuzzTest), nil
-}
-
-func (m *mockBuilder) FindFuzzTestSeedCorpus(fuzzTest string) (string, error) {
-	return m.seedCorpus, nil
-}
 
 // A library in a system library directory that is not certain to exist in the Docker image.
 const uncommonSystemDepUnix = "/usr/lib/libBLAS.so"
@@ -63,18 +28,6 @@ func generateExternalDepPath() string {
 	return filepath.Join(home, ".conan", "cache", "libfoo.so")
 }
 
-func (m *mockBuilder) GetRuntimeDeps(_ string) ([]string, error) {
-	deps := []string{
-		// A library in the project's build directory.
-		filepath.Join(m.BuildDir(), "lib", "helper.so"),
-		externalDep,
-	}
-	if runtime.GOOS != "windows" {
-		deps = append(deps, uncommonSystemDepUnix)
-	}
-	return deps, nil
-}
-
 func TestAssembleArtifacts(t *testing.T) {
 	seedCorpus, err := os.MkdirTemp("", "seed-corpus-*")
 	require.NoError(t, err)
@@ -86,9 +39,26 @@ func TestAssembleArtifacts(t *testing.T) {
 	projectDir, err := filepath.Abs("project")
 	require.NoError(t, err)
 
-	builder := NewMockBuilder(projectDir, seedCorpus)
+	fuzzTest := "some_fuzz_test"
+	buildDir := filepath.Join(projectDir, "build")
+	runtimeDeps := []string{
+		// A library in the project's build directory.
+		filepath.Join(buildDir, "lib", "helper.so"),
+		externalDep,
+	}
+	if runtime.GOOS != "windows" {
+		runtimeDeps = append(runtimeDeps, uncommonSystemDepUnix)
+	}
+	buildResult := &build.Result{
+		Executable:  filepath.Join(buildDir, "pkg", fuzzTest),
+		SeedCorpus:  seedCorpus,
+		BuildDir:    buildDir,
+		Engine:      "libfuzzer",
+		Sanitizers:  []string{"address"},
+		RuntimeDeps: runtimeDeps,
+	}
 
-	fuzzers, manifest, systemDeps, err := assembleArtifacts("some_fuzz_test", builder, projectDir)
+	fuzzers, manifest, systemDeps, err := assembleArtifacts(fuzzTest, buildResult, projectDir)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(fuzzers))
@@ -103,8 +73,8 @@ func TestAssembleArtifacts(t *testing.T) {
 	}, *fuzzers[0])
 
 	assert.Equal(t, map[string]string{
-		filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "pkg", "some_fuzz_test"): filepath.Join(builder.BuildDir(), "pkg", "some_fuzz_test"),
-		filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "lib", "helper.so"):      filepath.Join(builder.BuildDir(), "lib", "helper.so"),
+		filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "pkg", "some_fuzz_test"): filepath.Join(buildDir, "pkg", "some_fuzz_test"),
+		filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "lib", "helper.so"):      filepath.Join(buildDir, "lib", "helper.so"),
 		filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs", "libfoo.so"):   externalDep,
 		filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds"):                        seedCorpus,
 		filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds", "seed"):                filepath.Join(seedCorpus, "seed"),

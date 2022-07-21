@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
+	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/build/other"
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler"
@@ -148,7 +149,7 @@ func New() *cobra.Command {
 func (c *runCmd) run() error {
 	var err error
 
-	fuzzTestExecutable, err := c.buildFuzzTest()
+	buildResult, err := c.buildFuzzTest()
 	if err != nil {
 		return err
 	}
@@ -156,13 +157,13 @@ func (c *runCmd) run() error {
 	// Initialize the report handler. Only do this right before we start
 	// the fuzz test, because this is storing a timestamp which is used
 	// to figure out how long the fuzzing run is running.
-	defaultSeedCorpusDir := c.opts.fuzzTest + "_seed_corpus"
-	c.reportHandler, err = report_handler.NewReportHandler(defaultSeedCorpusDir, c.opts.PrintJSON, viper.GetBool("verbose"))
+	verbose := viper.GetBool("verbose")
+	c.reportHandler, err = report_handler.NewReportHandler(buildResult.SeedCorpus, c.opts.PrintJSON, verbose)
 	if err != nil {
 		return err
 	}
 
-	err = c.runFuzzTest(fuzzTestExecutable)
+	err = c.runFuzzTest(buildResult.Executable)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && c.opts.UseSandbox {
@@ -179,7 +180,7 @@ func (c *runCmd) run() error {
 	return nil
 }
 
-func (c *runCmd) buildFuzzTest() (string, error) {
+func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 	// TODO: Do not hardcode these values.
 	sanitizers := []string{"address"}
 	// UBSan is not supported by MSVC
@@ -200,20 +201,20 @@ func (c *runCmd) buildFuzzTest() (string, error) {
 			Stderr:     c.ErrOrStderr(),
 		})
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		err = builder.Configure()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		err = builder.Build([]string{c.opts.fuzzTest})
+		buildResults, err := builder.Build([]string{c.opts.fuzzTest})
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
+		return buildResults[c.opts.fuzzTest], nil
 	} else if c.opts.BuildSystem == config.BuildSystemOther {
 		if runtime.GOOS == "windows" {
-			return "", errors.New("CMake is the only supported build system on Windows")
+			return nil, errors.New("CMake is the only supported build system on Windows")
 		}
 		builder, err := other.NewBuilder(&other.BuilderOptions{
 			BuildCommand: c.opts.BuildCommand,
@@ -224,15 +225,15 @@ func (c *runCmd) buildFuzzTest() (string, error) {
 			Stderr:     c.ErrOrStderr(),
 		})
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		err = builder.Build()
+		buildResult, err := builder.Build(c.opts.fuzzTest)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
+		return buildResult, nil
 	} else {
-		return "", errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
+		return nil, errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
 	}
 }
 

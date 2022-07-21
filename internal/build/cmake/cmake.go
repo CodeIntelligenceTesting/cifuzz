@@ -30,6 +30,8 @@ type BuilderOptions struct {
 	Sanitizers []string
 	Stdout     io.Writer
 	Stderr     io.Writer
+
+	FindRuntimeDeps bool
 }
 
 func (opts *BuilderOptions) Validate() error {
@@ -143,7 +145,7 @@ func (b *Builder) Configure() error {
 }
 
 // Build builds the specified fuzz test with CMake
-func (b *Builder) Build(fuzzTests []string) error {
+func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 	cmd := exec.Command(
 		"cmake",
 		"--build", b.BuildDir(),
@@ -162,22 +164,50 @@ func (b *Builder) Build(fuzzTests []string) error {
 		// so we print the error without the stack trace.
 		err = cmdutils.WrapExecError(err, cmd)
 		log.Error(err)
-		return cmdutils.ErrSilent
+		return nil, cmdutils.ErrSilent
 	}
-	return nil
+
+	results := make(map[string]*build.Result)
+	for _, fuzzTest := range fuzzTests {
+		executable, err := b.findFuzzTestExecutable(fuzzTest)
+		if err != nil {
+			return nil, err
+		}
+		seedCorpus, err := b.findFuzzTestSeedCorpus(fuzzTest)
+		if err != nil {
+			return nil, err
+		}
+		var runtimeDeps []string
+		if b.FindRuntimeDeps {
+			runtimeDeps, err = b.getRuntimeDeps(fuzzTest)
+			if err != nil {
+				return nil, err
+			}
+		}
+		results[fuzzTest] = &build.Result{
+			Executable:  executable,
+			SeedCorpus:  seedCorpus,
+			BuildDir:    b.BuildDir(),
+			Engine:      b.Engine,
+			Sanitizers:  b.Sanitizers,
+			RuntimeDeps: runtimeDeps,
+		}
+	}
+
+	return results, nil
 }
 
-// FindFuzzTestExecutable uses the info files emitted by the CMake integration
+// findFuzzTestExecutable uses the info files emitted by the CMake integration
 // in the configure step to look up the absolute path of a fuzz test's
 // executable.
-func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
+func (b *Builder) findFuzzTestExecutable(fuzzTest string) (string, error) {
 	return b.readInfoFile(fuzzTest, "executable")
 }
 
-// FindFuzzTestSeedCorpus uses the info files emitted by the CMake integration
+// findFuzzTestSeedCorpus uses the info files emitted by the CMake integration
 // in the configure step to look up the absolute path of a fuzz test's
 // seed corpus directory.
-func (b *Builder) FindFuzzTestSeedCorpus(fuzzTest string) (string, error) {
+func (b *Builder) findFuzzTestSeedCorpus(fuzzTest string) (string, error) {
 	return b.readInfoFile(fuzzTest, "seed_corpus")
 }
 
@@ -200,10 +230,10 @@ func (b *Builder) ListFuzzTests() ([]string, error) {
 	return fuzzTests, nil
 }
 
-// GetRuntimeDeps returns the absolute paths of all (transitive) runtime
+// getRuntimeDeps returns the absolute paths of all (transitive) runtime
 // dependencies of the given fuzz test. It prints a warning if any dependency
 // couldn't be resolved or resolves to more than one file.
-func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
+func (b *Builder) getRuntimeDeps(fuzzTest string) ([]string, error) {
 	cmd := exec.Command(
 		"cmake",
 		"--install",

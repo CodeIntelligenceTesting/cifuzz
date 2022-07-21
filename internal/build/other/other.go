@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -16,7 +17,6 @@ import (
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/envutil"
-	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
@@ -76,7 +76,7 @@ func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 }
 
 // Build builds the specified fuzz test with CMake
-func (b *Builder) Build() error {
+func (b *Builder) Build(fuzzTest string) (*build.Result, error) {
 	var err error
 	defer fileutil.Cleanup(b.buildDir)
 
@@ -84,11 +84,11 @@ func (b *Builder) Build() error {
 		// Build the replayer without coverage instrumentation
 		replayerSource, err := runfiles.Finder.ReplayerSourcePath()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		clang, err := runfiles.Finder.ClangPath()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		cmd := exec.Command(clang, "-fPIC", "-c", replayerSource, "-o", filepath.Join(b.buildDir, "replayer.o"))
 		cmd.Stdout = b.Stdout
@@ -96,7 +96,7 @@ func (b *Builder) Build() error {
 		log.Debugf("Command: %s", cmd.String())
 		err = cmd.Run()
 		if err != nil {
-			return errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
 	}
 
@@ -114,9 +114,32 @@ func (b *Builder) Build() error {
 		// the error without the stack trace.
 		err = cmdutils.WrapExecError(err, cmd)
 		log.Error(err)
-		return cmdutils.ErrSilent
+		return nil, cmdutils.ErrSilent
 	}
-	return nil
+
+	executable, err := b.findFuzzTestExecutable(fuzzTest)
+	if err != nil {
+		return nil, err
+	}
+	// For the build system type "other", we expect the  the default
+	// seed corpus next to the fuzzer executable.
+	seedCorpus := executable + "_seed_corpus"
+	runtimeDeps, err := b.findSharedLibraries(fuzzTest)
+	if err != nil {
+		return nil, err
+	}
+	buildDir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	return &build.Result{
+		Executable:  executable,
+		SeedCorpus:  seedCorpus,
+		BuildDir:    buildDir,
+		Engine:      b.Engine,
+		Sanitizers:  b.Sanitizers,
+		RuntimeDeps: runtimeDeps,
+	}, nil
 }
 
 var commonCFlags = []string{
@@ -235,10 +258,15 @@ func (b *Builder) setCoverageEnv() error {
 	return nil
 }
 
-func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
+func (b *Builder) findFuzzTestExecutable(fuzzTest string) (string, error) {
 	if exists, _ := fileutil.Exists(fuzzTest); exists {
-		return executil.CallablePath(fuzzTest), nil
+		executable, err := filepath.Abs(fuzzTest)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+		return executable, nil
 	}
+
 	var executable string
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -267,5 +295,40 @@ func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {
 	if executable == "" {
 		return "", errors.Errorf("Could not find executable for fuzz test %s", fuzzTest)
 	}
-	return executil.CallablePath(executable), nil
+	executable, err = filepath.Abs(executable)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	return executable, nil
+}
+
+var sharedLibraryRegex = regexp.MustCompile(`^.+\.((so)|(dylib))(\.\d\w*)*$`)
+
+func (b *Builder) findSharedLibraries(fuzzTest string) ([]string, error) {
+	// TODO: Only return those libraries which are actually used, and which
+	//       might live outside of the project directory, by parsing the
+	//       shared object dependencies of the executable (we could use
+	//       cmake for that or do it ourselves in Go).
+	var sharedObjects []string
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if info.IsDir() {
+			return nil
+		}
+		// Ignore shared objects in .dSYM directories, to avoid llvm-cov
+		// failing with:
+		//
+		//    Failed to load coverage: Unsupported coverage format version
+		//
+		if strings.Contains(path, "dSYM") {
+			return nil
+		}
+		if sharedLibraryRegex.MatchString(info.Name()) {
+			sharedObjects = append(sharedObjects, path)
+		}
+		return nil
+	})
+	return sharedObjects, err
 }

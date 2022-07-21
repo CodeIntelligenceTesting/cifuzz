@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 
+	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
@@ -71,14 +72,6 @@ type configureVariant struct {
 	Sanitizers []string
 }
 
-// Nothing stops users from including fuzz tests only conditionally by e.g. wrapping their `add_fuzz_test` target in
-// CMake into an `if(address IN_LIST CIFUZZ_SANITIZERS)`, so we maintain the list of fuzz tests per build configuration.
-// We don't expect this to happen, but it also decouples the code a bit better.
-type builderAndFuzzTests struct {
-	FuzzTests []string
-	Builder   *cmake.Builder
-}
-
 func New(conf *config.Config) *cobra.Command {
 	opts := &bundleOpts{}
 	cmd := &cobra.Command{
@@ -128,7 +121,7 @@ func (c *bundleCmd) run() (err error) {
 		sanitizers = append(sanitizers, "undefined")
 	}
 
-	buildVariants, err := c.buildAllVariants()
+	allVariantBuildResults, err := c.buildAllVariants()
 	if err != nil {
 		return err
 	}
@@ -138,9 +131,9 @@ func (c *bundleCmd) run() (err error) {
 	var fuzzers []*artifact.Fuzzer
 	archiveManifest := make(map[string]string)
 	deduplicatedSystemDeps := make(map[string]struct{})
-	for _, variant := range buildVariants {
-		for _, fuzzTest := range variant.FuzzTests {
-			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := assembleArtifacts(fuzzTest, variant.Builder, c.config.ProjectDir)
+	for _, buildResults := range allVariantBuildResults {
+		for fuzzTest, buildResult := range buildResults {
+			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := assembleArtifacts(fuzzTest, buildResult, c.config.ProjectDir)
 			if err != nil {
 				return err
 			}
@@ -215,7 +208,7 @@ func (c *bundleCmd) run() (err error) {
 	return nil
 }
 
-func (c *bundleCmd) buildAllVariants() ([]builderAndFuzzTests, error) {
+func (c *bundleCmd) buildAllVariants() ([]map[string]*build.Result, error) {
 	fuzzingVariant := configureVariant{
 		// TODO: Do not hardcode these values.
 		Engine:     "libfuzzer",
@@ -239,14 +232,15 @@ func (c *bundleCmd) buildAllVariants() ([]builderAndFuzzTests, error) {
 		configureVariants = append(configureVariants, coverageVariant)
 	}
 
-	var buildVariants []builderAndFuzzTests
+	var allVariantBuildResults []map[string]*build.Result
 	for _, variant := range configureVariants {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
-			ProjectDir: c.config.ProjectDir,
-			Engine:     variant.Engine,
-			Sanitizers: variant.Sanitizers,
-			Stdout:     c.OutOrStdout(),
-			Stderr:     c.ErrOrStderr(),
+			ProjectDir:      c.config.ProjectDir,
+			Engine:          variant.Engine,
+			Sanitizers:      variant.Sanitizers,
+			Stdout:          c.OutOrStdout(),
+			Stderr:          c.ErrOrStderr(),
+			FindRuntimeDeps: true,
 		})
 		if err != nil {
 			return nil, err
@@ -275,39 +269,31 @@ func (c *bundleCmd) buildAllVariants() ([]builderAndFuzzTests, error) {
 			fuzzTests = c.opts.fuzzTests
 		}
 
-		err = builder.Build(fuzzTests)
+		buildResults, err := builder.Build(fuzzTests)
 		if err != nil {
 			return nil, err
 		}
-
-		buildVariants = append(buildVariants, builderAndFuzzTests{
-			Builder:   builder,
-			FuzzTests: fuzzTests,
-		})
+		allVariantBuildResults = append(allVariantBuildResults, buildResults)
 	}
 
-	return buildVariants, nil
+	return allVariantBuildResults, nil
 }
 
-func assembleArtifacts(fuzzTest string, builder Builder, projectDir string) (
+func assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,
 	err error,
 ) {
-	fuzzTestExecutableAbsPath, err := builder.FindFuzzTestExecutable(fuzzTest)
-	if err != nil {
-		err = errors.Wrapf(err, "failed to find fuzz test executable for %q", fuzzTest)
-		return
-	}
+	fuzzTestExecutableAbsPath := buildResult.Executable
 
 	archiveManifest = make(map[string]string)
 	// Add all build artifacts under a subdirectory of the fuzz test base path so that these files don't clash with
 	// seeds and dictionaries.
-	buildArtifactsPrefix := filepath.Join(fuzzTestPrefix(fuzzTest, builder), "bin")
+	buildArtifactsPrefix := filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "bin")
 
 	// Add the fuzz test executable.
-	fuzzTestExecutableRelPath, err := filepath.Rel(builder.BuildDir(), fuzzTestExecutableAbsPath)
+	fuzzTestExecutableRelPath, err := filepath.Rel(buildResult.BuildDir, fuzzTestExecutableAbsPath)
 	if err != nil {
 		err = errors.WithStack(err)
 		return
@@ -316,21 +302,17 @@ func assembleArtifacts(fuzzTest string, builder Builder, projectDir string) (
 	archiveManifest[fuzzTestArchivePath] = fuzzTestExecutableAbsPath
 
 	// Add the runtime dependencies of the fuzz test executable.
-	runtimeDeps, err := builder.GetRuntimeDeps(fuzzTest)
-	if err != nil {
-		return
-	}
 	externalLibrariesPrefix := ""
 depsLoop:
-	for _, dep := range runtimeDeps {
+	for _, dep := range buildResult.RuntimeDeps {
 		var isBelowBuildDir bool
-		isBelowBuildDir, err = fileutil.IsBelow(dep, builder.BuildDir())
+		isBelowBuildDir, err = fileutil.IsBelow(dep, buildResult.BuildDir)
 		if err != nil {
 			return
 		}
 		if isBelowBuildDir {
 			var buildDirRelPath string
-			buildDirRelPath, err = filepath.Rel(builder.BuildDir(), dep)
+			buildDirRelPath, err = filepath.Rel(buildResult.BuildDir, dep)
 			if err != nil {
 				err = errors.WithStack(err)
 				return
@@ -373,7 +355,7 @@ depsLoop:
 		// to the library search path in the run environment.
 		// Note: Since all libraries are placed in a single directory, we have to ensure that basenames of external
 		// libraries are unique. If they aren't, we report a conflict.
-		externalLibrariesPrefix = filepath.Join(fuzzTestPrefix(fuzzTest, builder), "external_libs")
+		externalLibrariesPrefix = filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "external_libs")
 		archivePath := filepath.Join(externalLibrariesPrefix, filepath.Base(dep))
 		if conflictingDep, hasConflict := archiveManifest[archivePath]; hasConflict {
 			err = errors.Errorf(
@@ -388,18 +370,14 @@ depsLoop:
 	}
 
 	// Add the default seed corpus directory if it exists.
-	seedCorpus, err := builder.FindFuzzTestSeedCorpus(fuzzTest)
-	if err != nil {
-		return
-	}
-	var exists bool
-	exists, err = fileutil.Exists(seedCorpus)
+	seedCorpus := buildResult.SeedCorpus
+	exists, err := fileutil.Exists(seedCorpus)
 	if err != nil {
 		return
 	}
 	archiveSeedsDir := ""
 	if exists {
-		archiveSeedsDir = filepath.Join(fuzzTestPrefix(fuzzTest, builder), "seeds")
+		archiveSeedsDir = filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "seeds")
 		err = artifact.AddDirToManifest(archiveManifest, archiveSeedsDir, seedCorpus)
 	}
 
@@ -411,7 +389,7 @@ depsLoop:
 		LibraryPaths: externalLibrariesPrefix,
 	}
 
-	if builder.Opts().Engine == "replayer" {
+	if buildResult.Engine == "replayer" {
 		fuzzer := baseFuzzerInfo
 		fuzzer.Engine = "LLVM_COV"
 		fuzzers = []*artifact.Fuzzer{&fuzzer}
@@ -419,7 +397,7 @@ depsLoop:
 		return
 	}
 
-	for _, sanitizer := range builder.Opts().Sanitizers {
+	for _, sanitizer := range buildResult.Sanitizers {
 		if sanitizer == "undefined" {
 			// The artifact archive spec does not support UBSan as a standalone sanitizer.
 			continue
@@ -435,12 +413,12 @@ depsLoop:
 
 // fuzzTestPrefix returns the path in the resulting artifact archive under which fuzz test specific files should be
 // added.
-func fuzzTestPrefix(fuzzTest string, builder Builder) string {
-	sanitizerSegment := strings.Join(builder.Opts().Sanitizers, "+")
+func fuzzTestPrefix(fuzzTest string, buildResult *build.Result) string {
+	sanitizerSegment := strings.Join(buildResult.Sanitizers, "+")
 	if sanitizerSegment == "" {
 		sanitizerSegment = "none"
 	}
-	return filepath.Join(builder.Opts().Engine, sanitizerSegment, fuzzTest)
+	return filepath.Join(buildResult.Engine, sanitizerSegment, fuzzTest)
 }
 
 func getCodeRevision() (codeRevision *artifact.CodeRevision) {
@@ -467,13 +445,4 @@ func getCodeRevision() (codeRevision *artifact.CodeRevision) {
 		},
 	}
 	return
-}
-
-type Builder interface {
-	Opts() *cmake.BuilderOptions
-	BuildDir() string
-
-	FindFuzzTestExecutable(fuzzTest string) (string, error)
-	FindFuzzTestSeedCorpus(fuzzTest string) (string, error)
-	GetRuntimeDeps(fuzzTest string) ([]string, error)
 }
