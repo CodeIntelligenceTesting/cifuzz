@@ -95,10 +95,11 @@ func TestIntegration_CMake_InitCreateRunBundle(t *testing.T) {
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`), false)
 
 	// Check that options set via the config file are respected
-	configFileContent := `engine-args:
- - -rss_limit_mb=1234`
+	configFileContent := `use-sandbox: false`
 	err = os.WriteFile(filepath.Join(dir, "cifuzz.yaml"), []byte(configFileContent), 0644)
-	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`-rss_limit_mb=1234`), false)
+	// When minijail is used, the artifact prefix is set to the minijail
+	// output path
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`artifact_prefix='./'`), false)
 
 	// Run cifuzz bundle and verify the contents of the archive.
 	archiveDir := createAndExtractArtifactArchive(t, dir, cifuzz)
