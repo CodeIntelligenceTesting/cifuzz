@@ -66,7 +66,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expecte
 		"run", "-v", fuzzTest,
 		"--build-command", "make clean && make "+filepath.Base(fuzzTest),
 		// The crashes are expected to be found quickly.
-		"--engine-arg=-run=1000",
+		"--engine-arg=-runs=1000",
 		"--engine-arg=-seed=1",
 	)
 	cmd.Dir = dir
