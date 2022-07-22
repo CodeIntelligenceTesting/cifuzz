@@ -2,7 +2,6 @@ package executil
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
 )
 
@@ -37,24 +35,6 @@ func CallablePath(path string) string {
 	}
 	// Can't use filepath.Join as it cleans away the "./".
 	return "." + string(os.PathSeparator) + path
-}
-
-// HandleExecError wraps an error returned by a function on exec.Cmd, adding
-// stderr to the message if the error is an exec.ExitError.
-// Note: exec.ExitError instances are logged without the stack trace and
-// returned as a cmdutils.SilentError.
-func HandleExecError(cmd *exec.Cmd, err error) error {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		stderr := string(exitErr.Stderr)
-		if stderr != "" && !strings.HasSuffix(stderr, "\n") {
-			stderr += "\n"
-		}
-		err = fmt.Errorf("%s%s: %w", stderr, filepath.Base(cmd.Args[0]), err)
-		log.Error(err, err.Error())
-		return cmdutils.WrapSilentError(errors.WithStack(err))
-	}
-	return errors.WithStack(err)
 }
 
 // Cmd provides the same functionality as exec.Cmd plus some utility

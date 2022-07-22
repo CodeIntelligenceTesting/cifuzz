@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
+	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/minijail"
 	libfuzzer_parser "code-intelligence.com/cifuzz/pkg/parser/libfuzzer"
@@ -292,7 +293,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 				if !r.Verbose {
 					log.Print(startupOutput.String())
 				}
-				return executil.HandleExecError(r.cmd.Cmd, err)
+				return cmdutils.WrapExecError(err, r.cmd.Cmd)
 			}
 
 			if !reporter.FindingReported {

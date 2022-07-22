@@ -2,6 +2,9 @@ package cmdutils
 
 import (
 	"fmt"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -85,4 +88,33 @@ func (e CouldBeSandboxError) Unwrap() error {
 // is handled.
 func WrapCouldBeSandboxError(err error) error {
 	return &CouldBeSandboxError{err}
+}
+
+// ExecError includes information about the exec.Cmd which failed in the
+// error message.
+type ExecError struct {
+	err error
+	cmd *exec.Cmd
+}
+
+func (e ExecError) Error() string {
+	var exitErr *exec.ExitError
+	if errors.As(e.err, &exitErr) {
+		stderr := string(exitErr.Stderr)
+		if stderr != "" && !strings.HasSuffix(stderr, "\n") {
+			stderr += "\n"
+		}
+		return fmt.Sprintf("%s%s: %s", stderr, filepath.Base(e.cmd.Args[0]), e.err)
+	}
+	return e.err.Error()
+}
+
+func (e ExecError) Unwrap() error {
+	return e.err
+}
+
+// WrapExecError wraps an existing error into an ExecError to include
+// information about the exec.Cmd which failed in the error message.
+func WrapExecError(err error, cmd *exec.Cmd) error {
+	return &ExecError{err, cmd}
 }

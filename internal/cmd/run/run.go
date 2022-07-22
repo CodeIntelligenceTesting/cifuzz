@@ -327,6 +327,14 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 		return cmdutils.WrapSilentError(signalErr)
 	}
 
+	var execErr *cmdutils.ExecError
+	if errors.As(err, &execErr) {
+		// It's expected that libFuzzer might fail due to user
+		// configuration, so we print the error without the stack trace.
+		log.Error(err)
+		return cmdutils.ErrSilent
+	}
+
 	return err
 }
 

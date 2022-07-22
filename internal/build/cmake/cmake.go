@@ -14,8 +14,8 @@ import (
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/internal/build"
+	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
-	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
@@ -132,7 +132,14 @@ func (b *Builder) Configure() error {
 	log.Debugf("Working directory: %s", cmd.Dir)
 	log.Debugf("Command: %s", cmd.String())
 	err := cmd.Run()
-	return executil.HandleExecError(cmd, err)
+	if err != nil {
+		// It's expected that cmake might fail due to user configuration,
+		// so we print the error without the stack trace.
+		err = cmdutils.WrapExecError(err, cmd)
+		log.Error(err)
+		return cmdutils.ErrSilent
+	}
+	return nil
 }
 
 // Build builds the specified fuzz test with CMake
@@ -150,7 +157,14 @@ func (b *Builder) Build(fuzzTests []string) error {
 	cmd.Env = b.env
 	log.Debugf("Command: %s", cmd.String())
 	err := cmd.Run()
-	return executil.HandleExecError(cmd, err)
+	if err != nil {
+		// It's expected that cmake might fail due to user configuration,
+		// so we print the error without the stack trace.
+		err = cmdutils.WrapExecError(err, cmd)
+		log.Error(err)
+		return cmdutils.ErrSilent
+	}
+	return nil
 }
 
 // FindFuzzTestExecutable uses the info files emitted by the CMake integration
@@ -199,7 +213,11 @@ func (b *Builder) GetRuntimeDeps(fuzzTest string) ([]string, error) {
 	)
 	stdout, err := cmd.Output()
 	if err != nil {
-		return nil, executil.HandleExecError(cmd, err)
+		// It's expected that cmake might fail due to user configuration,
+		// so we print the error without the stack trace.
+		err = cmdutils.WrapExecError(err, cmd)
+		log.Error(err)
+		return nil, cmdutils.ErrSilent
 	}
 
 	var resolvedDeps []string
