@@ -123,13 +123,15 @@ function(add_fuzz_test name)
     target_compile_definitions("${name}" PRIVATE CIFUZZ_TEST_NAME="${name}")
   endif()
 
+  get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+
   if(CIFUZZ_ENGINE STREQUAL replayer OR CIFUZZ_ENGINE STREQUAL coverage)
     target_link_libraries("${name}" PRIVATE cifuzz_internal_replayer)
   elseif(CIFUZZ_ENGINE STREQUAL libfuzzer)
     if(MSVC)
       # MSVC already marks its compilation outputs as requiring a link against libFuzzer and thus link.exe doesn't
       # offer the equivalent of `-fsanitize=fuzzer`.
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR ((NOT "CXX" IN_LIST LANGUAGES) AND (CMAKE_C_COMPILER_ID STREQUAL "Clang")))
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR ((NOT "CXX" IN_LIST _enabled_languages) AND (CMAKE_C_COMPILER_ID STREQUAL "Clang")))
       target_link_options("${name}" PRIVATE -fsanitize=fuzzer)
     else()
       message(FATAL_ERROR "CIFuzz: ${CMAKE_CXX_COMPILER_ID} compiler is not supported with the libfuzzer engine")
