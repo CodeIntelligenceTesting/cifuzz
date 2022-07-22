@@ -17,6 +17,7 @@ import (
 )
 
 var expectedFinding = regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-buffer-overflow`)
+var filteredLine = regexp.MustCompile(`child process \d+ exited`)
 
 func TestIntegration_Make_Run(t *testing.T) {
 	if testing.Short() {
@@ -93,6 +94,9 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expecte
 	for scanner.Scan() {
 		if expectedOutput.MatchString(scanner.Text()) {
 			seenExpectedOutput = true
+		}
+		if filteredLine.MatchString(scanner.Text()) {
+			require.FailNow(t, "Found line in output which should have been filtered", scanner.Text())
 		}
 	}
 	require.True(t, seenExpectedOutput, "Did not see %q in fuzzer output", expectedOutput.String())
