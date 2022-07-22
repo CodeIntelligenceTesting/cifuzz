@@ -30,8 +30,9 @@ var fuzzTargetSrc []byte
 type compilerCase struct {
 	compiler                    string
 	flags                       []string
-	outputFlag                  string
+	outputFlags                 []string
 	disableFuzzerInitializeFlag string
+	compileOnlyAsCppFlags       []string
 }
 
 // clang-cl is almost fully compatible with MSVC (cl.exe), but doesn't seem to support ASan and the /Za flag.
@@ -44,8 +45,9 @@ var clangCl = compilerCase{
 		// Enable additional security warnings.
 		"/sdl",
 	},
-	"/Fe%s",
+	[]string{"/Fe%s"},
 	"/DDISABLE_FUZZER_INITIALIZE",
+	[]string{"/TP", "/c"},
 }
 
 var msvc = compilerCase{
@@ -66,8 +68,9 @@ var msvc = compilerCase{
 		// Using ASan without debug symbols may result in a warning, which would be fatal due to /WX.
 		"/Zi",
 	}, clangCl.flags...),
-	clangCl.outputFlag,
+	clangCl.outputFlags,
 	clangCl.disableFuzzerInitializeFlag,
+	clangCl.compileOnlyAsCppFlags,
 }
 
 var clang = compilerCase{
@@ -85,10 +88,10 @@ var clang = compilerCase{
 		"-fsanitize-undefined-trap-on-error",
 		// Disable compiler-specific extensions and use the C90 standard.
 		"-ansi",
-		"-o",
 	},
-	"%s",
+	[]string{"-o", "%s"},
 	"-DDISABLE_FUZZER_INITIALIZE",
+	[]string{"-xc++", "-c"},
 }
 
 // MinGW lacks ASan and UBSan, but is otherwise compatible with Unix gcc.
@@ -101,10 +104,10 @@ var mingw = compilerCase{
 		"-pedantic-errors",
 		"-Werror",
 		"-ansi",
-		"-o",
 	},
-	"%s",
+	[]string{"-o", "%s"},
 	"-DDISABLE_FUZZER_INITIALIZE",
+	[]string{"-xc++", "-c"},
 }
 
 // On Unix, gcc supports ASan and UBSan.
@@ -119,8 +122,9 @@ var gcc = compilerCase{
 		// Make UBSan findings assertable by aborting.
 		"-fsanitize-undefined-trap-on-error",
 	}, mingw.flags...),
-	mingw.outputFlag,
+	mingw.outputFlags,
 	mingw.disableFuzzerInitializeFlag,
+	mingw.compileOnlyAsCppFlags,
 }
 
 type runCase struct {
@@ -225,6 +229,7 @@ func TestIntegration_Replayer_WithMsvc(t *testing.T) {
 	// MSVC (cl.exe) does not support UBSan.
 	subtestCompileAndRunWithFuzzerInitialize(t, msvc, append(baseRunCases, asanRunCase))
 	subtestCompileAndRunWithoutFuzzerInitialize(t, msvc)
+	subtestCompileAsCpp(t, msvc)
 }
 
 func TestIntegration_Replayer_WithClangCl(t *testing.T) {
@@ -241,6 +246,7 @@ func TestIntegration_Replayer_WithClangCl(t *testing.T) {
 	// CI runs fail with the error referenced in https://github.com/llvm/llvm-project/issues/52728.
 	subtestCompileAndRunWithFuzzerInitialize(t, clangCl, baseRunCases)
 	subtestCompileAndRunWithoutFuzzerInitialize(t, clangCl)
+	subtestCompileAsCpp(t, clangCl)
 }
 
 func TestIntegration_Replayer_WithClang(t *testing.T) {
@@ -255,6 +261,7 @@ func TestIntegration_Replayer_WithClang(t *testing.T) {
 
 	subtestCompileAndRunWithFuzzerInitialize(t, clang, append(baseRunCases, asanRunCase, ubsanRunCase))
 	subtestCompileAndRunWithoutFuzzerInitialize(t, clang)
+	subtestCompileAsCpp(t, clang)
 }
 
 func TestIntegration_Replayer_WithGcc(t *testing.T) {
@@ -269,6 +276,7 @@ func TestIntegration_Replayer_WithGcc(t *testing.T) {
 
 	subtestCompileAndRunWithFuzzerInitialize(t, gcc, append(baseRunCases, asanRunCase, ubsanRunCase))
 	subtestCompileAndRunWithoutFuzzerInitialize(t, gcc)
+	subtestCompileAsCpp(t, gcc)
 }
 
 func TestIntegration_Replayer_WithMingw(t *testing.T) {
@@ -284,6 +292,7 @@ func TestIntegration_Replayer_WithMingw(t *testing.T) {
 	// MinGW does not support sanitizers.
 	subtestCompileAndRunWithFuzzerInitialize(t, mingw, baseRunCases)
 	subtestCompileAndRunWithoutFuzzerInitialize(t, mingw)
+	subtestCompileAsCpp(t, mingw)
 }
 
 func TestIntegration_Replayer_WithNoAsserts(t *testing.T) {
@@ -297,9 +306,9 @@ func TestIntegration_Replayer_WithNoAsserts(t *testing.T) {
 	require.NoError(t, err)
 
 	if runtime.GOOS == "windows" {
-		compileReplayer(t, tempDir, clangCl.compiler, clangCl.outputFlag, append([]string{"/DNDEBUG"}, clangCl.flags...)...)
+		compileReplayer(t, tempDir, clangCl.compiler, clangCl.outputFlags, append([]string{"/DNDEBUG"}, clangCl.flags...)...)
 	} else {
-		compileReplayer(t, tempDir, clang.compiler, clang.outputFlag, append([]string{"-DNDEBUG"}, clang.flags...)...)
+		compileReplayer(t, tempDir, clang.compiler, clang.outputFlags, append([]string{"-DNDEBUG"}, clang.flags...)...)
 	}
 }
 
@@ -315,9 +324,9 @@ func TestIntegration_Replayer_WithoutArgsRunsSeedCorpus(t *testing.T) {
 
 	var replayerPath string
 	if runtime.GOOS == "windows" {
-		replayerPath = compileReplayer(t, tempDir, msvc.compiler, msvc.outputFlag, msvc.flags...)
+		replayerPath = compileReplayer(t, tempDir, msvc.compiler, msvc.outputFlags, msvc.flags...)
 	} else {
-		replayerPath = compileReplayer(t, tempDir, clang.compiler, clang.outputFlag, clang.flags...)
+		replayerPath = compileReplayer(t, tempDir, clang.compiler, clang.outputFlags, clang.flags...)
 	}
 
 	// Create a seed corpus directory with the correct name next to the replayer binary.
@@ -343,7 +352,7 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 		tempDir, err := os.MkdirTemp(baseTempDir, "")
 		require.NoError(t, err)
 
-		replayer := compileReplayer(t, tempDir, cc.compiler, cc.outputFlag, cc.flags...)
+		replayer := compileReplayer(t, tempDir, cc.compiler, cc.outputFlags, cc.flags...)
 
 		for _, rc := range rcs {
 			// Capture loop variable in goroutine, see https://gist.github.com/posener/92a55c4cd441fc5e5e85f27bca008721.
@@ -413,7 +422,7 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) 
 		tempDir, err := os.MkdirTemp(baseTempDir, "")
 		require.NoError(t, err)
 
-		replayer := compileReplayer(t, tempDir, cc.compiler, cc.outputFlag, append(
+		replayer := compileReplayer(t, tempDir, cc.compiler, cc.outputFlags, append(
 			[]string{cc.disableFuzzerInitializeFlag},
 			cc.flags...,
 		)...)
@@ -430,9 +439,29 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) 
 	})
 }
 
-// compileReplayer expects the last flag to be the compiler's equivalent of '-o' (if necessary) and returns the path to
-// the resulting executable.
-func compileReplayer(t *testing.T, tempDir string, compiler string, outputFlag string, flags ...string) string {
+func subtestCompileAsCpp(t *testing.T, cc compilerCase) {
+	t.Run("_CompileAsC++", func(t *testing.T) {
+		tempDir, err := os.MkdirTemp(baseTempDir, "")
+		require.NoError(t, err)
+
+		reproducerSrcFile := filepath.Join(tempDir, "replayer.cpp")
+		err = os.WriteFile(reproducerSrcFile, replayerSrc, 0700)
+		require.NoError(t, err)
+
+		var args []string
+		args = append(args, cc.compileOnlyAsCppFlags...)
+		args = append(args, cc.flags...)
+		args = append(args, reproducerSrcFile)
+		c := exec.Command(cc.compiler, args...)
+		// Emit additional compiler outputs into a test-exclusive directory.
+		c.Dir = tempDir
+		out, err := c.CombinedOutput()
+		require.NoErrorf(t, err, "Failed to execute %q: %+v\n%s", c.String(), err, string(out))
+	})
+}
+
+// compileReplayer returns the path to the resulting executable.
+func compileReplayer(t *testing.T, tempDir string, compiler string, outputFlags []string, flags ...string) string {
 	tempDir, err := os.MkdirTemp(tempDir, "")
 	require.NoError(t, err)
 
@@ -450,7 +479,13 @@ func compileReplayer(t *testing.T, tempDir string, compiler string, outputFlag s
 	outFile := filepath.Join(tempDir, outBasename)
 	var args []string
 	args = append(args, flags...)
-	args = append(args, fmt.Sprintf(outputFlag, outFile))
+	for _, outputFlag := range outputFlags {
+		if strings.Contains(outputFlag, "%s") {
+			args = append(args, fmt.Sprintf(outputFlag, outFile))
+		} else {
+			args = append(args, outputFlag)
+		}
+	}
 	args = append(args, reproducerSrcFile, fuzzTargetSrcFile)
 	c := exec.Command(compiler, args...)
 	// Emit additional compiler outputs into a test-exclusive directory.
