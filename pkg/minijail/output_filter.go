@@ -6,7 +6,7 @@ import (
 	"regexp"
 )
 
-var ignoredPattern = regexp.MustCompile(`^libminijail[\d+]: child process \d+ exited with status \d+`)
+var ignoredPattern = regexp.MustCompile(`^libminijail\[\d+]: child process \d+ exited with status \d+`)
 
 type OutputFilter struct {
 	nextWriter io.Writer
