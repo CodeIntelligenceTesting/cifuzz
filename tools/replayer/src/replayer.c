@@ -152,12 +152,23 @@ ret name##Default args
  */
 #include <dlfcn.h>
 
+/*
+ * Prevent "cast between pointer-to-function and pointer-to-object is an extension" when compiled as C++, which doesn't
+ * allow UB just because POSIX says so.
+ * https://stackoverflow.com/questions/1096341/function-pointers-casting-in-c
+ */
+#ifdef __cplusplus
+#define CAST_TO_FN_PTR(ret, name, args, ptr) ((ret (*) args) (reinterpret_cast<uintptr_t>(ptr)))
+#else
+#define CAST_TO_FN_PTR(ret, name, args, ptr) ((ret (*) args) ptr)
+#endif
+
 #define DEFINE_DEFAULT(ret, name, args)                \
 static ret name##Default args;                         \
 static ret (*name##Ptr()) args {                       \
   void *fn_ptr = dlsym(RTLD_DEFAULT, STRINGIFY(name)); \
   if (fn_ptr != NULL) {                                \
-    return (ret (*) args) fn_ptr;                      \
+    return CAST_TO_FN_PTR(ret, name, args, fn_ptr);    \
   }                                                    \
   return name##Default;                                \
 }                                                      \
