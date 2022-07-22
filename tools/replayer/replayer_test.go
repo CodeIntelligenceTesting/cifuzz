@@ -227,9 +227,9 @@ func TestIntegration_Replayer_WithMsvc(t *testing.T) {
 	testutil.RegisterTestDeps("src", "testdata")
 
 	// MSVC (cl.exe) does not support UBSan.
-	subtestCompileAndRunWithFuzzerInitialize(t, msvc, append(baseRunCases, asanRunCase))
-	subtestCompileAndRunWithoutFuzzerInitialize(t, msvc)
-	subtestCompileAsCpp(t, msvc)
+	subtestCompileAndRunWithFuzzerInitialize(t, &msvc, append(baseRunCases, asanRunCase))
+	subtestCompileAndRunWithoutFuzzerInitialize(t, &msvc)
+	subtestCompileAsCpp(t, &msvc)
 }
 
 func TestIntegration_Replayer_WithClangCl(t *testing.T) {
@@ -244,9 +244,9 @@ func TestIntegration_Replayer_WithClangCl(t *testing.T) {
 
 	// clang-cl does not seem to support sanitizers.
 	// CI runs fail with the error referenced in https://github.com/llvm/llvm-project/issues/52728.
-	subtestCompileAndRunWithFuzzerInitialize(t, clangCl, baseRunCases)
-	subtestCompileAndRunWithoutFuzzerInitialize(t, clangCl)
-	subtestCompileAsCpp(t, clangCl)
+	subtestCompileAndRunWithFuzzerInitialize(t, &clangCl, baseRunCases)
+	subtestCompileAndRunWithoutFuzzerInitialize(t, &clangCl)
+	subtestCompileAsCpp(t, &clangCl)
 }
 
 func TestIntegration_Replayer_WithClang(t *testing.T) {
@@ -259,9 +259,9 @@ func TestIntegration_Replayer_WithClang(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("src", "testdata")
 
-	subtestCompileAndRunWithFuzzerInitialize(t, clang, append(baseRunCases, asanRunCase, ubsanRunCase))
-	subtestCompileAndRunWithoutFuzzerInitialize(t, clang)
-	subtestCompileAsCpp(t, clang)
+	subtestCompileAndRunWithFuzzerInitialize(t, &clang, append(baseRunCases, asanRunCase, ubsanRunCase))
+	subtestCompileAndRunWithoutFuzzerInitialize(t, &clang)
+	subtestCompileAsCpp(t, &clang)
 }
 
 func TestIntegration_Replayer_WithGcc(t *testing.T) {
@@ -274,9 +274,9 @@ func TestIntegration_Replayer_WithGcc(t *testing.T) {
 	t.Parallel()
 	testutil.RegisterTestDeps("src", "testdata")
 
-	subtestCompileAndRunWithFuzzerInitialize(t, gcc, append(baseRunCases, asanRunCase, ubsanRunCase))
-	subtestCompileAndRunWithoutFuzzerInitialize(t, gcc)
-	subtestCompileAsCpp(t, gcc)
+	subtestCompileAndRunWithFuzzerInitialize(t, &gcc, append(baseRunCases, asanRunCase, ubsanRunCase))
+	subtestCompileAndRunWithoutFuzzerInitialize(t, &gcc)
+	subtestCompileAsCpp(t, &gcc)
 }
 
 func TestIntegration_Replayer_WithMingw(t *testing.T) {
@@ -290,9 +290,9 @@ func TestIntegration_Replayer_WithMingw(t *testing.T) {
 	testutil.RegisterTestDeps("src", "testdata")
 
 	// MinGW does not support sanitizers.
-	subtestCompileAndRunWithFuzzerInitialize(t, mingw, baseRunCases)
-	subtestCompileAndRunWithoutFuzzerInitialize(t, mingw)
-	subtestCompileAsCpp(t, mingw)
+	subtestCompileAndRunWithFuzzerInitialize(t, &mingw, baseRunCases)
+	subtestCompileAndRunWithoutFuzzerInitialize(t, &mingw)
+	subtestCompileAsCpp(t, &mingw)
 }
 
 func TestIntegration_Replayer_WithNoAsserts(t *testing.T) {
@@ -345,7 +345,7 @@ func TestIntegration_Replayer_WithoutArgsRunsSeedCorpus(t *testing.T) {
 	)
 }
 
-func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs []runCase) {
+func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc *compilerCase, rcs []runCase) {
 	t.Run("_WithFuzzerInitialize", func(t *testing.T) {
 		t.Parallel()
 
@@ -415,7 +415,7 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc compilerCase, rcs
 	})
 }
 
-func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) {
+func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc *compilerCase) {
 	t.Run("_WithoutFuzzerInitialize", func(t *testing.T) {
 		t.Parallel()
 
@@ -439,7 +439,7 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc compilerCase) 
 	})
 }
 
-func subtestCompileAsCpp(t *testing.T, cc compilerCase) {
+func subtestCompileAsCpp(t *testing.T, cc *compilerCase) {
 	t.Run("_CompileAsC++", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp(baseTempDir, "")
 		require.NoError(t, err)
