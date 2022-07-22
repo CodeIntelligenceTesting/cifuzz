@@ -204,7 +204,7 @@ func (c *runCmd) buildFuzzTest() (string, error) {
 	if c.opts.BuildSystem == config.BuildSystemCMake {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
 			ProjectDir: c.opts.ProjectDir,
-			// TODO: Do not hardcode this values.
+			// TODO: Do not hardcode this value.
 			Engine:     "libfuzzer",
 			Sanitizers: sanitizers,
 			Stdout:     c.OutOrStdout(),
@@ -228,8 +228,11 @@ func (c *runCmd) buildFuzzTest() (string, error) {
 		}
 		builder, err := other.NewBuilder(&other.BuilderOptions{
 			BuildCommand: c.opts.BuildCommand,
-			Stdout:       c.OutOrStdout(),
-			Stderr:       c.ErrOrStderr(),
+			// TODO: Do not hardcode this value.
+			Engine:     "libfuzzer",
+			Sanitizers: sanitizers,
+			Stdout:     c.OutOrStdout(),
+			Stderr:     c.ErrOrStderr(),
 		})
 		if err != nil {
 			return "", err

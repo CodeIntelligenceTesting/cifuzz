@@ -82,6 +82,18 @@ func ContainsStringWithPrefix(slice []string, prefix string) bool {
 	return false
 }
 
+func Equal(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func SubtractSlices(a, b []string) (diff []string) {
 	// Based on https://stackoverflow.com/a/45428032
 	// Original author: https://stackoverflow.com/users/604260/peterwilliams97

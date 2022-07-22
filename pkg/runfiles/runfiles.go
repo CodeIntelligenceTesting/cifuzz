@@ -19,6 +19,7 @@ type RunfilesFinder interface {
 	Minijail0Path() (string, error)
 	ProcessWrapperPath() (string, error)
 	CIFuzzIncludePath() (string, error)
+	ReplayerSourcePath() (string, error)
 }
 
 var Finder RunfilesFinder

@@ -1,6 +1,7 @@
 package other
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -17,22 +18,32 @@ import (
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
 type BuilderOptions struct {
 	BuildCommand string
+	Engine       string
+	Sanitizers   []string
 	Stdout       io.Writer
 	Stderr       io.Writer
 }
 
 type Builder struct {
 	*BuilderOptions
-	env []string
+	env      []string
+	buildDir string
 }
 
 func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 	var err error
 	b := &Builder{BuilderOptions: opts}
+
+	// Create a temporary build directory
+	b.buildDir, err = os.MkdirTemp("", "cifuzz-build-")
+	if err != nil {
+		return nil, err
+	}
 
 	b.env, err = build.CommonBuildEnv()
 	if err != nil {
@@ -41,7 +52,22 @@ func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 
 	// Set CFLAGS, CXXFLAGS, LDFLAGS, and FUZZ_TEST_LDFLAGS which must
 	// be passed to the build commands by the build system.
-	b.env, err = setBuildFlagsEnvVars(b.env)
+	switch opts.Engine {
+	case "libfuzzer":
+		for _, sanitizer := range opts.Sanitizers {
+			if sanitizer != "address" && sanitizer != "undefined" {
+				panic(fmt.Sprintf("Invalid sanitizer for engine %q: %q", opts.Engine, sanitizer))
+			}
+		}
+		err = b.setLibFuzzerEnv()
+	case "replayer":
+		if !stringutil.Equal(opts.Sanitizers, []string{"coverage"}) {
+			panic(fmt.Sprintf("Invalid sanitizers for engine %q: %q", opts.Engine, opts.Sanitizers))
+		}
+		err = b.setCoverageEnv()
+	default:
+		panic(fmt.Sprintf("Invalid engine %q", opts.Engine))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +78,23 @@ func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 // Build builds the specified fuzz test with CMake
 func (b *Builder) Build() error {
 	var err error
+	defer fileutil.Cleanup(b.buildDir)
+
+	if b.Engine == "replayer" {
+		// Build the replayer without coverage instrumentation
+		replayerSource, err := runfiles.Finder.ReplayerSourcePath()
+		if err != nil {
+			return err
+		}
+		cmd := exec.Command("clang", "-c", replayerSource, "-o", filepath.Join(b.buildDir, "replayer.o"))
+		cmd.Stdout = b.Stdout
+		cmd.Stderr = b.Stderr
+		log.Debugf("Command: %s", cmd.String())
+		err = cmd.Run()
+		if err != nil {
+			return errors.WithStack(err)
+		}
+	}
 
 	// Run the build command
 	cmd := exec.Command("/bin/sh", "-c", b.BuildCommand)
@@ -72,23 +115,26 @@ func (b *Builder) Build() error {
 	return nil
 }
 
-func setBuildFlagsEnvVars(env []string) ([]string, error) {
+var commonCFlags = []string{
+	// Keep debug symbols
+	"-g",
+	// Do optimizations which don't harm debugging
+	"-Og",
+	// To get good stack frames for better debugging
+	"-fno-omit-frame-pointer",
+	// Conventional macro to conditionally compile out fuzzer road blocks
+	// See https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
+	"-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION",
+}
+
+func (b *Builder) setLibFuzzerEnv() error {
+	var err error
+
 	// Set CFLAGS and CXXFLAGS. Note that these flags must not contain
 	// spaces, because the environment variables are space separated.
 	//
 	// Note: Keep in sync with tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake
-	cflags := []string{
-		// ----- Common flags -----
-		// Keep debug symbols
-		"-g",
-		// Do optimizations which don't harm debugging
-		"-Og",
-		// To get good stack frames for better debugging
-		"-fno-omit-frame-pointer",
-		// Conventional macro to conditionally compile out fuzzer road blocks
-		// See https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
-		"-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION",
-
+	cflags := append(commonCFlags, []string{
 		// ----- Flags used to build with libFuzzer -----
 		// Compile with edge coverage and compare instrumentation. We
 		// use fuzzer-no-link here instead of -fsanitize=fuzzer because
@@ -107,14 +153,14 @@ func setBuildFlagsEnvVars(env []string) ([]string, error) {
 		// TODO: Check if there are other additional error detectors
 		//       which we want to use
 		"-fsanitize-address-use-after-scope",
-	}
-	env, err := envutil.Setenv(env, "CFLAGS", strings.Join(cflags, " "))
+	}...)
+	b.env, err = envutil.Setenv(b.env, "CFLAGS", strings.Join(cflags, " "))
 	if err != nil {
-		return nil, err
+		return err
 	}
-	env, err = envutil.Setenv(env, "CXXFLAGS", strings.Join(cflags, " "))
+	b.env, err = envutil.Setenv(b.env, "CXXFLAGS", strings.Join(cflags, " "))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	ldflags := []string{
@@ -125,31 +171,64 @@ func setBuildFlagsEnvVars(env []string) ([]string, error) {
 		// https://github.com/bazelbuild/bazel/issues/11122#issuecomment-896613570
 		"-fsanitize-link-c++-runtime",
 	}
-	env, err = envutil.Setenv(env, "LDFLAGS", strings.Join(ldflags, " "))
+	b.env, err = envutil.Setenv(b.env, "LDFLAGS", strings.Join(ldflags, " "))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Users should pass the environment variable FUZZ_TEST_CFLAGS to the
 	// compiler command building the fuzz test.
 	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	env, err = envutil.Setenv(env, "FUZZ_TEST_CFLAGS", "-I"+cifuzzIncludePath)
+	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_CFLAGS", "-I"+cifuzzIncludePath)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Users should pass the environment variable FUZZ_TEST_LDFLAGS to
 	// the linker command building the fuzz test. For libfuzzer, we set
 	// it to "-fsanitize=fuzzer" to build a libfuzzer binary.
-	env, err = envutil.Setenv(env, "FUZZ_TEST_LDFLAGS", "-fsanitize=fuzzer")
+	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_LDFLAGS", "-fsanitize=fuzzer")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return env, nil
+	return nil
+}
+
+func (b *Builder) setCoverageEnv() error {
+	var err error
+
+	// Set CFLAGS and CXXFLAGS. Note that these flags must not contain
+	// spaces, because the environment variables are space separated.
+	//
+	// Note: Keep in sync with tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake
+	cflags := append(commonCFlags, []string{
+		// ----- Flags used to build with code coverage -----
+		"-fprofile-instr-generate",
+		"-fcoverage-mapping",
+	}...)
+	b.env, err = envutil.Setenv(b.env, "CFLAGS", strings.Join(cflags, " "))
+	if err != nil {
+		return err
+	}
+	b.env, err = envutil.Setenv(b.env, "CXXFLAGS", strings.Join(cflags, " "))
+	if err != nil {
+		return err
+	}
+
+	// Users should pass the environment variable FUZZ_TEST_LDFLAGS to
+	// the linker command building the fuzz test. When building for
+	// coverage, we set it to the replayer object file which we built
+	// before without coverage instrumentation.
+	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_LDFLAGS", filepath.Join(b.buildDir, "replayer.o"))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *Builder) FindFuzzTestExecutable(fuzzTest string) (string, error) {

@@ -41,6 +41,10 @@ func (f RunfilesFinderImpl) CIFuzzIncludePath() (string, error) {
 	return f.findFollowSymlinks("share/cifuzz/include/cifuzz")
 }
 
+func (f RunfilesFinderImpl) ReplayerSourcePath() (string, error) {
+	return f.findFollowSymlinks("share/cifuzz/src/replayer.c")
+}
+
 func (f RunfilesFinderImpl) findFollowSymlinks(relativePath string) (string, error) {
 	absolutePath := filepath.Join(f.InstallDir, relativePath)
 
