@@ -58,9 +58,15 @@
 #include <dirent.h>
 #endif
 
+#ifdef __cplusplus
+#define C_LINKAGE extern "C"
+#else
+#define C_LINKAGE extern
+#endif
+
 /* If no arguments are specified and argv[0] + SEED_CORPUS_SUFFIX exists as a file or directory, its contents will
  * be executed. */
-const char *SEED_CORPUS_SUFFIX = "_seed_corpus";
+static const char *SEED_CORPUS_SUFFIX = "_seed_corpus";
 
 static const char *argv0;
 static int all_inputs_passed = 0;
@@ -97,18 +103,12 @@ static const char *strsignal(int sig) {
 }
 #endif
 
-const char *__ubsan_default_options() {
+C_LINKAGE const char *__ubsan_default_options() {
   /*
    * With the reproducer, UBSan findings should always be fatal so that they lead to a non-zero exit code.
    */
   return "halt_on_error=1";
 }
-
-#ifdef __cplusplus
-#define C_LINKAGE extern "C"
-#else
-#define C_LINKAGE extern
-#endif
 
 C_LINKAGE int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
 
@@ -127,15 +127,19 @@ C_LINKAGE int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
  */
 #if defined(_MSC_VER)
 #define DEFINE_DEFAULT(ret, name, args)                                                   \
+C_LINKAGE                                                                                 \
 ret name##Default args;                                                                   \
 __pragma(comment(linker, "/alternatename:" STRINGIFY(name) "=" STRINGIFY(name##Default))) \
+C_LINKAGE                                                                                 \
 ret name args;                                                                            \
 ret name##Default args
 #else
 #define DEFINE_DEFAULT(ret, name, args)                \
+C_LINKAGE                                              \
 ret name##Default args;                                \
+C_LINKAGE                                              \
 __attribute__((weak, alias(STRINGIFY(name##Default)))) \
-C_LINKAGE ret name args;                               \
+ret name args;                                         \
 ret name##Default args
 #endif
 
@@ -167,7 +171,7 @@ static ret name##Default args
  * precludes using the dlsym approach.
  * https://github.com/llvm/llvm-project/blob/0c8c05064d57fe3bbbb1edd4c6e67f909c720578/compiler-rt/lib/fuzzer/FuzzerExtFunctionsWeak.cpp
  */
-#define DEFINE_DEFAULT(ret, name, args) __attribute__((weak)) ret name args
+#define DEFINE_DEFAULT(ret, name, args) C_LINKAGE __attribute__((weak)) ret name args
 #define WITH_DEFAULT(name) name
 
 #endif
@@ -194,7 +198,7 @@ DEFINE_DEFAULT(const char*, cifuzz_seed_corpus, (void)) {
  * TODO: If this ever becomes an issue with other build systems, replace the compile-time check with a dynamic lookup
  *       at runtime. */
 #ifdef CIFUZZ_HAS_SANITIZER
-void __sanitizer_set_death_callback(void (*callback)(void));
+C_LINKAGE void __sanitizer_set_death_callback(void (*callback)(void));
 #endif
 
 static void run_one_input(const unsigned char *data, size_t size) {
