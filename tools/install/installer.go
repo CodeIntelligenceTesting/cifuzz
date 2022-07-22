@@ -381,8 +381,9 @@ func findProjectDir() (string, error) {
 func (i *Installer) copyCMakeIntegration(destDir string) (string, error) {
 	cmakeSrc := filepath.Join(i.projectDir, "tools", "cmake", "cifuzz")
 	opts := copy.Options{
-		// Skip copying the replayer, which is a symlink on UNIX but a file
-		// containing the relative path on Windows. It is handled below.
+		// Skip copying the replayer, which is a symlink on UNIX but checked out
+		// by git as a file containing the relative path on Windows. It is
+		// handled below.
 		OnSymlink: func(string) copy.SymlinkAction {
 			return copy.Skip
 		},
@@ -400,8 +401,11 @@ func (i *Installer) copyCMakeIntegration(destDir string) (string, error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	replayerDst := filepath.Join(replayerDir, "replayer.c")
-	err = copy.Copy(replayerSrc, replayerDst)
+	err = copy.Copy(replayerSrc, filepath.Join(replayerDir, "replayer.c"))
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	err = copy.Copy(replayerSrc, filepath.Join(replayerDir, "replayer.cpp"))
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

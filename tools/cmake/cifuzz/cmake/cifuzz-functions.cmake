@@ -126,7 +126,28 @@ function(add_fuzz_test name)
   get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
 
   if(CIFUZZ_ENGINE STREQUAL replayer OR CIFUZZ_ENGINE STREQUAL coverage)
-    target_link_libraries("${name}" PRIVATE cifuzz_internal_replayer)
+    # The replayer is written so that it can be compiled as both C and C++.
+    # Since we do not have control over the enabled languages, we add the
+    # replayer with a source file extension matching the enabled language.
+    if(C IN_LIST _enabled_languages)
+      set(_replayer_src "${CIFUZZ_REPLAYER_C_SRC}")
+    else()
+      if (NOT CXX IN_LIST _enabled_languages)
+        message(FATAL "CIFuzz: At least one of C and CXX has to be an enabled language")
+      endif()
+      set(_replayer_src "${CIFUZZ_REPLAYER_CXX_SRC}")
+    endif()
+    target_sources("${name}" PRIVATE "${_replayer_src}")
+    if(CIFUZZ_ENGINE STREQUAL coverage)
+      # Never instrument the replayer file for coverage.
+      set_source_files_properties("${_replayer_src}"
+                                  PROPERTIES COMPILE_FLAGS
+                                  "-fno-profile-instr-generate -fno-coverage-mapping")
+    endif()
+
+    if(CIFUZZ_SANITIZERS)
+      target_compile_definitions("${name}" PRIVATE CIFUZZ_HAS_SANITIZER)
+    endif()
   elseif(CIFUZZ_ENGINE STREQUAL libfuzzer)
     if(MSVC)
       # MSVC already marks its compilation outputs as requiring a link against libFuzzer and thus link.exe doesn't
