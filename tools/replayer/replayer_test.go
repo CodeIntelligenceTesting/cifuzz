@@ -346,7 +346,7 @@ func TestIntegration_Replayer_WithoutArgsRunsSeedCorpus(t *testing.T) {
 }
 
 func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc *compilerCase, rcs []runCase) {
-	t.Run("_WithFuzzerInitialize", func(t *testing.T) {
+	t.Run("WithFuzzerInitialize", func(t *testing.T) {
 		t.Parallel()
 
 		tempDir, err := os.MkdirTemp(baseTempDir, "")
@@ -416,7 +416,7 @@ func subtestCompileAndRunWithFuzzerInitialize(t *testing.T, cc *compilerCase, rc
 }
 
 func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc *compilerCase) {
-	t.Run("_WithoutFuzzerInitialize", func(t *testing.T) {
+	t.Run("WithoutFuzzerInitialize", func(t *testing.T) {
 		t.Parallel()
 
 		tempDir, err := os.MkdirTemp(baseTempDir, "")
@@ -440,7 +440,7 @@ func subtestCompileAndRunWithoutFuzzerInitialize(t *testing.T, cc *compilerCase)
 }
 
 func subtestCompileAsCpp(t *testing.T, cc *compilerCase) {
-	t.Run("_CompileAsC++", func(t *testing.T) {
+	t.Run("CompileAsC++", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp(baseTempDir, "")
 		require.NoError(t, err)
 
