@@ -2,7 +2,6 @@ package create
 
 import (
 	"fmt"
-	"io"
 	"path/filepath"
 	"strings"
 
@@ -49,7 +48,7 @@ func New(config *config.Config) *cobra.Command {
 
 func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	// get test type
-	opts.testType, err = getTestType(args, cmd.InOrStdin())
+	opts.testType, err = getTestType(args)
 	if err != nil {
 		return err
 	}
@@ -81,11 +80,11 @@ Note: Fuzz tests can be put anywhere in your repository, but it makes sense to k
 }
 
 // getTestType returns the test type (selected by argument or input dialog)
-func getTestType(args []string, stdin io.Reader) (config.FuzzTestType, error) {
+func getTestType(args []string) (config.FuzzTestType, error) {
 	if len(args) == 1 {
 		return config.FuzzTestType(args[0]), nil
 	}
-	userSelectedType, err := dialog.Select("Select type of the fuzz test", supportedTestTypes, stdin)
+	userSelectedType, err := dialog.Select("Select type of the fuzz test", supportedTestTypes)
 	if err != nil {
 		fmt.Printf("%+v \n", err)
 		return "", cmdutils.ErrSilent
