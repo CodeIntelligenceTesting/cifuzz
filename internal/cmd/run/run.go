@@ -144,7 +144,7 @@ func New() *cobra.Command {
 	cmd.Flags().Duration("timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
 	cmdutils.ViperMustBindPFlag("timeout", cmd.Flags().Lookup("timeout"))
 
-	cmd.Flags().Bool("use-sandbox", false, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
+	cmd.Flags().Bool("use-sandbox", false, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --use-sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
 	viper.SetDefault("use-sandbox", runtime.GOOS == "linux")
 	cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
 
