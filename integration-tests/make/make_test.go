@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/otiai10/copy"
@@ -14,12 +15,13 @@ import (
 	"code-intelligence.com/cifuzz/tools/install"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
 var expectedFinding = regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-buffer-overflow`)
 var filteredLine = regexp.MustCompile(`child process \d+ exited`)
 
-func TestIntegration_Make_Run(t *testing.T) {
+func TestIntegration_Make_RunCoverage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -41,6 +43,8 @@ func TestIntegration_Make_Run(t *testing.T) {
 	// Run the two fuzz tests and verify that they crash with the expected finding.
 	runFuzzer(t, cifuzz, dir, "my_fuzz_test_1", expectedFinding)
 	runFuzzer(t, cifuzz, dir, filepath.Join(dir, "my_fuzz_test_2"), expectedFinding)
+
+	createCoverageReport(t, cifuzz, dir)
 }
 
 func copyMakeExampleDir(t *testing.T) string {
@@ -100,4 +104,28 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expecte
 		}
 	}
 	require.True(t, seenExpectedOutput, "Did not see %q in fuzzer output", expectedOutput.String())
+}
+
+func createCoverageReport(t *testing.T, cifuzz string, dir string) {
+	t.Helper()
+
+	cmd := executil.Command(cifuzz, "coverage", "-v",
+		"--build-command=make clean && make my_fuzz_test_1",
+		"my_fuzz_test_1")
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	t.Logf("Command: %s", strings.Join(stringutil.QuotedStrings(cmd.Args), " "))
+	err := cmd.Run()
+	require.NoError(t, err)
+
+	// Check that the coverage report was created
+	reportPath := filepath.Join(dir, "my_fuzz_test_1.coverage.html")
+	require.FileExists(t, reportPath)
+
+	// Check that the coverage report contains coverage for the api.cpp
+	// source file
+	bytes, err := os.ReadFile(reportPath)
+	require.NoError(t, err)
+	require.Contains(t, string(bytes), "api.cpp")
 }

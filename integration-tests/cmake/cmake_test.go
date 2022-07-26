@@ -25,7 +25,7 @@ import (
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
-func TestIntegration_CMake_InitCreateRunBundle(t *testing.T) {
+func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -99,6 +99,12 @@ func TestIntegration_CMake_InitCreateRunBundle(t *testing.T) {
  - -rss_limit_mb=1234`
 	err = os.WriteFile(filepath.Join(dir, "cifuzz.yaml"), []byte(configFileContent), 0644)
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`-rss_limit_mb=1234`), false)
+
+	// Building with coverage instrumentation doesn't work on Windows yet
+	if runtime.GOOS != "windows" {
+		// Produce a coverage report for the fuzz test
+		createCoverageReport(t, cifuzz, dir)
+	}
 
 	// Run cifuzz bundle and verify the contents of the archive.
 	archiveDir := createAndExtractArtifactArchive(t, dir, cifuzz)
@@ -198,6 +204,27 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 	case <-runCtx.Done():
 		require.NoError(t, runCtx.Err())
 	}
+}
+
+func createCoverageReport(t *testing.T, cifuzz string, dir string) {
+	t.Helper()
+
+	cmd := executil.Command(cifuzz, "coverage", "-v", "parser_fuzz_test")
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	require.NoError(t, err)
+
+	// Check that the coverage report was created
+	reportPath := filepath.Join(dir, "parser_fuzz_test.coverage.html")
+	require.FileExists(t, reportPath)
+
+	// Check that the coverage report contains coverage for the
+	// parser.cpp source file
+	bytes, err := os.ReadFile(reportPath)
+	require.NoError(t, err)
+	require.Contains(t, string(bytes), "parser.cpp")
 }
 
 func followStepsPrintedByInitCommand(t *testing.T, initOutput io.Reader, cmakeLists string) {
