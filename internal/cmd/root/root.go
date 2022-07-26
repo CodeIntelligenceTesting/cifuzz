@@ -134,6 +134,10 @@ running it without sandboxing:
 
     %s --use-sandbox=false
 
+For more information on cifuzz sandboxing, see:
+
+    https://github.com/CodeIntelligenceTesting/cifuzz#sandboxing
+
 `
 			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), msg, strings.Join(os.Args, " "))
 		}
