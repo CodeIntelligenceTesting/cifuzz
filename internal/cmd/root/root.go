@@ -133,7 +133,7 @@ func Execute() {
 			if !strings.HasSuffix(err.Error(), "\n") {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr())
 			}
-			msg := `If you don't expect this fuzz test to do any harm to the system
+			msg := `Note: If you don't expect this fuzz test to do any harm to the system
 accidentally (like overwriting files), you might want to try
 running it without sandboxing:
 
@@ -144,7 +144,7 @@ For more information on cifuzz sandboxing, see:
     https://github.com/CodeIntelligenceTesting/cifuzz#sandboxing
 
 `
-			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), msg, strings.Join(os.Args, " "))
+			log.Notef(msg, strings.Join(os.Args, " "))
 		}
 
 		var signalErr *cmdutils.SignalError

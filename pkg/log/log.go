@@ -69,6 +69,15 @@ func Warn(a ...any) {
 	log(pterm.Style{pterm.Bold, pterm.FgYellow}, "⚠️ ", a...)
 }
 
+// Notef highlights a message as a note
+func Notef(format string, a ...any) {
+	Note(fmt.Sprintf(format, a...))
+}
+
+func Note(a ...any) {
+	log(pterm.Style{pterm.FgLightYellow}, "", a...)
+}
+
 // Errorf highlights a message as an error and shows the stack strace if the --verbose flag is active
 func Errorf(err error, format string, a ...any) {
 	Error(err, fmt.Sprintf(format, a...))

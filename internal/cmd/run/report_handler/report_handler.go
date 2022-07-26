@@ -156,7 +156,7 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 
 		if r.Finding.InputFile != "" {
 			seedPath := fileutil.PrettifyPath(filepath.Join(h.seedCorpusDir, r.Finding.Name))
-			log.Printf(`
+			log.Notef(`
 Note: The crashing input has been copied to the seed corpus at:
 
     %s
