@@ -59,8 +59,8 @@ func (c *reloadCmd) run() error {
 
 	if conf.BuildSystem == config.BuildSystemCMake {
 		return c.reloadCMake()
-	} else if conf.BuildSystem == config.BuildSystemUnknown {
-		// Nothing to reload for unknown build system
+	} else if conf.BuildSystem == config.BuildSystemOther {
+		// Nothing to reload for other build system
 		return nil
 	} else {
 		return errors.Errorf("Unsupported build system \"%s\"", conf.BuildSystem)

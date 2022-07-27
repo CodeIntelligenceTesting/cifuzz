@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	BuildSystemCMake   string = "cmake"
-	BuildSystemUnknown string = "unknown"
+	BuildSystemCMake string = "cmake"
+	BuildSystemOther string = "other"
 )
 
-var buildSystemTypes = []string{BuildSystemCMake, BuildSystemUnknown}
+var buildSystemTypes = []string{BuildSystemCMake, BuildSystemOther}
 
 type ProjectConfig struct {
 	LastUpdated string
@@ -138,7 +138,7 @@ func DetermineBuildSystem(projectDir string) (string, error) {
 	if isCMakeProject {
 		return BuildSystemCMake, nil
 	} else {
-		return BuildSystemUnknown, nil
+		return BuildSystemOther, nil
 	}
 }
 

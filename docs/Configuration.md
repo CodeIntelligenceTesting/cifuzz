@@ -21,7 +21,7 @@ precedence over the respective config file setting.
 
 The build system used to build this project. If not set, cifuzz tries
 to detect the build system automatically.
-Valid values: "cmake", "unknown".
+Valid values: "cmake", "other".
 
 #### Example
 
@@ -33,7 +33,7 @@ build-system: cmake
 
 ### build-command
 
-If the build system type is "unknown", this command is used by
+If the build system type is "other", this command is used by
 `cifuzz run` to build the fuzz test.
 
 #### Example

@@ -99,7 +99,7 @@ func TestReadProjectConfig(t *testing.T) {
 	config, err := ReadProjectConfig(projectDir)
 	require.NoError(t, err)
 
-	require.Equal(t, BuildSystemUnknown, config.BuildSystem)
+	require.Equal(t, BuildSystemOther, config.BuildSystem)
 }
 
 func TestReadProjectConfigCMake(t *testing.T) {

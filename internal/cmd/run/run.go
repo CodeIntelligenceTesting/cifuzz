@@ -220,17 +220,17 @@ func (c *runCmd) buildFuzzTest() (string, error) {
 			return "", err
 		}
 		return builder.FindFuzzTestExecutable(c.opts.fuzzTest)
-	} else if c.opts.BuildSystem == config.BuildSystemUnknown {
+	} else if c.opts.BuildSystem == config.BuildSystemOther {
 		if runtime.GOOS == "windows" {
 			return "", errors.New("CMake is the only supported build system on Windows")
 		}
-		return c.buildWithUnknownBuildSystem()
+		return c.buildWithOtherBuildSystem()
 	} else {
 		return "", errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
 	}
 }
 
-func (c *runCmd) buildWithUnknownBuildSystem() (string, error) {
+func (c *runCmd) buildWithOtherBuildSystem() (string, error) {
 	// Prepare the environment
 	env, err := build.CommonBuildEnv()
 	if err != nil {
@@ -243,11 +243,10 @@ func (c *runCmd) buildWithUnknownBuildSystem() (string, error) {
 		return "", err
 	}
 
-	// To build with an unknown build system, a build command must be
-	// provided
+	// To build with other build systems, a build command must be provided.
 	if c.opts.BuildCommand == "" {
 		return "", cmdutils.WrapIncorrectUsageError(errors.Errorf("Flag \"build-command\" must be set to build" +
-			" with an unknown build system"))
+			" when using build system type \"other\""))
 	}
 
 	// Run the build command

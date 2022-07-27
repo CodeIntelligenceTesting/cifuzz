@@ -35,8 +35,8 @@ func ValidFuzzTests(cmd *cobra.Command, args []string, toComplete string) ([]str
 
 	if conf.BuildSystem == config.BuildSystemCMake {
 		return validCMakeFuzzTests(cmd, args, toComplete)
-	} else if conf.BuildSystem == config.BuildSystemUnknown {
-		// For unknown build systems, the <fuzz test> argument must be
+	} else if conf.BuildSystem == config.BuildSystemOther {
+		// For other build systems, the <fuzz test> argument must be
 		// the path to the fuzz test executable, so we use file
 		// completion here (which is only useful if the executable has
 		// been built before, but that's still better than no completion

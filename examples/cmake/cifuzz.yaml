@@ -3,5 +3,5 @@
 
 ## The build system used to build this project. If not set, cifuzz tries
 ## to detect the build system automatically.
-## Valid values: "cmake", "unknown".
+## Valid values: "cmake", "other".
 #build-system: cmake
