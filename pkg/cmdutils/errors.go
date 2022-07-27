@@ -2,6 +2,7 @@ package cmdutils
 
 import (
 	"fmt"
+	"io"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -97,19 +98,36 @@ type ExecError struct {
 	cmd *exec.Cmd
 }
 
-func (e ExecError) Error() string {
+func (e *ExecError) msg() string {
 	var exitErr *exec.ExitError
 	if errors.As(e.err, &exitErr) {
 		stderr := string(exitErr.Stderr)
 		if stderr != "" && !strings.HasSuffix(stderr, "\n") {
 			stderr += "\n"
 		}
-		return fmt.Sprintf("%s%s: %s", stderr, filepath.Base(e.cmd.Args[0]), e.err)
+		return fmt.Sprintf("%s%s", stderr, filepath.Base(e.cmd.Args[0]))
 	}
-	return e.err.Error()
+	return ""
 }
 
-func (e ExecError) Unwrap() error {
+func (e *ExecError) Error() string {
+	return fmt.Sprintf("%s: %s\n", e.msg(), e.err.Error())
+}
+
+func (e *ExecError) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if s.Flag('+') {
+			_, _ = fmt.Fprintf(s, "%s: %+v\n", e.msg(), e.err)
+			return
+		}
+		fallthrough
+	case 's', 'q':
+		_, _ = io.WriteString(s, e.Error())
+	}
+}
+
+func (e *ExecError) Unwrap() error {
 	return e.err
 }
 
