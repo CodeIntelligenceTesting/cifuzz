@@ -19,4 +19,4 @@ main: api.o
 
 my_fuzz_test%: libapi.so
 	@echo "Building $@"
-	${CXX} ${CXXFLAGS} ${FUZZ_TEST_CFLAGS} ${FUZZ_TEST_LDFLAGS} -o $@ $@.cpp -Wl,-rpath '-Wl,$$ORIGIN' -L. -lapi
+	${CXX} ${CXXFLAGS} ${FUZZ_TEST_CFLAGS} ${FUZZ_TEST_LDFLAGS} -pie -fPIE -o $@ $@.cpp -Wl,-rpath '-Wl,$$ORIGIN' -L. -lapi
