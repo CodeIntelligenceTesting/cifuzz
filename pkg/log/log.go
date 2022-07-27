@@ -84,9 +84,8 @@ func Error(err error, a ...any) {
 	type stackTracer interface {
 		StackTrace() errors.StackTrace
 	}
-
-	st, ok := errors.Cause(err).(stackTracer)
-	if ok {
+	var st stackTracer
+	if errors.As(err, &st) {
 		Debugf("%+v", st)
 	}
 }
