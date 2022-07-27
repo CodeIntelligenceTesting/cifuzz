@@ -16,6 +16,11 @@ func (f RunfilesFinderImpl) CIFuzzIncludePath() (string, error) {
 	return f.findFollowSymlinks("share/cifuzz/include/cifuzz")
 }
 
+func (f RunfilesFinderImpl) ClangPath() (string, error) {
+	path, err := exec.LookPath("clang")
+	return path, errors.WithStack(err)
+}
+
 func (f RunfilesFinderImpl) JazzerAgentDeployJarPath() (string, error) {
 	return f.findFollowSymlinks("bin/jazzer_driver")
 }

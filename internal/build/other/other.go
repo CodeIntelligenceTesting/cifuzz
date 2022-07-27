@@ -86,7 +86,11 @@ func (b *Builder) Build() error {
 		if err != nil {
 			return err
 		}
-		cmd := exec.Command("clang", "-c", replayerSource, "-o", filepath.Join(b.buildDir, "replayer.o"))
+		clang, err := runfiles.Finder.ClangPath()
+		if err != nil {
+			return err
+		}
+		cmd := exec.Command(clang, "-c", replayerSource, "-o", filepath.Join(b.buildDir, "replayer.o"))
 		cmd.Stdout = b.Stdout
 		cmd.Stderr = b.Stderr
 		log.Debugf("Command: %s", cmd.String())

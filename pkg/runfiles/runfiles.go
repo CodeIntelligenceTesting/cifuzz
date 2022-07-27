@@ -13,6 +13,7 @@ import (
 
 type RunfilesFinder interface {
 	CIFuzzIncludePath() (string, error)
+	ClangPath() (string, error)
 	JazzerAgentDeployJarPath() (string, error)
 	JazzerDriverPath() (string, error)
 	LibMinijailPreloadPath() (string, error)
