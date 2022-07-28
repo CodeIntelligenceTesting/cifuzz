@@ -1,0 +1,15 @@
+name: 'cifuzz version'
+description: 'helps generating (prerelease) version numbers for cifuzz'
+inputs:
+  token:
+    description: 'Authorized secret GitHub Personal Access Token. Defaults to github.token'
+    required: false
+    default: ${{ github.token }}
+outputs:
+  version:
+    description: 'a semver version'
+env:
+  'GITHUB_TOKEN': 'As provided by Github Actions'
+runs:
+  using: 'node16'
+  main: 'dist/index.js'
