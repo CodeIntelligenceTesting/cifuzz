@@ -1,0 +1,39 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+
+jobs:
+  installer:
+    uses: ./.github/workflows/workflow_installer.yml
+    permissions:
+      actions: write # for uploading artifacts
+    with:
+      version: "v0.0.1-test"
+
+  create_release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    needs: installer 
+    permissions:
+      contents: write # for creating releases
+
+    steps:
+      - name: Download Artifacts 
+        uses: actions/download-artifact@v3
+        with:
+          name: cifuzz_installer 
+
+      # TODO use tag name as version
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref }}
+          body: |
+            Lorem ipsum
+          draft: true
+          files: installer_*
+          fail_on_unmatched_files: true
