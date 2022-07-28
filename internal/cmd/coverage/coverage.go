@@ -46,21 +46,6 @@ func (opts *coverageOptions) validate() error {
 		return cmdutils.ErrSilent
 	}
 
-	// If the default seed corpus dir exists, add it to the list of
-	// seed corpus dirs
-	defaultSeedCorpusDir := cmdutils.DefaultSeedCorpusDir(opts.fuzzTest)
-	defaultSeedCorpusDir, err = filepath.Abs(defaultSeedCorpusDir)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	exists, err := fileutil.Exists(defaultSeedCorpusDir)
-	if err != nil {
-		return err
-	}
-	if exists && !stringutil.Contains(opts.SeedCorpusDirs, defaultSeedCorpusDir) {
-		opts.SeedCorpusDirs = append(opts.SeedCorpusDirs, defaultSeedCorpusDir)
-	}
-
 	if opts.BuildSystem == "" {
 		opts.BuildSystem, err = config.DetermineBuildSystem(opts.ProjectDir)
 		if err != nil {
@@ -155,7 +140,7 @@ func (c *coverageCmd) run() error {
 		return err
 	}
 
-	err = c.runFuzzTest(buildResult.Executable)
+	err = c.runFuzzTest(buildResult)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && c.opts.UseSandbox {
@@ -229,19 +214,27 @@ func (c *coverageCmd) buildFuzzTest() (*build.Result, error) {
 	}
 }
 
-func (c *coverageCmd) runFuzzTest(fuzzTestExecutable string) error {
+func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 	log.Infof("Running %s on corpus", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
-	log.Debugf("Executable: %s", fuzzTestExecutable)
+	log.Debugf("Executable: %s", buildResult.Executable)
 
-	seedDirs := c.opts.SeedCorpusDirs
-
-	generatedCorpusDir := cmdutils.GeneratedCorpusDir(c.opts.ProjectDir, c.opts.fuzzTest)
-	exists, err := fileutil.Exists(generatedCorpusDir)
+	// Use user-specified seed corpus dirs (if any), the default seed
+	// corpus (if it exists), and the generated corpus (if it exists).
+	corpusDirs := c.opts.SeedCorpusDirs
+	exists, err := fileutil.Exists(buildResult.SeedCorpus)
 	if err != nil {
 		return err
 	}
 	if exists {
-		seedDirs = append(seedDirs, generatedCorpusDir)
+		corpusDirs = append(corpusDirs, buildResult.SeedCorpus)
+	}
+	generatedCorpusDir := cmdutils.GeneratedCorpusDir(c.opts.ProjectDir, c.opts.fuzzTest)
+	exists, err = fileutil.Exists(generatedCorpusDir)
+	if err != nil {
+		return err
+	}
+	if exists {
+		corpusDirs = append(corpusDirs, generatedCorpusDir)
 	}
 
 	// The environment we run the binary in
@@ -251,17 +244,10 @@ func (c *coverageCmd) runFuzzTest(fuzzTestExecutable string) error {
 		return err
 	}
 
-	// Use the absolute path to the fuzz test executable to be able to
-	// add a Minijail binding for it
-	fuzzTestExecutable, err = filepath.Abs(fuzzTestExecutable)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
 	// The environment we run minijail in
 	wrapperEnv := os.Environ()
 
-	args := append([]string{fuzzTestExecutable}, seedDirs...)
+	args := append([]string{buildResult.Executable}, corpusDirs...)
 	if len(c.opts.FuzzTestArgs) > 0 {
 		args = append(append(args, "--"), c.opts.FuzzTestArgs...)
 	}
@@ -269,10 +255,10 @@ func (c *coverageCmd) runFuzzTest(fuzzTestExecutable string) error {
 	if c.opts.UseSandbox {
 		bindings := []*minijail.Binding{
 			// The fuzz target must be accessible
-			{Source: fuzzTestExecutable},
+			{Source: buildResult.Executable},
 		}
 
-		for _, dir := range seedDirs {
+		for _, dir := range corpusDirs {
 			bindings = append(bindings, &minijail.Binding{Source: dir})
 		}
 
