@@ -163,7 +163,7 @@ func (c *runCmd) run() error {
 		return err
 	}
 
-	err = c.runFuzzTest(buildResult.Executable)
+	err = c.runFuzzTest(buildResult)
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && c.opts.UseSandbox {
@@ -237,9 +237,9 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 	}
 }
 
-func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
+func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
-	log.Debugf("Executable: %s", fuzzTestExecutable)
+	log.Debugf("Executable: %s", buildResult.Executable)
 
 	generatedCorpusDir := cmdutils.GeneratedCorpusDir(c.opts.ProjectDir, c.opts.fuzzTest)
 	err := os.MkdirAll(generatedCorpusDir, 0755)
@@ -248,10 +248,21 @@ func (c *runCmd) runFuzzTest(fuzzTestExecutable string) error {
 	}
 	log.Infof("Storing generated corpus in %s", fileutil.PrettifyPath(generatedCorpusDir))
 
+	// Use user-specified seed corpus dirs (if any) and the default seed
+	// corpus (if it exists)
+	seedCorpusDirs := c.opts.SeedCorpusDirs
+	exists, err := fileutil.Exists(buildResult.SeedCorpus)
+	if err != nil {
+		return err
+	}
+	if exists {
+		seedCorpusDirs = append(seedCorpusDirs, buildResult.SeedCorpus)
+	}
+
 	runnerOpts := &libfuzzer.RunnerOptions{
-		FuzzTarget:         fuzzTestExecutable,
+		FuzzTarget:         buildResult.Executable,
 		GeneratedCorpusDir: generatedCorpusDir,
-		SeedCorpusDirs:     c.opts.SeedCorpusDirs,
+		SeedCorpusDirs:     seedCorpusDirs,
 		Dictionary:         c.opts.Dictionary,
 		EngineArgs:         c.opts.EngineArgs,
 		FuzzTestArgs:       c.opts.FuzzTestArgs,
