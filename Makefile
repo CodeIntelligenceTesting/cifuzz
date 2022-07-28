@@ -35,6 +35,12 @@ deps/dev: deps
 install:
 	go run cmd/installer/main.go
 
+# TODO: REMOVE; TMP FOR TESTING
+.PHONY: installer
+installer:
+	mkdir -p build/bin/installer/
+	echo "hello world" > build/bin/installer/installer_$(current_os)
+
 .PHONY: build
 build: build/$(current_os)
 
