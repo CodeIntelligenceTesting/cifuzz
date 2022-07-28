@@ -259,6 +259,19 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 		seedCorpusDirs = append(seedCorpusDirs, buildResult.SeedCorpus)
 	}
 
+	// Ensure that symlinks are resolved to be able to add minijail
+	// bindings for the corpus dirs.
+	generatedCorpusDir, err = filepath.EvalSymlinks(generatedCorpusDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	for i, dir := range seedCorpusDirs {
+		seedCorpusDirs[i], err = filepath.EvalSymlinks(dir)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
 	runnerOpts := &libfuzzer.RunnerOptions{
 		FuzzTarget:         buildResult.Executable,
 		GeneratedCorpusDir: generatedCorpusDir,

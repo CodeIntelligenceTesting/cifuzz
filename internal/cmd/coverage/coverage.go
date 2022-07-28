@@ -237,6 +237,15 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 		corpusDirs = append(corpusDirs, generatedCorpusDir)
 	}
 
+	// Ensure that symlinks are resolved to be able to add minijail
+	// bindings for the corpus dirs.
+	for i, dir := range corpusDirs {
+		corpusDirs[i], err = filepath.EvalSymlinks(dir)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
 	// The environment we run the binary in
 	var binaryEnv []string
 	binaryEnv, err = envutil.Setenv(binaryEnv, "LLVM_PROFILE_FILE", c.rawProfilePattern())
