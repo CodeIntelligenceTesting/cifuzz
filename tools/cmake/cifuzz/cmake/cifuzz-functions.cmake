@@ -55,13 +55,6 @@ function(enable_fuzz_testing)
     else()
       add_compile_options(-fsanitize=fuzzer)
     endif()
-  elseif(CIFUZZ_ENGINE STREQUAL coverage)
-    if(MSVC)
-      message(FATAL_ERROR "CIFuzz: MSVC does not support coverage builds yet")
-    else()
-      add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
-      add_link_options(-fprofile-instr-generate -fcoverage-mapping)
-    endif()
   endif()
 
   foreach(sanitizer IN LISTS CIFUZZ_SANITIZERS)
@@ -91,6 +84,13 @@ function(enable_fuzz_testing)
           # https://github.com/bazelbuild/bazel/issues/11122#issuecomment-896613570
           add_link_options(-fsanitize-link-c++-runtime)
         endif()
+      endif()
+    elseif(sanitizer STREQUAL coverage)
+      if(MSVC)
+        message(FATAL_ERROR "CIFuzz: MSVC does not support coverage builds yet")
+      else()
+        add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+        add_link_options(-fprofile-instr-generate -fcoverage-mapping)
       endif()
     else()
       message(FATAL_ERROR "CIFuzz: Unsupported value in CIFUZZ_SANITIZERS: ${sanitizer}")
@@ -125,7 +125,7 @@ function(add_fuzz_test name)
 
   get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
 
-  if(CIFUZZ_ENGINE STREQUAL replayer OR CIFUZZ_ENGINE STREQUAL coverage)
+  if(CIFUZZ_ENGINE STREQUAL replayer)
     # The replayer is written so that it can be compiled as both C and C++.
     # Since we do not have control over the enabled languages, we add the
     # replayer with a source file extension matching the enabled language.
@@ -138,14 +138,12 @@ function(add_fuzz_test name)
       set(_replayer_src "${CIFUZZ_REPLAYER_CXX_SRC}")
     endif()
     target_sources("${name}" PRIVATE "${_replayer_src}")
-    if(CIFUZZ_ENGINE STREQUAL coverage)
+    if(coverage IN_LIST CIFUZZ_SANITIZERS)
       # Never instrument the replayer file for coverage.
       set_source_files_properties("${_replayer_src}"
                                   PROPERTIES COMPILE_FLAGS
                                   "-fno-profile-instr-generate -fno-coverage-mapping")
-    endif()
-
-    if(CIFUZZ_SANITIZERS)
+    elseif(CIFUZZ_SANITIZERS)
       target_compile_definitions("${name}" PRIVATE CIFUZZ_HAS_SANITIZER)
     endif()
   elseif(CIFUZZ_ENGINE STREQUAL libfuzzer)

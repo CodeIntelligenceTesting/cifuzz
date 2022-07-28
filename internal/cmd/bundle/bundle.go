@@ -233,7 +233,8 @@ func (c *bundleCmd) buildAllVariants() ([]builderAndFuzzTests, error) {
 	// Coverage builds are not supported by MSVC.
 	if runtime.GOOS != "windows" {
 		coverageVariant := configureVariant{
-			Engine: "coverage",
+			Engine:     "replayer",
+			Sanitizers: []string{"coverage"},
 		}
 		configureVariants = append(configureVariants, coverageVariant)
 	}
@@ -252,7 +253,7 @@ func (c *bundleCmd) buildAllVariants() ([]builderAndFuzzTests, error) {
 		}
 
 		var typeDisplayString string
-		if variant.Engine == "coverage" {
+		if variant.Engine == "replayer" {
 			typeDisplayString = "coverage"
 		} else {
 			typeDisplayString = "fuzzing"
@@ -410,7 +411,7 @@ depsLoop:
 		LibraryPaths: externalLibrariesPrefix,
 	}
 
-	if builder.Opts().Engine == "coverage" {
+	if builder.Opts().Engine == "replayer" {
 		fuzzer := baseFuzzerInfo
 		fuzzer.Engine = "LLVM_COV"
 		fuzzers = []*artifact.Fuzzer{&fuzzer}

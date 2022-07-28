@@ -374,7 +374,7 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 		return
 	}
 	// Verify that a coverage build has been added to the archive.
-	fuzzerPathPattern = regexp.MustCompile(`\W*path: (coverage.*parser_fuzz_test.*)`)
+	fuzzerPathPattern = regexp.MustCompile(`\W*path: (replayer/coverage.*parser_fuzz_test.*)`)
 	fuzzerPath = filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
 	require.FileExists(t, fuzzerPath)
 
