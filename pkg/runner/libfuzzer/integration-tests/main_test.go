@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"code-intelligence.com/cifuzz/tools/install"
+	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
@@ -23,7 +23,11 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Failed to create temp dir for tests: %+v", err)
 	}
 
-	installer, err = install.NewInstaller(&install.Options{InstallDir: filepath.Join(baseTempDir, "install-dir")})
+	opts := install.Options{
+		Version:   "dev",
+		TargetDir: filepath.Join(baseTempDir, "install-dir"),
+	}
+	bundler, err = install.NewInstallationBundler(opts)
 	if err != nil {
 		fileutil.Cleanup(baseTempDir)
 		log.Fatalf("Failed to create install dir for tests: %+v", err)

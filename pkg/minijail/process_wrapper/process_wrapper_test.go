@@ -13,23 +13,23 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
-	"code-intelligence.com/cifuzz/tools/install"
 )
 
 func TestMain(m *testing.M) {
-	installer, err := install.NewInstaller(nil)
+	bundler, err := install.NewInstallationBundler(install.Options{Version: "dev"})
 	if err != nil {
 		log.Fatalf("%+v", err)
 	}
-	err = installer.InstallProcessWrapper()
+	err = bundler.BuildProcessWrapper()
 	if err != nil {
 		log.Fatalf("%+v", err)
 	}
-	runfiles.Finder = runfiles.RunfilesFinderImpl{InstallDir: installer.InstallDir}
+	runfiles.Finder = runfiles.RunfilesFinderImpl{InstallDir: bundler.TargetDir}
 
 	res := m.Run()
-	installer.Cleanup()
+	bundler.Cleanup()
 	os.Exit(res)
 }
 
