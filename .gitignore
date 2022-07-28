@@ -7,6 +7,7 @@ tmp/
 bin/
 lib/
 scratch/
+installer-bundle/bundle
 .installer-lock
 
 coverage.out
