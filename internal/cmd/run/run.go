@@ -115,10 +115,11 @@ func New() *cobra.Command {
 			cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
 			cmdutils.ViperMustBindPFlag("print-json", cmd.Flags().Lookup("json"))
 
-			err := config.ParseProjectConfig(opts)
+			projectDir, err := config.ParseProjectConfig(opts)
 			if err != nil {
 				return err
 			}
+			opts.ProjectDir = projectDir
 
 			opts.fuzzTest = args[0]
 			return opts.validate()

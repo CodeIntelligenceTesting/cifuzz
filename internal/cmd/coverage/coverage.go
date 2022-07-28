@@ -109,10 +109,11 @@ func New() *cobra.Command {
 			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
 			cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
 
-			err := config.ParseProjectConfig(opts)
+			projectDir, err := config.ParseProjectConfig(opts)
 			if err != nil {
 				return err
 			}
+			opts.ProjectDir = projectDir
 
 			opts.fuzzTest = args[0]
 			return opts.validate()

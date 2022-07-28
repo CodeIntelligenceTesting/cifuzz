@@ -63,12 +63,12 @@ func CreateProjectConfig(projectDir string) (configpath string, err error) {
 	return
 }
 
-func ParseProjectConfig(opts interface{}) error {
+func ParseProjectConfig(opts interface{}) (string, error) {
 	var err error
 
 	projectDir, err := FindProjectDir()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	configpath := filepath.Join(projectDir, projectConfigFile)
@@ -76,17 +76,15 @@ func ParseProjectConfig(opts interface{}) error {
 
 	err = viper.ReadInConfig()
 	if err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
-
-	viper.Set("ProjectDir", projectDir)
 
 	err = viper.Unmarshal(opts)
 	if err != nil {
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 
-	return nil
+	return projectDir, nil
 }
 
 func ReadProjectConfig(projectDir string) (*ProjectConfig, error) {
