@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -22,6 +21,7 @@ import (
 	"code-intelligence.com/cifuzz/internal/names"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
@@ -155,18 +155,19 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 		log.Print(strings.Join(r.Finding.Logs, "\n"))
 
 		if r.Finding.InputFile != "" {
-			destPath := filepath.Join(h.seedCorpusDir, r.Finding.Name)
+			seedPath := fileutil.PrettifyPath(filepath.Join(h.seedCorpusDir, r.Finding.Name))
+			log.Printf(`
+Note: The crashing input has been copied to the seed corpus at:
 
-			copyCmd := fmt.Sprintf("mkdir -p %s && cp", h.seedCorpusDir)
-			if runtime.GOOS == "windows" {
-				copyCmd = fmt.Sprintf("if not exist %s mkdir %s && copy", destPath, destPath)
-			}
+    %s
 
-			log.Print("\n")
-			log.Print("You can add this crashing input to the seed corpus with:")
-			log.Infof("  %s %s %s", copyCmd, r.Finding.InputFile, destPath)
-			log.Print("After adding, the input will be applied every time you run the regression tests / replayer binary (for example during your CI/CD pipeline).")
-			log.Print("For more information you can take a look at https://github.com/CodeIntelligenceTesting/cifuzz#regression-testing")
+It will now be used as a seed input for all runs of the fuzz test,
+including remote runs with artifacts created via 'cifuzz run' and
+regression tests. For more information on regression tests, see:
+
+    https://github.com/CodeIntelligenceTesting/cifuzz#regression-testing
+
+`, seedPath)
 		}
 
 		log.Print("=================================================================")
