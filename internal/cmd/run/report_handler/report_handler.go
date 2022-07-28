@@ -13,6 +13,7 @@ import (
 
 	"github.com/gookit/color"
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"golang.org/x/term"
@@ -93,6 +94,18 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 
 		if err := r.Finding.Save(); err != nil {
 			return err
+		}
+
+		// Copy the input file to the seed corpus dir
+		if r.Finding.InputFile != "" {
+			err = os.MkdirAll(h.seedCorpusDir, 0755)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			err = copy.Copy(r.Finding.InputFile, filepath.Join(h.seedCorpusDir, r.Finding.Name))
+			if err != nil {
+				return errors.WithStack(err)
+			}
 		}
 	}
 
