@@ -68,10 +68,10 @@ func printBuildSystemInstructions(cwd string) {
 		return
 	}
 	if cfg.BuildSystem == config.BuildSystemCMake {
-		log.Infof(`
-Enable fuzz testing in your CMake project by adding the following lines to the
-top-level CMakeLists.txt before any add_subdirectory(...), add_library(...) or 
-add_executable(...) calls:
+		log.Info(`
+Enable fuzz testing in your CMake project by adding the following lines
+to the top-level CMakeLists.txt before any add_subdirectory(...),
+add_library(...) or add_executable(...) calls:
 
     find_package(cifuzz)
     enable_fuzz_testing()`)
