@@ -349,35 +349,41 @@ static void run_file_or_dir(const char *path) {
   }
 }
 
+#define COLOR_RED "\x1b[31m"
+#define COLOR_YELLOW "\x1b[93m"
+#define COLOR_RESET "\x1b[0m"
+
 static void print_summary(const char *failure_reason) {
   if (all_inputs_passed) {
-    fprintf(stderr, "\nRan fuzz test on %d inputs - passed\n\n"
-                    "Note: No fuzzing has been performed, the fuzz test has only been executed on the\n"
-                    "fixed inputs in the seed corpus.\n\n", num_passing_inputs);
+    fprintf(stderr, "\nRan fuzz test on %d inputs - passed\n\n", num_passing_inputs);
+    fprintf(stderr, COLOR_YELLOW
+        "Note: No fuzzing has been performed, the fuzz test has only been\n"
+        "executed on the fixed inputs in the seed corpus.\n\n" COLOR_RESET);
     if (WITH_DEFAULT(cifuzz_test_name)()) {
-      fprintf(stderr, "To start a fuzzing run, execute:\n\n"
-                      "    cifuzz run %s\n", WITH_DEFAULT(cifuzz_test_name)());
+      fprintf(stderr, COLOR_YELLOW
+        "To start a fuzzing run, execute:\n\n"
+        "    cifuzz run %s\n\n" COLOR_RESET, WITH_DEFAULT(cifuzz_test_name)());
     }
   } else {
     if (current_input) {
-      fprintf(stderr, "\nFuzz test failed on input '%s'\n"
-                      "Reason: %s\n\n", current_input, failure_reason);
+      fprintf(stderr, COLOR_RED "\nFuzz test failed on input '%s'\n"
+                      "Reason: %s\n\n" COLOR_RESET, current_input, failure_reason);
       /* TODO: Replace with cifuzz debug on all platforms when it has been implemented. */
 #ifdef __linux__
       fprintf(stderr, "To debug this failure, execute:\n\n"
-                      "    gdb -ex 'break LLVMFuzzerTestOneInput' -ex run --args '%s' '%s'\n", argv0, current_input);
+                      "    gdb -ex 'break LLVMFuzzerTestOneInput' -ex run --args '%s' '%s'\n\n", argv0, current_input);
 #endif
     } else {
       if (failure_reason == NULL) {
         failure_reason = "Unknown";
       }
       /* The empty input is always executed first by the replayer, so we do not need to pass in an empty file. */
-      fprintf(stderr, "\nFuzz test failed on the empty input\n"
-                      "Reason: %s\n\n", failure_reason);
+      fprintf(stderr, COLOR_RED "\nFuzz test failed on the empty input\n"
+                      "Reason: %s\n\n" COLOR_RESET, failure_reason);
       /* TODO: Replace with cifuzz debug on all platforms when it has been implemented. */
 #ifdef __linux__
       fprintf(stderr, "To debug this failure, execute:\n\n"
-                      "    gdb -ex 'break LLVMFuzzerTestOneInput' -ex run --args '%s'\n", argv0);
+                      "    gdb -ex 'break LLVMFuzzerTestOneInput' -ex run --args '%s'\n\n", argv0);
 #endif
     }
   }
