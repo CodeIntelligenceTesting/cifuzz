@@ -1,0 +1,36 @@
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+jobs:
+  installer:
+    name: build installer + upload as artifact (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: "^1.18"
+
+      # TODO use version
+      - name: Build installer
+        run: |
+          echo ${{ inputs.version }}
+          make installer
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v3
+        with:
+          name: cifuzz_installer
+          path: build/bin/installer/*
+          if-no-files-found: error
+          retention-days: 5
