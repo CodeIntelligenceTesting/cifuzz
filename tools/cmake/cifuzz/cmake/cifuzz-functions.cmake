@@ -174,6 +174,16 @@ function(add_fuzz_test name)
   # them and are not easy to deal with using just POSIX functions).
   target_compile_definitions("${name}" PRIVATE CIFUZZ_SEED_CORPUS="${_source_seed_corpus}")
 
+  # Coverage builds should always run over the full generated corpus in addition to the seed corpus.
+  if(coverage IN_LIST CIFUZZ_SANITIZERS)
+    set(_source_generated_corpus "${CMAKE_SOURCE_DIR}/.cifuzz-corpus/${name}")
+    if(WIN32)
+      string(REGEX REPLACE "/" "\\\\" _source_generated_corpus "${_source_generated_corpus}")
+    endif()
+    string(REGEX REPLACE "\\\\" "\\\\\\\\" _source_generated_corpus "${_source_generated_corpus}")
+    target_compile_definitions("${name}" PRIVATE CIFUZZ_GENERATED_CORPUS="${_source_generated_corpus}")
+  endif()
+
   # Collect a mapping from CMake target names to information required by cifuzz. Currently, this includes the path of
   # the fuzz test executable as well as of its seed corpus.
   # We don't use add_custom_command here as we want the mapping to exist already after the configure step, not only

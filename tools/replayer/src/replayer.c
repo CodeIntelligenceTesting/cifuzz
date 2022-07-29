@@ -202,6 +202,10 @@ DEFINE_DEFAULT(const char*, cifuzz_seed_corpus, (void)) {
   return NULL;
 }
 
+DEFINE_DEFAULT(const char*, cifuzz_generated_corpus, (void)) {
+  return NULL;
+}
+
 /* Set by the CMake integration if a sanitizer is linked in.
  * Detecting this via compiler macros isn't possible since gcc does not define a macro for UBSan.
  * Using DEFINE_DEFAULT/WITH_DEFAULT isn't possible since sanitizer runtimes are usually linked dynamically and thus
@@ -516,6 +520,13 @@ int main(int argc, char **argv) {
         run_file_or_dir(seed_corpus_path);
       }
       free(seed_corpus_path);
+    }
+    /* If this is a coverage run, the build system integration may have provided the path to the generated corpus, which
+     * should be run in addition to the seed corpus. */
+    if (WITH_DEFAULT(cifuzz_generated_corpus)() != NULL) {
+      if (POSIX_STAT(WITH_DEFAULT(cifuzz_generated_corpus)(), &stat_info) == 0) {
+        run_file_or_dir(WITH_DEFAULT(cifuzz_generated_corpus)());
+      }
     }
   }
 

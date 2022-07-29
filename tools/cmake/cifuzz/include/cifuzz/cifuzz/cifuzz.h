@@ -66,6 +66,9 @@ static const int DOCTEST_ANON_VAR_15771531 =    \
 #ifndef CIFUZZ_SEED_CORPUS
 #define CIFUZZ_SEED_CORPUS NULL
 #endif
+#ifndef CIFUZZ_GENERATED_CORPUS
+#define CIFUZZ_GENERATED_CORPUS NULL
+#endif
 
 #define FUZZ_TEST                                                                \
 static void LLVMFuzzerTestOneInputNoReturn(const uint8_t *data, size_t size);    \
@@ -78,6 +81,9 @@ CIFUZZ_C_LINKAGE const char *cifuzz_test_name(void) {                           
 }                                                                                \
 CIFUZZ_C_LINKAGE const char *cifuzz_seed_corpus(void) {                          \
   return CIFUZZ_SEED_CORPUS;                                                     \
+}                                                                                \
+CIFUZZ_C_LINKAGE const char *cifuzz_generated_corpus(void) {                     \
+  return CIFUZZ_GENERATED_CORPUS;                                                \
 }                                                                                \
 CLION_TEST_PLAY_BUTTON                                                           \
 void LLVMFuzzerTestOneInputNoReturn
