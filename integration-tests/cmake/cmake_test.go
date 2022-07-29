@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/pkg/artifact"
-	"code-intelligence.com/cifuzz/tools/install"
+	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
@@ -30,12 +30,31 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 		t.Skip()
 	}
 
-	installer, err := install.NewInstaller(nil)
+	// Create installation bundle
+	projectDir, err := install.FindProjectDir()
 	require.NoError(t, err)
-	err = installer.InstallCIFuzzAndDeps()
+	targetDir := filepath.Join(projectDir, "installer-bundle", "bundle")
+	err = os.RemoveAll(targetDir)
 	require.NoError(t, err)
-	defer installer.Cleanup()
-	err = os.Setenv("CMAKE_PREFIX_PATH", installer.InstallDir)
+
+	opts := install.Options{Version: "dev", TargetDir: targetDir}
+	bundler, err := install.NewInstallationBundler(opts)
+	require.NoError(t, err)
+	err = bundler.BuildCIFuzzAndDeps()
+	require.NoError(t, err)
+	defer bundler.Cleanup()
+
+	// Install CIFuzz in temp folder
+	installDir, err := os.MkdirTemp("", "cifuzz-")
+	require.NoError(t, err)
+	installDir = filepath.Join(installDir, "cifuzz")
+	installCmd := exec.Command("go", "run", "-tags", "installer", "cmd/installer/main.go", "-i", installDir)
+	installCmd.Dir = projectDir
+	t.Logf("Command: %s", installCmd.String())
+	err = installCmd.Run()
+	require.NoError(t, err)
+
+	err = os.Setenv("CMAKE_PREFIX_PATH", installDir)
 	require.NoError(t, err)
 
 	dir := copyTestdataDir(t)
@@ -43,7 +62,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	t.Logf("executing cmake integration test in %s", dir)
 
 	// Execute the root command
-	cifuzz := installer.CIFuzzExecutablePath()
+	cifuzz := install.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
 	cmd := executil.Command(cifuzz)
 	cmd.Dir = dir
 	cmd.Stderr = os.Stderr

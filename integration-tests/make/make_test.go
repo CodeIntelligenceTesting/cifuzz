@@ -3,6 +3,7 @@ package cmake
 import (
 	"bufio"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -12,7 +13,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/tools/install"
+	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
@@ -29,12 +30,31 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 		t.Skip("Make support is only available on Unix")
 	}
 
-	installer, err := install.NewInstaller(nil)
+	// Create installation bundle
+	projectDir, err := install.FindProjectDir()
 	require.NoError(t, err)
-	err = installer.InstallCIFuzzAndDeps()
+	targetDir := filepath.Join(projectDir, "installer-bundle", "bundle")
+	err = os.RemoveAll(targetDir)
 	require.NoError(t, err)
-	defer installer.Cleanup()
-	cifuzz := installer.CIFuzzExecutablePath()
+
+	opts := install.Options{Version: "dev", TargetDir: targetDir}
+	bundler, err := install.NewInstallationBundler(opts)
+	require.NoError(t, err)
+	err = bundler.BuildCIFuzzAndDeps()
+	require.NoError(t, err)
+	defer bundler.Cleanup()
+
+	// Install CIFuzz in temp folder
+	installDir, err := os.MkdirTemp("", "cifuzz-")
+	require.NoError(t, err)
+	installDir = filepath.Join(installDir, "cifuzz")
+	installCmd := exec.Command("go", "run", "-tags", "installer", "cmd/installer/main.go", "-i", installDir)
+	installCmd.Dir = projectDir
+	t.Logf("Command: %s", installCmd.String())
+	err = installCmd.Run()
+	require.NoError(t, err)
+
+	cifuzz := install.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
 
 	dir := copyMakeExampleDir(t)
 	defer fileutil.Cleanup(dir)

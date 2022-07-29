@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/tools/install"
+	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/testutil"
 )
@@ -28,28 +28,22 @@ var baseTempDir string
 
 func TestMain(m *testing.M) {
 	var err error
-	// Intentionally include a space here to test that we don't break on it.
-	baseTempDir, err = os.MkdirTemp("", "cifuzz cmake")
-	if err != nil {
-		log.Fatalf("Failed to create temp dir for tests: %+v", err)
-	}
 
 	// The CMake integration is installed globally once and used by all tests.
-	installer, err := install.NewInstaller(
-		&install.Options{InstallDir: filepath.Join(baseTempDir, "cmake-integration")})
+	bundler, err := install.NewInstallationBundler(install.Options{Version: "dev"})
 	if err != nil {
-		fileutil.Cleanup(baseTempDir)
+		bundler.Cleanup()
 		log.Fatalf("Failed to install CMake integration: %+v", err)
 	}
-	err = installer.InstallCMakeIntegration()
+	err = bundler.CopyCMakeIntegration()
 	if err != nil {
-		fileutil.Cleanup(baseTempDir)
+		bundler.Cleanup()
 		log.Fatalf("Failed to install CMake integration: %+v", err)
 	}
 
 	m.Run()
 
-	fileutil.Cleanup(baseTempDir)
+	bundler.Cleanup()
 }
 
 func TestIntegration_Ctest_DefaultSettings(t *testing.T) {

@@ -33,7 +33,11 @@ deps/dev: deps
 
 .PHONY: install
 install:
-	go run cmd/installer/main.go
+	go run cmd/bundler/main.go --version dev && go run -tags installer cmd/installer/main.go && rm -r installer-bundle/bundle
+
+.PHONY: installer
+installer:
+	go run cmd/bundler/main.go --version dev && go build -tags installer -o build/bin/installer cmd/installer/main.go && rm -r installer-bundle/bundle
 
 .PHONY: build
 build: build/$(current_os)
