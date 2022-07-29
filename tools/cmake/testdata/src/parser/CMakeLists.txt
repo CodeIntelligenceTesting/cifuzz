@@ -4,7 +4,7 @@ target_sources(secrets PUBLIC
 set_property(TARGET secrets PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_include_directories(secrets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_library(parser SHARED parser.cpp)
+add_library(parser parser.cpp)
 target_sources(parser PUBLIC
                parser.h)
 target_link_libraries(parser PRIVATE helper)

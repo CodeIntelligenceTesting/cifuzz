@@ -1,4 +1,4 @@
-add_library(helper SHARED helper.cpp)
+add_library(helper helper.cpp)
 target_sources(helper PUBLIC
                helper.h)
 target_link_libraries(helper PRIVATE secrets)
