@@ -71,7 +71,7 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 
 	// show success message
 	log.Successf("Created fuzz test stub %s", opts.outputPath)
-	log.Info(`
+	log.Print(`
 Note: Fuzz tests can be put anywhere in your repository, but it makes sense
 to keep them close to the tested code - just like regular unit tests.`)
 
@@ -96,7 +96,7 @@ func getTestType(args []string) (config.FuzzTestType, error) {
 func printBuildSystemInstructions(buildSystem, filename string) {
 	// Printing build system instructions is best-effort: Do not fail on errors.
 	if buildSystem == config.BuildSystemCMake {
-		log.Infof(`
+		log.Printf(`
 Create a CMake target for the fuzz test as follows - it behaves just like
 a regular add_executable(...):
 

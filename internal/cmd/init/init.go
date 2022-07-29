@@ -53,8 +53,8 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 
 	printBuildSystemInstructions(cwd)
 
-	log.Info(`
-Use 'cifuzz create' to create your first fuzz test`)
+	log.Print(`
+Use 'cifuzz create' to create your first fuzz test.`)
 	return
 }
 
@@ -68,7 +68,7 @@ func printBuildSystemInstructions(cwd string) {
 		return
 	}
 	if cfg.BuildSystem == config.BuildSystemCMake {
-		log.Info(`
+		log.Print(`
 Enable fuzz testing in your CMake project by adding the following lines
 to the top-level CMakeLists.txt before any add_subdirectory(...),
 add_library(...) or add_executable(...) calls:
