@@ -95,10 +95,15 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`), false)
 
 	// Check that options set via the config file are respected
-	configFileContent := `engine-args:
- - -rss_limit_mb=1234`
+	configFileContent := `use-sandbox: false`
 	err = os.WriteFile(filepath.Join(dir, "cifuzz.yaml"), []byte(configFileContent), 0644)
-	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`-rss_limit_mb=1234`), false)
+	// When minijail is used, the artifact prefix is set to the minijail
+	// output path
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`artifact_prefix='./'`), false)
+
+	// Check that command-line flags take precedence over config file
+	// settings
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`minijail`), false, "--use-sandbox=true")
 
 	// Building with coverage instrumentation doesn't work on Windows yet
 	if runtime.GOOS != "windows" {
@@ -128,22 +133,25 @@ func copyTestdataDir(t *testing.T) string {
 	return dir
 }
 
-func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.Regexp, terminate bool) {
+func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.Regexp, terminate bool, args ...string) {
 	t.Helper()
 
 	runCtx, closeRunCtx := context.WithCancel(context.Background())
 	defer closeRunCtx()
+	args = append([]string{"run", "-v", "parser_fuzz_test",
+		"--engine-arg=-seed=1",
+		"--engine-arg=-runs=1000000"},
+		args...)
 	cmd := executil.CommandContext(
 		runCtx,
 		cifuzz,
-		"run", "-v", "parser_fuzz_test",
-		"--engine-arg=-seed=1",
-		"--engine-arg=-runs=1000000",
+		args...,
 	)
 	cmd.Dir = dir
 	stdoutPipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
-	cmd.Stderr = os.Stderr
+	stderrPipe, err := cmd.StderrTeePipe(os.Stderr)
+	require.NoError(t, err)
 
 	// Terminate the cifuzz process when we receive a termination signal
 	// (else the test won't stop). An alternative would be to run the
@@ -171,7 +179,19 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 
 	// Check that the output contains the expected output
 	var seenExpectedOutput bool
+	// cifuzz progress messages go to stdout.
 	scanner := bufio.NewScanner(stdoutPipe)
+	for scanner.Scan() {
+		if expectedOutput.MatchString(scanner.Text()) {
+			seenExpectedOutput = true
+			if terminate {
+				err = cmd.TerminateProcessGroup()
+				require.NoError(t, err)
+			}
+		}
+	}
+	// Fuzzer output goes to stderr.
+	scanner = bufio.NewScanner(stderrPipe)
 	for scanner.Scan() {
 		if expectedOutput.MatchString(scanner.Text()) {
 			seenExpectedOutput = true
@@ -204,6 +224,8 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 	case <-runCtx.Done():
 		require.NoError(t, runCtx.Err())
 	}
+
+	require.True(t, seenExpectedOutput, "Did not see %q in fuzzer output", expectedOutput.String())
 }
 
 func createCoverageReport(t *testing.T, cifuzz string, dir string) {
