@@ -5,3 +5,4 @@ my_fuzz_test_1
 my_fuzz_test_2
 .cifuzz-findings
 .cifuzz-corpus
+*_seed_corpus
